@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Line Tower Wars — duel screen v2</title>
+<style>
+  /* Rough on purpose: system fonts, gray hairlines, colour ONLY where it is
+     semantic (valid/refused placement, lap pressure, locked tier). */
+  :root { --line:#999; --faint:#ccc; --ink:#222; --dim:#777; --ok:#2a7; --bad:#c33; --warn:#c60; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:24px; font:13px/1.45 -apple-system,"Segoe UI",system-ui,sans-serif; color:var(--ink); background:#fff; }
+  h1 { font-size:15px; font-weight:600; margin:0 0 4px; }
+  h2.sec { font-size:14px; font-weight:600; margin:34px 0 4px; }
+  .caption { color:var(--dim); font-size:12px; margin:0 0 18px; }
+  .screen { border:1px solid var(--line); max-width:1240px; margin:0 0 12px; }
+
+  .hud { display:flex; align-items:stretch; border-bottom:1px solid var(--line); }
+  .hud div { padding:8px 13px; border-right:1px solid var(--faint); }
+  .hud div:last-child { border-right:0; margin-left:auto; }
+  .k { display:block; font-size:9.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--dim); }
+  .v { font-size:17px; font-variant-numeric:tabular-nums; }
+  .v.sm { font-size:12.5px; }
+
+  .stage { display:flex; }
+  .mine { flex:1; padding:11px; border-right:1px solid var(--line); }
+  .lane-label { font-size:9.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--dim); margin-bottom:7px; display:flex; justify-content:space-between; }
+  .field { position:relative; height:286px; border:1px solid var(--faint);
+    background-image:linear-gradient(to right,var(--faint) 1px,transparent 1px),linear-gradient(to bottom,var(--faint) 1px,transparent 1px);
+    background-size:24px 24px; }
+  .gate { position:absolute; top:120px; width:24px; height:48px; border:1px solid var(--line); font-size:8.5px; text-align:center; line-height:48px; color:var(--dim); }
+  .gate.in{left:0} .gate.out{right:0}
+  .t { position:absolute; width:22px; height:22px; border:1px solid var(--ink); background:#eee; font-size:8px; text-align:center; line-height:22px; color:var(--dim); }
+  .t.l2 { border-width:2px; background:#e2e2e2; }
+  .t.l3 { border-width:3px; background:#d6d6d6; }
+  .t.sel { outline:2px solid var(--ok); outline-offset:1px; }
+  .ring { position:absolute; border:1px dashed var(--ok); border-radius:50%; opacity:.55; }
+  .c { position:absolute; width:12px; height:12px; border-radius:50%; background:var(--ink); }
+  .c b { position:absolute; left:13px; top:-3px; font-size:8.5px; font-weight:600; color:var(--dim); }
+  .c.hot { background:var(--bad); }
+  .c.hot b { color:var(--bad); }
+  .trail { position:absolute; inset:0; pointer-events:none; }
+  .note { position:absolute; font-size:9.5px; color:var(--dim); background:#fff; padding:1px 4px; border:1px solid var(--faint); white-space:nowrap; }
+
+  /* Inline upgrade panel — the decision this wireframe exists to place. */
+  .panel { position:absolute; width:186px; border:1px solid var(--ink); background:#fff; padding:8px 9px; font-size:11.5px; box-shadow:2px 2px 0 rgba(0,0,0,.06); }
+  .panel h3 { margin:0 0 5px; font-size:12px; font-weight:600; }
+  .panel table { width:100%; border-collapse:collapse; margin-bottom:6px; }
+  .panel td { padding:1px 0; color:var(--dim); }
+  .panel td+td { text-align:right; color:var(--ink); font-variant-numeric:tabular-nums; }
+  .panel .arrow { color:var(--ok); }
+  .btn { display:block; width:100%; border:1px solid var(--ink); background:#f4f4f4; padding:4px; font:inherit; font-size:11px; text-align:center; }
+  .btn.off { opacity:.4; }
+  .panel .sell { margin-top:4px; font-size:10.5px; color:var(--dim); text-align:center; }
+
+  .theirs { width:268px; padding:11px; }
+  .mini { position:relative; height:132px; border:1px solid var(--faint);
+    background-image:linear-gradient(to right,var(--faint) 1px,transparent 1px),linear-gradient(to bottom,var(--faint) 1px,transparent 1px);
+    background-size:11px 11px; }
+  .mini .t{width:9px;height:9px;line-height:9px;font-size:0}
+  .mini .c{width:6px;height:6px}
+  .mini .c b{display:none}
+  .feed { margin-top:9px; border-top:1px solid var(--faint); padding-top:7px; font-size:10.5px; color:var(--dim); }
+  .feed div { padding:1.5px 0; }
+  .feed b { color:var(--ink); font-weight:600; }
+
+  .bar { display:flex; border-top:1px solid var(--line); }
+  .pal { flex:1; padding:9px 12px; }
+  .pal+.pal { border-left:1px solid var(--line); }
+  .pal h2 { font-size:9.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--dim); margin:0 0 7px; font-weight:600; display:flex; justify-content:space-between; }
+  .cards { display:flex; gap:6px; flex-wrap:wrap; }
+  .card { border:1px solid var(--line); padding:5px 7px; min-width:96px; }
+  .card.sel { border-width:2px; padding:4px 6px; }
+  .card.off { opacity:.36; }
+  .card.locked { opacity:.5; border-style:dashed; }
+  .card .n { display:block; font-size:11.5px; }
+  .card .c2 { font-size:10.5px; color:var(--dim); font-variant-numeric:tabular-nums; }
+  .card .lock { font-size:10px; color:var(--warn); }
+  .hint { font-size:10.5px; color:var(--dim); margin-top:6px; }
+  kbd { border:1px solid var(--faint); padding:0 3px; font:inherit; font-size:9.5px; }
+  .pair { display:flex; gap:16px; max-width:1240px; flex-wrap:wrap; }
+</style>
+</head>
+<body>
+
+<h1>Line Tower Wars — duel screen (v2, matches current spec)</h1>
+<p class="caption">Redrawn after the spec changed: 3 archetypes &times; 3 levels with an inline upgrade panel, timed creep tier locks, per-creep lap counters, persistent maze score, leak trail. Rough sketch, not a visual design.</p>
+
+<div class="screen">
+  <div class="hud">
+    <div><span class="k">Lives</span><span class="v">14</span></div>
+    <div><span class="k">Opponent</span><span class="v">17</span></div>
+    <div><span class="k">Gold</span><span class="v">312</span></div>
+    <div><span class="k">Income</span><span class="v">47<span class="v sm"> /15s</span></span></div>
+    <div><span class="k">Next pay</span><span class="v">0:06</span></div>
+    <div><span class="k">Next tier</span><span class="v sm">1:22</span></div>
+    <div><span class="k">Room</span><span class="v sm">ltw.gg/r/xf7q2</span></div>
+  </div>
+
+  <div class="stage">
+    <div class="mine">
+      <div class="lane-label"><span>Your lane</span><span>Maze: 214 tiles &middot; 7 creeps</span></div>
+      <div class="field">
+        <div class="gate in">IN</div><div class="gate out">OUT</div>
+
+        <div class="t" style="left:72px;top:48px">1</div>
+        <div class="t l2" style="left:96px;top:48px">2</div>
+        <div class="t l2" style="left:120px;top:48px">2</div>
+        <div class="t" style="left:144px;top:48px">1</div>
+        <div class="t" style="left:144px;top:72px">1</div>
+        <div class="t l3 sel" style="left:144px;top:96px">3</div>
+        <div class="ring" style="left:81px;top:33px;width:150px;height:150px"></div>
+        <div class="t" style="left:144px;top:120px">1</div>
+        <div class="t" style="left:120px;top:168px">1</div>
+        <div class="t l2" style="left:96px;top:168px">2</div>
+        <div class="t" style="left:72px;top:168px">1</div>
+        <div class="t l2" style="left:264px;top:72px">2</div>
+        <div class="t" style="left:288px;top:72px">1</div>
+        <div class="t" style="left:288px;top:96px">1</div>
+        <div class="t l3" style="left:288px;top:144px">3</div>
+        <div class="t" style="left:288px;top:168px">1</div>
+        <div class="t l2" style="left:408px;top:96px">2</div>
+        <div class="t" style="left:408px;top:120px">1</div>
+
+        <!-- leak trail: the route the lap-5 runner keeps taking -->
+        <svg class="trail" viewBox="0 0 720 286" preserveAspectRatio="none">
+          <polyline points="24,144 60,144 60,215 190,215 190,40 250,40 250,215 330,215 330,60 400,60 400,190 470,190 470,144 720,144"
+                    fill="none" stroke="#c33" stroke-width="1.5" stroke-dasharray="4 4" opacity=".55"/>
+        </svg>
+
+        <div class="c hot" style="left:196px;top:200px">          <b>lap 5</b></div>
+        <div class="c" style="left:104px;top:210px"><b>2</b></div>
+        <div class="c" style="left:252px;top:150px"><b>1</b></div>
+        <div class="c" style="left:330px;top:96px"><b>1</b></div>
+        <div class="c" style="left:404px;top:170px"><b>3</b></div>
+        <div class="c" style="left:466px;top:132px"><b>1</b></div>
+
+        <div class="note" style="left:196px;top:238px;border-color:#c33;color:#c33">Runner &middot; lap 5 &middot; 34% HP &middot; leak trail shown</div>
+
+        <!-- INLINE UPGRADE PANEL: the Section 11 decision -->
+        <div class="panel" style="left:180px;top:96px">
+          <h3>Single-target &middot; Lv 3</h3>
+          <table>
+            <tr><td>Damage</td><td>84</td></tr>
+            <tr><td>Range</td><td>6.5 tiles</td></tr>
+            <tr><td>Fire rate</td><td>0.7/s</td></tr>
+          </table>
+          <button class="btn off">Max level</button>
+          <div class="sell">Range ring shown while selected</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="theirs">
+      <div class="lane-label"><span>Opponent</span><span>Maze: 138</span></div>
+      <div class="mini">
+        <div class="t" style="left:33px;top:22px"></div>
+        <div class="t" style="left:44px;top:22px"></div>
+        <div class="t" style="left:55px;top:22px"></div>
+        <div class="t" style="left:55px;top:33px"></div>
+        <div class="t" style="left:55px;top:44px"></div>
+        <div class="t" style="left:121px;top:55px"></div>
+        <div class="t" style="left:132px;top:55px"></div>
+        <div class="c" style="left:77px;top:62px"></div>
+        <div class="c" style="left:106px;top:73px"></div>
+        <div class="c" style="left:139px;top:66px"></div>
+        <div class="c" style="left:158px;top:70px"></div>
+      </div>
+      <div class="feed">
+        <div><b>You sent</b> 4&times; Runner &rarr; their lane</div>
+        <div><b>Leak</b> your Runner, lap 2 &middot; <b>+1 life</b></div>
+        <div style="color:#c33"><b>Their Runner</b> lap 5 in your lane &mdash; kill it</div>
+        <div><b>Tier 2</b> unlocks in 1:22</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bar">
+    <div class="pal">
+      <h2><span>Build</span><span>3 archetypes &middot; 3 levels each</span></h2>
+      <div class="cards">
+        <div class="card sel"><span class="n">Single-target</span><span class="c2">60g &middot; anti-tank</span></div>
+        <div class="card"><span class="n">Splash</span><span class="c2">110g &middot; anti-swarm</span></div>
+        <div class="card"><span class="n">Slow</span><span class="c2">80g &middot; anti-runner</span></div>
+      </div>
+      <p class="hint"><kbd>1</kbd>–<kbd>3</kbd> pick &middot; <kbd>click</kbd> place &middot; <kbd>click a tower</kbd> to upgrade &middot; <kbd>esc</kbd> cancel</p>
+    </div>
+    <div class="pal">
+      <h2><span>Send &rarr; opponent</span><span>raises your income</span></h2>
+      <div class="cards">
+        <div class="card"><span class="n">Swarm</span><span class="c2">20g &times;6 &middot; +3 inc</span></div>
+        <div class="card"><span class="n">Runner</span><span class="c2">45g &middot; +4 inc</span></div>
+        <div class="card off"><span class="n">Tank</span><span class="c2">140g &middot; +7 &middot; need 28g</span></div>
+        <div class="card locked"><span class="n">Runner II</span><span class="lock">unlocks 1:22</span></div>
+      </div>
+      <p class="hint">Cheaper creeps give more income per gold. A leak loops until they kill it.</p>
+    </div>
+  </div>
+</div>
+
+<h2 class="sec">Placement states &mdash; how the no-block rule teaches itself</h2>
+<p class="caption">Left: valid, with the new path length previewed. Right: refused, because the lane would be sealed.</p>
+
+<div class="pair">
+  <div class="screen" style="flex:1;min-width:430px">
+    <div class="hud"><div><span class="k">Placing</span><span class="v sm">Slow &middot; 80g</span></div><div style="margin-left:auto"><span class="k">Maze after build</span><span class="v sm">214 &rarr; 268 tiles</span></div></div>
+    <div style="padding:11px">
+      <div class="field" style="height:196px">
+        <div class="gate in" style="top:74px">IN</div><div class="gate out" style="top:74px">OUT</div>
+        <div class="t" style="left:96px;top:48px">1</div>
+        <div class="t" style="left:120px;top:48px">1</div>
+        <div class="t l2" style="left:120px;top:72px">2</div>
+        <div class="t" style="left:120px;top:96px">1</div>
+        <div class="t" style="left:216px;top:72px">1</div>
+        <div class="t l2" style="left:216px;top:96px">2</div>
+        <div class="t" style="left:120px;top:120px; border-style:dashed; border-width:2px; border-color:#2a7; background:rgba(34,170,119,.10); color:#2a7">+</div>
+        <svg class="trail" viewBox="0 0 660 196" preserveAspectRatio="none">
+          <polyline points="24,98 84,98 84,170 186,170 186,50 280,50 280,140 660,140" fill="none" stroke="#2a7" stroke-width="1.5" stroke-dasharray="4 4"/>
+        </svg>
+        <div class="note" style="left:140px;top:146px;border-color:#2a7;color:#2a7">+54 tiles &middot; click to build</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" style="flex:1;min-width:430px">
+    <div class="hud"><div><span class="k">Placing</span><span class="v sm">Slow &middot; 80g</span></div><div style="margin-left:auto"><span class="k" style="color:#c33">Refused</span><span class="v sm" style="color:#c33">Would seal the lane</span></div></div>
+    <div style="padding:11px">
+      <div class="field" style="height:196px">
+        <div class="gate in" style="top:74px">IN</div><div class="gate out" style="top:74px">OUT</div>
+        <div class="t" style="left:288px;top:0">1</div>
+        <div class="t" style="left:288px;top:24px">1</div>
+        <div class="t" style="left:288px;top:48px">1</div>
+        <div class="t" style="left:288px;top:72px">1</div>
+        <div class="t" style="left:288px;top:120px">1</div>
+        <div class="t" style="left:288px;top:144px">1</div>
+        <div class="t" style="left:288px;top:168px">1</div>
+        <div class="t" style="left:288px;top:96px; border-style:dashed; border-width:2px; border-color:#c33; background:rgba(204,51,51,.10); color:#c33">+</div>
+        <div class="note" style="left:318px;top:92px;border-color:#c33;color:#c33">No path IN &rarr; OUT &mdash; creeps must always have a way through</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!--
+  WHAT CHANGED FROM v1 OF THIS WIREFRAME, AND WHY:
+
+  1. UPGRADE PANEL, INLINE ON THE FIELD (Section 11 decision).
+     Three levels per tower makes upgrading the most frequent mid-match verb after
+     placing. The panel opens at the tile, shows current vs next stats and cost, and
+     draws the range ring while selected. Eyes stay on the maze, which is where the
+     information you are deciding from actually lives. Tower level is also drawn ON
+     the tower (1/2/3 + border weight) so you can read your maze's strength without
+     clicking anything.
+
+  2. LAP COUNTERS ON CREEPS.
+     The loop rule makes lap count the most important number attached to any object.
+     A creep on lap 5 is the reason you are losing. It is drawn beside the creep and
+     turns red under pressure, and the feed calls it out by name.
+
+  3. LEAK TRAIL.
+     The dashed red route is the path the lap-5 Runner keeps taking. Under a rule where
+     a creep loops until killed, "why does this keep getting through" is a question you
+     ask repeatedly about the SAME creep — so the answer has to be visible, not inferred.
+
+  4. MAZE SCORE, PERSISTENT.
+     "Maze: 214 tiles" sits in the lane label, and the opponent's is shown too. It is
+     the flow field's spawn-tile distance, free to read, and it makes maze quality
+     comparable at a glance. The +54 delta on hover is the same number in motion.
+
+  5. TIER LOCKS IN THE SEND PALETTE.
+     Creep tiers unlock on a timer, so the palette needs three states, not two:
+     affordable, unaffordable ("need 28g"), and not-yet-unlocked ("unlocks 1:22").
+     Dashed border for locked, dimmed for unaffordable. "Next tier" is also in the HUD
+     because it changes what both players should be saving for.
+
+  6. TWO CLOCKS IN THE HUD.
+     "Next pay" (income, 15s) and "Next tier" (unlock timer) are different rhythms and
+     both drive spending decisions. The original wireframe had a generic "next wave"
+     timer, which this game does not have — there are no waves, only sends.
+
+  EDGE CASES THIS LAYOUT STILL HAS TO ANSWER:
+   - Pending placement: a predicted tower renders translucent until the tick confirms it
+     (Issue 4). Pending must never look identical to placed.
+   - 500+ creeps: lap labels cannot all render. Draw labels only for lap >= 2, which is
+     the only population that matters.
+   - Opponent disconnects: the small lane becomes the status surface, not a modal over
+     your own field.
+   - Desync: freeze with the diverging tick named, and offer the log as a download.
+   - Long creep names: cards are min-width, names wrap, costs never do.
+-->
+</body>
+</html>
