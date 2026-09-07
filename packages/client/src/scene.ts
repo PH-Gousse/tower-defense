@@ -14,10 +14,17 @@ import {
   tileX,
   tileY,
   checkBuild,
+  checkUpgrade,
+  checkSell,
+  sellValue,
   buildField,
   createField,
   mazeLength,
   pathFrom,
+  TowerKind,
+  ARCHETYPES,
+  levelOf,
+  MAX_LEVEL,
   type Tile,
   type FlowField,
 } from '@ltw/sim'
@@ -31,6 +38,16 @@ const REFUSAL_TEXT: Record<Refusal, string> = {
   [Refusal.Occupied]: 'A tower is already here',
   [Refusal.SpawnOrExit]: 'Cannot build on the entrance or the exit',
   [Refusal.WouldSealLane]: 'No path IN to OUT — creeps must always have a way through',
+  [Refusal.NotEnoughGold]: 'Not enough gold',
+  [Refusal.NoTowerHere]: 'No tower on this tile',
+  [Refusal.AlreadyMaxLevel]: 'Already at maximum level',
+}
+
+/** One colour per archetype so a maze is readable without clicking anything. */
+const TOWER_COLOUR: Record<TowerKind, number> = {
+  [TowerKind.Single]: 0x8d949c,
+  [TowerKind.Splash]: 0xc08a4a,
+  [TowerKind.Slow]: 0x5a8fa8,
 }
 
 /**
@@ -64,6 +81,17 @@ export interface Stats {
   /** Maze length in tiles, or -1 when the lane is sealed. */
   readonly maze: number
   readonly tick: number
+  readonly gold: number
+  readonly kills: number
+}
+
+export interface Selection {
+  readonly tile: Tile
+  readonly tower: TowerKind
+  readonly level: number
+  readonly upgradeCost: number | null
+  readonly sellValue: number
+  readonly canUpgrade: boolean
 }
 
 export interface HoverInfo {
@@ -77,6 +105,10 @@ export interface HoverInfo {
 export interface Scene {
   readonly onTileHover: (cb: (h: HoverInfo) => void) => void
   readonly onStats: (cb: (s: Stats) => void) => void
+  readonly onSelect: (cb: (sel: Selection | null) => void) => void
+  readonly setTool: (tower: TowerKind) => void
+  readonly upgradeSelected: () => void
+  readonly sellSelected: () => void
   start: () => void
 }
 
@@ -114,14 +146,37 @@ export function createScene(canvasParent: HTMLElement): Scene {
   for (const t of SPAWN_TILES) scene.add(marker(t, 0x2a7f62))
   for (const t of EXIT_TILES) scene.add(marker(t, 0xa8443c))
 
-  const towers = new THREE.InstancedMesh(
-    new THREE.BoxGeometry(TILE * 0.82, TOWER_H, TILE * 0.82),
-    new THREE.MeshLambertMaterial({ color: 0x8d949c }),
-    TILE_COUNT,
+  // One InstancedMesh per archetype. Three draw calls instead of one, in
+  // exchange for reading a maze's composition at a glance without clicking.
+  const towerMeshes: THREE.InstancedMesh[] = []
+  for (const kind of [TowerKind.Single, TowerKind.Splash, TowerKind.Slow]) {
+    const mesh = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(TILE * 0.82, TOWER_H, TILE * 0.82),
+      new THREE.MeshLambertMaterial({ color: TOWER_COLOUR[kind] }),
+      TILE_COUNT,
+    )
+    mesh.count = 0
+    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+    scene.add(mesh)
+    towerMeshes.push(mesh)
+  }
+
+  // Selection ring, and the range circle it implies.
+  const selectRing = new THREE.Mesh(
+    new THREE.RingGeometry(TILE * 0.52, TILE * 0.62, 24),
+    new THREE.MeshBasicMaterial({ color: 0x63c8a0, transparent: true, opacity: 0.9, side: THREE.DoubleSide }),
   )
-  towers.count = 0
-  towers.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
-  scene.add(towers)
+  selectRing.rotation.x = -Math.PI / 2
+  selectRing.visible = false
+  scene.add(selectRing)
+
+  const rangeRing = new THREE.Mesh(
+    new THREE.RingGeometry(1, 1.04, 48),
+    new THREE.MeshBasicMaterial({ color: 0x63c8a0, transparent: true, opacity: 0.35, side: THREE.DoubleSide }),
+  )
+  rangeRing.rotation.x = -Math.PI / 2
+  rangeRing.visible = false
+  scene.add(rangeRing)
 
   // Creeps are instanced from the start because the design bounds their
   // population only by gold. This is the mesh that has to survive 500 of them.
@@ -167,9 +222,12 @@ export function createScene(canvasParent: HTMLElement): Scene {
   const pointer = new THREE.Vector2()
 
   let hovered: Tile | null = null
+  let selected: Tile | null = null
+  let tool: TowerKind = TowerKind.Single
   let lastSyncedTick = -1
   let hoverCb: (h: HoverInfo) => void = () => {}
   let statsCb: (s: Stats) => void = () => {}
+  let selectCb: (sel: Selection | null) => void = () => {}
 
   function tileUnderPointer(ev: PointerEvent): Tile | null {
     const rect = renderer.domElement.getBoundingClientRect()
@@ -201,7 +259,7 @@ export function createScene(canvasParent: HTMLElement): Scene {
     }
 
     const state = driver.current
-    const check = checkBuild(state, t.x, t.y, probeField)
+    const check = checkBuild(state, t.x, t.y, tool, probeField)
     const allowed = check.refusal === Refusal.None
 
     hover.position.set(t.x + 0.5, 0.03, t.y + 0.5)
@@ -246,25 +304,87 @@ export function createScene(canvasParent: HTMLElement): Scene {
     previewTile(null)
   })
 
+  /**
+   * Click does one of two things depending on what is under it.
+   *
+   * An occupied tile selects its tower, which opens the upgrade/sell panel —
+   * upgrading is the most frequent mid-match action after placing, and putting
+   * it on the tile keeps your eyes on the maze rather than on a side bar.
+   * An empty tile places the current tool.
+   */
   renderer.domElement.addEventListener('pointerdown', (ev) => {
     const t = tileUnderPointer(ev)
-    if (!t) return
-    if (checkBuild(driver.current, t.x, t.y, probeField).refusal === Refusal.None) {
-      driver.queueBuild(t.x, t.y)
+    if (!t) { select(null); return }
+    const state = driver.current
+    if (state.lane.towers.kind[tileIndex(t)] !== -1) {
+      select(t)
+      return
+    }
+    select(null)
+    if (checkBuild(state, t.x, t.y, tool, probeField).refusal === Refusal.None) {
+      driver.queueBuild(t.x, t.y, tool)
     }
   })
 
-  function syncTowers(): void {
-    const blocked = driver.current.lane.blocked
-    let n = 0
-    for (let i = 0; i < TILE_COUNT; i++) {
-      if (blocked[i] !== 1) continue
-      scratch.makeTranslation(tileX(i) + 0.5, TOWER_H / 2, tileY(i) + 0.5)
-      towers.setMatrixAt(n, scratch)
-      n += 1
+  function select(t: Tile | null): void {
+    selected = t
+    if (!t) {
+      selectRing.visible = false
+      rangeRing.visible = false
+      selectCb(null)
+      return
     }
-    towers.count = n
-    towers.instanceMatrix.needsUpdate = true
+    const state = driver.current
+    const i = tileIndex(t)
+    const kind = state.lane.towers.kind[i] as TowerKind
+    const level = state.lane.towers.level[i] as number
+    const spec = levelOf(kind, level)
+
+    selectRing.position.set(t.x + 0.5, 0.05, t.y + 0.5)
+    selectRing.visible = true
+    rangeRing.position.set(t.x + 0.5, 0.045, t.y + 0.5)
+    rangeRing.scale.set(spec.range, spec.range, 1)
+    rangeRing.visible = true
+
+    const canUpgrade = checkUpgrade(state, t.x, t.y) === Refusal.None
+    selectCb({
+      tile: t,
+      tower: kind,
+      level,
+      upgradeCost: level < MAX_LEVEL ? levelOf(kind, level + 1).cost : null,
+      sellValue: sellValue(state, t.x, t.y),
+      canUpgrade,
+    })
+  }
+
+  /**
+   * Rebuild tower instances, grouped by archetype.
+   *
+   * Level is drawn as height so maze strength is readable without clicking:
+   * a level 3 tower stands visibly taller than a level 1.
+   */
+  function syncTowers(): number {
+    const t = driver.current.lane.towers
+    const counts = [0, 0, 0]
+    for (let i = 0; i < TILE_COUNT; i++) {
+      const kind = t.kind[i] as number
+      if (kind === -1) continue
+      const level = t.level[i] as number
+      const h = TOWER_H * (0.7 + 0.3 * level)
+      const mesh = towerMeshes[kind] as THREE.InstancedMesh
+      scratch.makeScale(1, h / TOWER_H, 1)
+      scratch.setPosition(tileX(i) + 0.5, h / 2, tileY(i) + 0.5)
+      mesh.setMatrixAt(counts[kind] as number, scratch)
+      counts[kind] = (counts[kind] as number) + 1
+    }
+    let total = 0
+    for (let k = 0; k < towerMeshes.length; k++) {
+      const mesh = towerMeshes[k] as THREE.InstancedMesh
+      mesh.count = counts[k] as number
+      mesh.instanceMatrix.needsUpdate = true
+      total += counts[k] as number
+    }
+    return total
   }
 
   /** Draw creeps between the previous and current tick. */
@@ -319,23 +439,43 @@ export function createScene(canvasParent: HTMLElement): Scene {
   return {
     onTileHover: (cb) => { hoverCb = cb },
     onStats: (cb) => { statsCb = cb },
+    onSelect: (cb) => { selectCb = cb },
+    setTool: (tower) => {
+      tool = tower
+      if (hovered) previewTile(hovered)
+    },
+    upgradeSelected: () => {
+      if (selected) driver.queueUpgrade(selected.x, selected.y)
+    },
+    sellSelected: () => {
+      if (selected) {
+        driver.queueSell(selected.x, selected.y)
+        select(null)
+      }
+    },
     start: () => {
       resize()
       renderer.setAnimationLoop((nowMs) => {
         const ran = driver.advance(nowMs)
         const state = driver.current
         if (ran > 0 && state.tick !== lastSyncedTick) {
-          syncTowers()
+          const towerCount = syncTowers()
           lastSyncedTick = state.tick
           currentPath.set(pathFrom(state.lane.field, SPAWN_INDICES[0] as number))
-          // The hover preview is stale once the field changes under it.
+          // Both of these go stale the moment the field or the gold changes.
           if (hovered) previewTile(hovered)
+          if (selected) {
+            if (state.lane.towers.kind[tileIndex(selected)] === -1) select(null)
+            else select(selected)
+          }
           const maze = mazeLength(state.lane.field)
           statsCb({
-            towers: towers.count,
+            towers: towerCount,
             creeps: state.lane.creeps.count,
             maze: maze === UNREACHABLE ? -1 : maze,
             tick: state.tick,
+            gold: state.gold,
+            kills: state.kills,
           })
         }
         syncCreeps(driver.alpha)

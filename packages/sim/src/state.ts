@@ -26,9 +26,28 @@ export interface Creeps {
   readonly y: Float64Array
   readonly hp: Int32Array
   readonly laps: Int32Array
-  /** Tiles per tick. */
+  /** Tiles per tick, before any slow is applied. */
   readonly speed: Float64Array
+  /** Movement reduction as an integer percent, active until `slowUntil`. */
+  readonly slowPercent: Int32Array
+  /** Tick at which the current slow expires. */
+  readonly slowUntil: Int32Array
   count: number
+}
+
+/**
+ * Towers, stored per tile rather than in a dense list.
+ *
+ * One tower per tile and 960 tiles, so a tile-indexed array is smaller than the
+ * bookkeeping a dense list would need — and it makes "fire in tile order", the
+ * determinism pin, a plain forward loop.
+ *
+ * `kind[i] === -1` means no tower.
+ */
+export interface Towers {
+  readonly kind: Int8Array
+  readonly level: Int8Array
+  readonly cooldown: Int32Array
 }
 
 export interface Lane {
@@ -36,14 +55,27 @@ export interface Lane {
   readonly blocked: Uint8Array
   readonly field: FlowField
   readonly creeps: Creeps
+  readonly towers: Towers
 }
 
 export interface GameState {
   tick: number
   /** Next creep id to hand out. Monotonic, never reused. */
   nextCreepId: number
+  /**
+   * Gold in hand.
+   *
+   * Step 4 has a fixed budget and no income: enough to make build, upgrade and
+   * sell mean something, without pretending the economy exists. Income ticks,
+   * kill bounty and tier unlocks arrive at step 6.
+   */
+  gold: number
+  /** Creeps killed this match. Kill bounty pays off this at step 6. */
+  kills: number
   readonly lane: Lane
 }
+
+export const STARTING_GOLD = 600
 
 export const MAX_CREEPS = 2048
 
@@ -55,8 +87,16 @@ function createCreeps(): Creeps {
     hp: new Int32Array(MAX_CREEPS),
     laps: new Int32Array(MAX_CREEPS),
     speed: new Float64Array(MAX_CREEPS),
+    slowPercent: new Int32Array(MAX_CREEPS),
+    slowUntil: new Int32Array(MAX_CREEPS),
     count: 0,
   }
+}
+
+function createTowers(): Towers {
+  const kind = new Int8Array(TILE_COUNT)
+  kind.fill(-1)
+  return { kind, level: new Int8Array(TILE_COUNT), cooldown: new Int32Array(TILE_COUNT) }
 }
 
 export function createState(): GameState {
@@ -65,7 +105,9 @@ export function createState(): GameState {
   return {
     tick: 0,
     nextCreepId: 1,
-    lane: { blocked, field, creeps: createCreeps() },
+    gold: STARTING_GOLD,
+    kills: 0,
+    lane: { blocked, field, creeps: createCreeps(), towers: createTowers() },
   }
 }
 
@@ -79,6 +121,11 @@ export function createState(): GameState {
 export function cloneState(from: GameState, into: GameState): GameState {
   into.tick = from.tick
   into.nextCreepId = from.nextCreepId
+  into.gold = from.gold
+  into.kills = from.kills
+  into.lane.towers.kind.set(from.lane.towers.kind)
+  into.lane.towers.level.set(from.lane.towers.level)
+  into.lane.towers.cooldown.set(from.lane.towers.cooldown)
   into.lane.blocked.set(from.lane.blocked)
   into.lane.field.dist.set(from.lane.field.dist)
   into.lane.field.dir.set(from.lane.field.dir)
@@ -90,6 +137,8 @@ export function cloneState(from: GameState, into: GameState): GameState {
   b.hp.set(a.hp)
   b.laps.set(a.laps)
   b.speed.set(a.speed)
+  b.slowPercent.set(a.slowPercent)
+  b.slowUntil.set(a.slowUntil)
   b.count = a.count
   return into
 }

@@ -16,7 +16,9 @@ import {
   UNREACHABLE,
   type FlowField,
 } from './field'
-import { cloneState, spawnPointFor, type GameState } from './state'
+import { cloneState, spawnPointFor, MAX_CREEPS, type GameState } from './state'
+import { TowerKind, levelOf, investedIn, SELL_REFUND, MAX_LEVEL } from './data'
+import { createSpatialHash, rebuildHash, fireTowers, type SpatialHash } from './towers'
 
 /**
  * The tick.
@@ -42,6 +44,8 @@ import { cloneState, spawnPointFor, type GameState } from './state'
 export enum Kind {
   None = 0,
   Build = 1,
+  Upgrade = 2,
+  Sell = 3,
 }
 
 export type Command =
@@ -50,6 +54,21 @@ export type Command =
       readonly tick: number
       readonly player: 0 | 1
       readonly kind: Kind.Build
+      readonly tower: TowerKind
+      readonly x: number
+      readonly y: number
+    }
+  | {
+      readonly tick: number
+      readonly player: 0 | 1
+      readonly kind: Kind.Upgrade
+      readonly x: number
+      readonly y: number
+    }
+  | {
+      readonly tick: number
+      readonly player: 0 | 1
+      readonly kind: Kind.Sell
       readonly x: number
       readonly y: number
     }
@@ -101,6 +120,9 @@ export enum Refusal {
   Occupied = 2,
   SpawnOrExit = 3,
   WouldSealLane = 4,
+  NotEnoughGold = 5,
+  NoTowerHere = 6,
+  AlreadyMaxLevel = 7,
 }
 
 export interface BuildCheck {
@@ -122,6 +144,7 @@ export function checkBuild(
   state: GameState,
   x: number,
   y: number,
+  tower: TowerKind = TowerKind.Single,
   scratch?: FlowField,
 ): BuildCheck {
   if (!inBounds(x, y)) return { refusal: Refusal.OutOfBounds, mazeAfter: 0 }
@@ -129,6 +152,9 @@ export function checkBuild(
   if (state.lane.blocked[i] === 1) return { refusal: Refusal.Occupied, mazeAfter: 0 }
   if (isSpawnIndex(i) || isExitIndex(i)) {
     return { refusal: Refusal.SpawnOrExit, mazeAfter: 0 }
+  }
+  if (state.gold < levelOf(tower, 1).cost) {
+    return { refusal: Refusal.NotEnoughGold, mazeAfter: 0 }
   }
 
   // Candidate rebuild: would this seal the lane? Note it checks the spawn tiles
@@ -146,8 +172,42 @@ export function checkBuild(
 }
 
 /** Can this tower be placed? Thin wrapper; `step()` needs only the verdict. */
-export function canBuild(state: GameState, x: number, y: number): boolean {
-  return checkBuild(state, x, y, stepScratch).refusal === Refusal.None
+export function canBuild(state: GameState, x: number, y: number, tower = TowerKind.Single): boolean {
+  return checkBuild(state, x, y, tower, stepScratch).refusal === Refusal.None
+}
+
+/** Upgrading needs a tower, headroom, and the gold for the next level. */
+export function checkUpgrade(state: GameState, x: number, y: number): Refusal {
+  if (!inBounds(x, y)) return Refusal.OutOfBounds
+  const i = tileIndex({ x, y })
+  const kind = state.lane.towers.kind[i] as number
+  if (kind === -1) return Refusal.NoTowerHere
+  const level = state.lane.towers.level[i] as number
+  if (level >= MAX_LEVEL) return Refusal.AlreadyMaxLevel
+  if (state.gold < levelOf(kind as TowerKind, level + 1).cost) return Refusal.NotEnoughGold
+  return Refusal.None
+}
+
+/**
+ * Selling needs a tower, and nothing else.
+ *
+ * Removing an obstacle can only ever open paths, never close them, so a sell
+ * can never seal the lane and needs no reachability check. That asymmetry is
+ * worth stating: it is why sell is the safe direction and build is not.
+ */
+export function checkSell(state: GameState, x: number, y: number): Refusal {
+  if (!inBounds(x, y)) return Refusal.OutOfBounds
+  if (state.lane.towers.kind[tileIndex({ x, y })] === -1) return Refusal.NoTowerHere
+  return Refusal.None
+}
+
+/** What selling this tower pays back. */
+export function sellValue(state: GameState, x: number, y: number): number {
+  const i = tileIndex({ x, y })
+  const kind = state.lane.towers.kind[i] as number
+  if (kind === -1) return 0
+  const invested = investedIn(kind as TowerKind, state.lane.towers.level[i] as number)
+  return Math.floor(invested * SELL_REFUND)
 }
 
 /**
@@ -158,6 +218,9 @@ export function canBuild(state: GameState, x: number, y: number): boolean {
  * allocate. Callers outside the sim should pass their own.
  */
 const stepScratch: FlowField = createField()
+
+/** Rebuilt every tick. Module-scoped for the same reason as stepScratch. */
+const hash: SpatialHash = createSpatialHash(MAX_CREEPS)
 
 export { ALLOWED }
 
@@ -175,10 +238,40 @@ export function step(
   const ordered = commands.slice().sort(commandOrder)
   let blockedChanged = false
   for (const cmd of ordered) {
-    if (cmd.kind !== Kind.Build) continue
-    if (!canBuild(s, cmd.x, cmd.y)) continue
-    s.lane.blocked[tileIndex({ x: cmd.x, y: cmd.y })] = 1
-    blockedChanged = true
+    if (cmd.kind === Kind.None) continue
+    const i = tileIndex({ x: cmd.x, y: cmd.y })
+
+    if (cmd.kind === Kind.Build) {
+      if (checkBuild(s, cmd.x, cmd.y, cmd.tower, stepScratch).refusal !== Refusal.None) continue
+      s.lane.blocked[i] = 1
+      s.lane.towers.kind[i] = cmd.tower
+      s.lane.towers.level[i] = 1
+      s.lane.towers.cooldown[i] = 0
+      s.gold -= levelOf(cmd.tower, 1).cost
+      blockedChanged = true
+      continue
+    }
+
+    if (cmd.kind === Kind.Upgrade) {
+      if (checkUpgrade(s, cmd.x, cmd.y) !== Refusal.None) continue
+      const next = (s.lane.towers.level[i] as number) + 1
+      s.gold -= levelOf(s.lane.towers.kind[i] as TowerKind, next).cost
+      s.lane.towers.level[i] = next
+      // Upgrading changes range and damage, never the blocked set, so the
+      // field is untouched.
+      continue
+    }
+
+    if (cmd.kind === Kind.Sell) {
+      if (checkSell(s, cmd.x, cmd.y) !== Refusal.None) continue
+      s.gold += sellValue(s, cmd.x, cmd.y)
+      s.lane.towers.kind[i] = -1
+      s.lane.towers.level[i] = 0
+      s.lane.towers.cooldown[i] = 0
+      s.lane.blocked[i] = 0
+      blockedChanged = true
+      continue
+    }
   }
   if (blockedChanged) buildField(s.lane.blocked, s.lane.field)
 
@@ -194,10 +287,48 @@ export function step(
     }
   }
 
+  // --- towers ---------------------------------------------------------------
+  // Fire before moving: a creep that would have left range this tick still gets
+  // shot at the position both clients agree it occupied at the start of it.
+  rebuildHash(s, hash)
+  fireTowers(s, hash)
+  removeDead(s)
+
   // --- creeps ---------------------------------------------------------------
   moveCreeps(s)
 
   return s
+}
+
+/**
+ * Compact out dead creeps, preserving order.
+ *
+ * A swap-remove would be faster and would silently break the creep-id ordering
+ * that targeting ties break on, and that the hash walks. Order is a determinism
+ * pin here, so this is a stable compaction: O(n), no allocation, ids stay
+ * ascending.
+ */
+function removeDead(s: GameState): void {
+  const c = s.lane.creeps
+  let write = 0
+  for (let read = 0; read < c.count; read++) {
+    if ((c.hp[read] as number) <= 0) {
+      s.kills += 1
+      continue
+    }
+    if (write !== read) {
+      c.id[write] = c.id[read] as number
+      c.x[write] = c.x[read] as number
+      c.y[write] = c.y[read] as number
+      c.hp[write] = c.hp[read] as number
+      c.laps[write] = c.laps[read] as number
+      c.speed[write] = c.speed[read] as number
+      c.slowPercent[write] = c.slowPercent[read] as number
+      c.slowUntil[write] = c.slowUntil[read] as number
+    }
+    write += 1
+  }
+  c.count = write
 }
 
 function addCreepAt(s: GameState, hp: number, speed: number, release: number): void {
@@ -228,7 +359,16 @@ function moveCreeps(s: GameState): void {
   const field: FlowField = s.lane.field
 
   for (let i = 0; i < c.count; i++) {
-    let remaining = c.speed[i] as number
+    // Slow is an integer percent with an expiry tick. Integer division keeps
+    // the reduction exact rather than accumulating float error over a match.
+    let speed = c.speed[i] as number
+    if (s.tick < (c.slowUntil[i] as number)) {
+      const pct = c.slowPercent[i] as number
+      speed = (speed * (100 - pct)) / 100
+    } else if ((c.slowPercent[i] as number) !== 0) {
+      c.slowPercent[i] = 0
+    }
+    let remaining = speed
     // A creep can cross more than one tile boundary in a tick if it is fast,
     // so this loop follows the field rather than assuming one step.
     for (let guard = 0; guard < 8 && remaining > 0; guard++) {

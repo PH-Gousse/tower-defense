@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { createState, type GameState } from '../src/state'
 import { step, canBuild, checkBuild, Refusal, Kind, DEFAULT_CONFIG, type Command } from '../src/step'
+import { TowerKind } from '../src/data'
 import { GRID_W, GRID_H, tileIndex, SPAWN_INDICES } from '../src/grid'
 import { UNREACHABLE, buildField, mazeLength } from '../src/field'
 import { hashState } from '../src/hash'
@@ -21,13 +22,12 @@ function run(
   return a
 }
 
-const build = (x: number, y: number, player: 0 | 1 = 0): Command => ({
-  tick: 0,
-  player,
-  kind: Kind.Build,
-  x,
-  y,
-})
+const build = (
+  x: number,
+  y: number,
+  player: 0 | 1 = 0,
+  tower: TowerKind = TowerKind.Single,
+): Command => ({ tick: 0, player, kind: Kind.Build, tower, x, y })
 
 describe('step', () => {
   it('does not mutate the previous state', () => {

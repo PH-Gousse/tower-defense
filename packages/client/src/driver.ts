@@ -7,6 +7,7 @@ import {
   type Command,
   type GameState,
   type SimConfig,
+  TowerKind,
 } from '@ltw/sim'
 
 /**
@@ -66,8 +67,16 @@ export class Driver {
     return raw > 1 ? 1 : raw
   }
 
-  queueBuild(x: number, y: number, player: 0 | 1 = 0): void {
-    this.pending.push({ tick: this.a.tick + 1, player, kind: Kind.Build, x, y })
+  queueBuild(x: number, y: number, tower: TowerKind, player: 0 | 1 = 0): void {
+    this.pending.push({ tick: this.a.tick + 1, player, kind: Kind.Build, tower, x, y })
+  }
+
+  queueUpgrade(x: number, y: number, player: 0 | 1 = 0): void {
+    this.pending.push({ tick: this.a.tick + 1, player, kind: Kind.Upgrade, x, y })
+  }
+
+  queueSell(x: number, y: number, player: 0 | 1 = 0): void {
+    this.pending.push({ tick: this.a.tick + 1, player, kind: Kind.Sell, x, y })
   }
 
   /** Advance by real elapsed time. Returns how many ticks actually ran. */

@@ -20,6 +20,44 @@
     #hud div { padding: 7px 13px; border-right: 1px solid #23272e; }
     #hud div:last-child { border-right: 0; margin-left: auto; color: #7d858f; }
     #note[data-refused] { color: #e0655a; }
+
+    #palette {
+      position: fixed; left: 0; right: 0; bottom: 0;
+      display: flex; gap: 7px; align-items: center; padding: 10px 13px;
+      font: 13px/1.4 -apple-system, "Segoe UI", system-ui, sans-serif; color: #e6e8ea;
+      background: rgba(14,16,19,.86); border-top: 1px solid #2a2f36;
+      backdrop-filter: blur(6px);
+    }
+    .tool {
+      display: block; text-align: left; cursor: pointer; font: inherit;
+      color: #e6e8ea; background: #191d23; border: 1px solid #333a43;
+      border-radius: 3px; padding: 6px 10px; min-width: 132px;
+    }
+    .tool:hover { border-color: #4a545f; }
+    .tool.selected { border-color: #4f8cc9; background: #1b2330; }
+    .tool .n { display: block; font-size: 12.5px; }
+    .tool .c { display: block; font-size: 11px; color: #7d858f; font-variant-numeric: tabular-nums; }
+    .tool[data-broke] { opacity: .45; }
+    #palette .hint { margin-left: auto; font-size: 11px; color: #6b727b; }
+    kbd { border: 1px solid #3a424c; border-radius: 2px; padding: 0 4px; font: inherit; font-size: 10px; }
+
+    #panel {
+      position: fixed; right: 16px; top: 52px; width: 194px;
+      font: 12px/1.45 -apple-system, "Segoe UI", system-ui, sans-serif; color: #e6e8ea;
+      background: rgba(20,24,29,.95); border: 1px solid #3a424c; border-radius: 4px;
+      padding: 10px 11px; backdrop-filter: blur(6px);
+    }
+    #panel h3 { margin: 0 0 7px; font-size: 12.5px; font-weight: 600; }
+    #panel table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+    #panel td { padding: 1px 0; color: #7d858f; }
+    #panel td + td { text-align: right; color: #e6e8ea; font-variant-numeric: tabular-nums; }
+    #panel button {
+      display: block; width: 100%; margin-top: 5px; cursor: pointer; font: inherit;
+      color: #e6e8ea; background: #23303f; border: 1px solid #3d5670;
+      border-radius: 3px; padding: 5px;
+    }
+    #panel button:disabled { opacity: .4; cursor: default; }
+    #panel button.sell { background: #2e2422; border-color: #5c3f38; }
     #hud b { display: block; font-size: 9.5px; letter-spacing: .08em;
              text-transform: uppercase; color: #7d858f; font-weight: 600; }
     #hud span { font-variant-numeric: tabular-nums; font-size: 15px; }
@@ -27,12 +65,43 @@
 </head>
 <body>
   <div id="hud">
+    <div><b>Gold</b><span id="gold">600</span></div>
     <div><b>Towers</b><span id="towers">0</span></div>
     <div><b>Creeps</b><span id="creeps">0</span></div>
+    <div><b>Kills</b><span id="kills">0</span></div>
     <div><b>Maze</b><span id="maze">39</span></div>
-    <div><b>Tile</b><span id="tile">—</span></div>
+    <div><b>Tile</b><span id="tile">&mdash;</span></div>
     <div><b>Placement</b><span id="note">hover a tile</span></div>
   </div>
+
+  <!-- Build palette. Opposite-facing economies get separate palettes later,
+       when Send exists; for now this is the one gold sink. -->
+  <div id="palette">
+    <button class="tool selected" data-tower="0">
+      <span class="n">Single-target</span><span class="c"><em id="cost0">60</em>g &middot; anti-tank</span>
+    </button>
+    <button class="tool" data-tower="1">
+      <span class="n">Splash</span><span class="c"><em id="cost1">110</em>g &middot; anti-swarm</span>
+    </button>
+    <button class="tool" data-tower="2">
+      <span class="n">Slow</span><span class="c"><em id="cost2">80</em>g &middot; anti-runner</span>
+    </button>
+    <span class="hint"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> pick &middot; click a tower to upgrade or sell</span>
+  </div>
+
+  <!-- Inline panel on the field: upgrading is the most frequent mid-match
+       action after placing, so it lives where your eyes already are. -->
+  <div id="panel" hidden>
+    <h3 id="panelTitle">Single-target &middot; Lv 1</h3>
+    <table>
+      <tr><td>Damage</td><td id="panelDamage">30</td></tr>
+      <tr><td>Range</td><td id="panelRange">6.0</td></tr>
+      <tr><td>Fire rate</td><td id="panelRate">0.8/s</td></tr>
+    </table>
+    <button id="btnUpgrade">Upgrade</button>
+    <button id="btnSell" class="sell">Sell</button>
+  </div>
+
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

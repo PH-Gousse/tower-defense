@@ -17,14 +17,14 @@ const fixture = JSON.parse(
 ) as {
   ticks: number
   config: Parameters<typeof step>[3]
-  commands: { at: number; player: 0 | 1; x: number; y: number }[]
+  commands: { at: number; player: 0 | 1; tower: number; x: number; y: number }[]
   expectedHash: string
 }
 
 const byTick = new Map<number, Command[]>()
 for (const c of fixture.commands) {
   const list = byTick.get(c.at) ?? []
-  list.push({ tick: c.at, player: c.player, kind: Kind.Build, x: c.x, y: c.y })
+  list.push({ tick: c.at, player: c.player, kind: Kind.Build, tower: c.tower, x: c.x, y: c.y })
   byTick.set(c.at, list)
 }
 

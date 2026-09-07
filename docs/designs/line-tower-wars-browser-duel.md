@@ -733,6 +733,13 @@ v1 so tuning is measured rather than felt, but expect tuning to take as long aga
    fraction, spawn-queue interval (4 ticks is a guess), tier unlock ticks, starting lives (20)
    and starting gold (60), maze length targets, tower costs. Also: does always-target-lowest-`dist`
    plus long-lived tanks produce a degenerate aggro-soak? All unchosen, all for the harness.
+3b. **Aggro soak — now measured, not hypothetical.** The step 4 golden fixture shows a
+   creep completing **two full laps past ten towers at full health**, never targeted once,
+   because targeting picks the creep nearest the exit and in a tight pack that is always the
+   leader. So the concern is real rather than speculative. Open: whether it is a feature
+   (the leader tanks, and packing creeps is a genuine tactic) or degenerate (a free rider in
+   every group). Candidate fixes if it reads badly: target the lowest-HP creep in range
+   instead, spread targeting across a tower's cooldown, or let splash punish packing harder.
 4. **Is a non-decided midgame reachable at all?** Creep HP is uncapped and escalates on a timer;
    tower power caps at three levels. Lives only decrease, nothing but damage removes a creep,
    and income compounds. So the first creep your maze cannot kill may decide the match minutes

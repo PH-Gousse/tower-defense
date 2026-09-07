@@ -36,6 +36,7 @@ interface Fixture {
   readonly commands: readonly {
     readonly at: number
     readonly player: 0 | 1
+    readonly tower: number
     readonly x: number
     readonly y: number
   }[]
@@ -49,7 +50,7 @@ function replayState(f: Fixture): GameState {
   const byTick = new Map<number, Command[]>()
   for (const c of f.commands) {
     const list = byTick.get(c.at) ?? []
-    list.push({ tick: c.at, player: c.player, kind: Kind.Build, x: c.x, y: c.y })
+    list.push({ tick: c.at, player: c.player, kind: Kind.Build, tower: c.tower, x: c.x, y: c.y })
     byTick.set(c.at, list)
   }
 
@@ -81,15 +82,32 @@ describe('golden fixture', () => {
     expect(replay(fixture)).toBe(replay(fixture))
   })
 
-  it('actually exercises the sim — creeps reach the exit and loop', () => {
-    // A fixture where nothing happens passes forever without testing anything.
-    // The first draft ran 240 ticks, which at 0.08 tiles/tick is 19 tiles of a
-    // 39-tile maze: every creep was still walking and the loop path was never
-    // touched. Assert the match actually reaches the mechanic under test.
+  it('exercises death, survival and looping in one match', () => {
+    // A fixture where nothing happens passes forever without testing anything,
+    // and this one has drifted twice already. First draft: 240 ticks, so every
+    // creep was still walking and the loop was never reached. Then step 4 gave
+    // towers teeth and they killed all 12 before any creep lapped, so the loop
+    // went untested again. Assert all four behaviours explicitly rather than
+    // trusting the hash to notice.
     expect(fixture.commands.length).toBeGreaterThan(4)
     const final = replayState(fixture)
-    expect(final.lane.creeps.count).toBe(fixture.config.spawnTotal)
+
+    // Some died: towers actually shoot.
+    expect(final.kills).toBeGreaterThan(0)
+    // Some lived: the match is not a rout that ends early.
+    expect(final.lane.creeps.count).toBeGreaterThan(0)
+    // Survivors looped: the leak-and-loop path ran.
     const laps = Array.from(final.lane.creeps.laps.slice(0, final.lane.creeps.count))
     expect(Math.min(...laps)).toBeGreaterThanOrEqual(1)
+    // At least one survivor carries damage: HP persists across laps rather
+    // than resetting at the exit.
+    //
+    // Deliberately the MINIMUM, not the maximum. One survivor finishes at full
+    // health despite two complete laps past ten towers, because targeting picks
+    // the creep nearest the exit and in a tight pack that is always the leader.
+    // That is the aggro-soak question the design doc leaves open, and asserting
+    // on the max would turn the evidence for it into a test failure.
+    const hp = Array.from(final.lane.creeps.hp.slice(0, final.lane.creeps.count))
+    expect(Math.min(...hp)).toBeLessThan(fixture.config.creepHp)
   })
 })

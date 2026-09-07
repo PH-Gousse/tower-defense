@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "_comment": "Step 4 values are placeholders with the right SHAPE, not tuned numbers. Tuning is step 8 and needs the harness. sellRefund is a fraction of total gold spent on the tower including upgrades.",
+  "sellRefund": 0.6,
+  "archetypes": [
+    {
+      "key": "single",
+      "name": "Single-target",
+      "answers": "tanks",
+      "levels": [
+        { "cost": 60,  "damage": 30, "range": 6.0, "cooldownTicks": 25 },
+        { "cost": 90,  "damage": 55, "range": 6.5, "cooldownTicks": 24 },
+        { "cost": 140, "damage": 84, "range": 7.0, "cooldownTicks": 22 }
+      ]
+    },
+    {
+      "key": "splash",
+      "name": "Splash",
+      "answers": "swarms",
+      "splashRadius": 1.2,
+      "levels": [
+        { "cost": 110, "damage": 12, "range": 3.0, "cooldownTicks": 12 },
+        { "cost": 160, "damage": 20, "range": 3.4, "cooldownTicks": 12 },
+        { "cost": 240, "damage": 32, "range": 3.8, "cooldownTicks": 11 }
+      ]
+    },
+    {
+      "key": "slow",
+      "name": "Slow",
+      "answers": "runners",
+      "slowTicks": 20,
+      "levels": [
+        { "cost": 80,  "damage": 4, "range": 4.5, "cooldownTicks": 10, "slowPercent": 30 },
+        { "cost": 120, "damage": 6, "range": 4.8, "cooldownTicks": 10, "slowPercent": 40 },
+        { "cost": 180, "damage": 9, "range": 5.2, "cooldownTicks": 10, "slowPercent": 50 }
+      ]
+    }
+  ]
+}
