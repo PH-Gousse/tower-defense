@@ -1,0 +1,50 @@
+name: Build and deploy
+
+# Premise 2 of the design doc: a browser game with no deployed URL does not
+# exist. This runs from step 1 so the URL exists before the game does.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never cancel a deploy mid-flight; queue instead.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # `pnpm build` runs `tsc --noEmit` before vite, so a type error fails the
+      # build rather than shipping. isolatedModules is on in tsconfig.base.json,
+      # which is what catches `const enum` — see the design doc, Input schema.
+      - run: pnpm build
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: packages/client/dist
+
+  deploy:
+    # Only main deploys; pull requests stop after a successful build.
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

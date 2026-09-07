@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Line Tower Wars</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: #0e1013; overflow: hidden; }
+    canvas { display: block; }
+    #hud {
+      position: fixed; top: 0; left: 0; right: 0;
+      display: flex; gap: 0; align-items: stretch;
+      font: 13px/1.4 -apple-system, "Segoe UI", system-ui, sans-serif;
+      color: #e6e8ea; background: rgba(14,16,19,.82);
+      border-bottom: 1px solid #2a2f36; backdrop-filter: blur(6px);
+      pointer-events: none;
+    }
+    #hud div { padding: 7px 13px; border-right: 1px solid #23272e; }
+    #hud div:last-child { border-right: 0; margin-left: auto; color: #7d858f; }
+    #hud b { display: block; font-size: 9.5px; letter-spacing: .08em;
+             text-transform: uppercase; color: #7d858f; font-weight: 600; }
+    #hud span { font-variant-numeric: tabular-nums; font-size: 15px; }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    <div><b>Towers</b><span id="count">0</span></div>
+    <div><b>Tile</b><span id="tile">—</span></div>
+    <div><b>Step 1</b><span id="note">skeleton — click to place</span></div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
