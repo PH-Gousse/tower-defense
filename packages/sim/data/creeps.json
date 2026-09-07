@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "creeps": [
+    {
+      "key": "runner",
+      "hp": 100,
+      "speed": 0.08,
+      "countPerSend": 1,
+      "note": "Step 2 stand-in. Real roster (swarm/runner/tank) arrives with the economy at step 6."
+    }
+  ]
+}

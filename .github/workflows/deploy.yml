@@ -19,7 +19,35 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Determinism is premise 3 of the design doc: two machines run the same
+  # simulation in parallel and must stay bit-identical. Node and headless Chrome
+  # are BOTH V8 and would test one engine while claiming two, so the second
+  # target has to be genuinely different. Bun runs JavaScriptCore.
+  sim:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Determinism guards (arithmetic + ordering)
+        run: pnpm lint
+      - name: Sim tests on V8 (node)
+        run: pnpm --filter @ltw/sim test
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Golden fixture on JavaScriptCore (bun)
+        # Same committed command log, same expected hash, different engine. If
+        # these two disagree, the arithmetic allowlist has a hole in it.
+        run: bun run scripts/golden-jsc.ts
+
   build:
+    needs: sim
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

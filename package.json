@@ -6,11 +6,18 @@
   "scripts": {
     "dev": "pnpm --filter @ltw/client dev",
     "build": "pnpm --filter @ltw/client build",
-    "typecheck": "pnpm -r exec tsc --noEmit"
+    "typecheck": "pnpm -r exec tsc --noEmit",
+    "lint": "eslint .",
+    "test": "pnpm -r test"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
     ]
+  },
+  "devDependencies": {
+    "eslint": "^9.36.0",
+    "typescript-eslint": "^8.45.0",
+    "typescript": "^5.9.0"
   }
 }

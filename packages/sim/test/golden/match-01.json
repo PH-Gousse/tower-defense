@@ -1,0 +1,24 @@
+{
+  "_comment": "FROZEN. Do not edit to make a red test green — find out what diverged. This fixture owns its config so balance tuning cannot silently change the expected hash.",
+  "seed": 20260907,
+  "ticks": 1400,
+  "config": {
+    "creepHp": 100,
+    "creepSpeed": 0.08,
+    "spawnEveryTicks": 4,
+    "spawnTotal": 12
+  },
+  "commands": [
+    { "at": 3,   "player": 0, "x": 10, "y": 11 },
+    { "at": 7,   "player": 0, "x": 10, "y": 12 },
+    { "at": 11,  "player": 0, "x": 10, "y": 13 },
+    { "at": 19,  "player": 0, "x": 14, "y": 10 },
+    { "at": 23,  "player": 0, "x": 14, "y": 11 },
+    { "at": 31,  "player": 0, "x": 14, "y": 12 },
+    { "at": 47,  "player": 0, "x": 20, "y": 13 },
+    { "at": 59,  "player": 0, "x": 20, "y": 12 },
+    { "at": 83,  "player": 0, "x": 26, "y": 11 },
+    { "at": 97,  "player": 0, "x": 26, "y": 12 }
+  ],
+  "expectedHash": "ad3da200"
+}

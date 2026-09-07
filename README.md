@@ -12,7 +12,13 @@ run the maze again**, until towers kill it. Leaks are a drain, not a penalty.
 
 ## Status
 
-**Step 1 of 11: skeleton.** A three.js lane you can look at and click. No simulation yet.
+**Step 2 of 11: the sim.** A pure simulation package with a flow field, driven at a fixed
+20Hz by the client. Creeps walk the maze; towers reroute them; a placement that would seal
+the lane is refused.
+
+Determinism is verified, not asserted: the golden fixture replays a committed command log to
+a committed hash on **two different engines** (V8 via node, JavaScriptCore via bun). They
+agree.
 
 ## Develop
 
@@ -21,6 +27,8 @@ pnpm install
 pnpm dev        # http://localhost:5173
 pnpm build      # typecheck + production build
 pnpm typecheck  # types only
+pnpm test       # sim test suite (vitest)
+pnpm lint       # determinism guards
 ```
 
 Requires Node 24 and pnpm 10.

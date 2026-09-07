@@ -4,41 +4,62 @@ import {
   GRID_H,
   SPAWN_TILES,
   EXIT_TILES,
+  TILE_COUNT,
+  MAX_CREEPS,
+  UNREACHABLE,
   inBounds,
-  isSpawn,
-  isExit,
   tileIndex,
+  tileX,
+  tileY,
+  canBuild,
+  buildField,
+  mazeLength,
   type Tile,
-} from './grid'
+} from '@ltw/sim'
+import { Driver } from './driver'
 
 /**
- * Step 1 skeleton: a lane you can look at and click.
+ * Step 2: the renderer reads sim state and draws it.
  *
- * There is no simulation here yet. Placement writes straight to a Set and a
- * mesh, because step 2 replaces this entirely with `packages/sim` driving the
- * renderer. What this file is proving is narrower: three.js renders the field,
- * the raycast picks the right tile, and instancing is wired from the start.
+ * The wall between this file and `@ltw/sim` is the load-bearing boundary of the
+ * whole project. Everything here may be impure — floats, three.js, the DOM,
+ * wall-clock time. Nothing here may write game state; the only channel back
+ * into the sim is a queued command.
  *
- *   pointer ──▶ raycast onto ground plane ──▶ floor() to tile ──▶ InstancedMesh
- *                      │                            │
- *                      ▼                            ▼
- *                 [off grid?]                  [already taken?]
- *                 [spawn/exit?]                 ignore, no-op
+ *   pointer ──▶ canBuild(state) ──▶ queueBuild ──┐
+ *                    │                           │
+ *                    ▼                           ▼
+ *              hover preview            Driver.advance() ──▶ step()
+ *                                                 │
+ *                                                 ▼
+ *                                    prev, curr, alpha ──▶ draw
+ *
+ * Creeps draw interpolated between the previous and current tick, so a 20Hz
+ * simulation renders smoothly at any refresh rate. The alpha is clamped in the
+ * driver — see the comment there for why that matters more than it looks.
  */
 
 const TILE = 1
 const TOWER_H = 0.55
+const CREEP_R = 0.22
 
-/** InstancedMesh needs its ceiling up front; 40x24 is every tile at once. */
-const MAX_TOWERS = GRID_W * GRID_H
+export interface Stats {
+  readonly towers: number
+  readonly creeps: number
+  /** Maze length in tiles, or -1 when the lane is sealed. */
+  readonly maze: number
+  readonly tick: number
+}
 
 export interface Scene {
-  readonly onTileHover: (cb: (t: Tile | null) => void) => void
-  readonly onTowerCount: (cb: (n: number) => void) => void
+  readonly onTileHover: (cb: (t: Tile | null, mazeDelta: number | null) => void) => void
+  readonly onStats: (cb: (s: Stats) => void) => void
   start: () => void
 }
 
 export function createScene(canvasParent: HTMLElement): Scene {
+  const driver = new Driver()
+
   const renderer = new THREE.WebGLRenderer({ antialias: true })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   canvasParent.appendChild(renderer.domElement)
@@ -46,10 +67,9 @@ export function createScene(canvasParent: HTMLElement): Scene {
   const scene = new THREE.Scene()
   scene.background = new THREE.Color(0x0e1013)
 
-  // Orthographic, tilted just enough that towers read as solid rather than as
-  // flat squares. A perspective camera would make identical towers at opposite
-  // ends of the lane look different sizes, which is exactly wrong for a game
-  // about reading a maze at a glance.
+  // Orthographic so identical towers at opposite ends of the lane read the same
+  // size. A perspective camera would make the far end of your maze look weaker
+  // than the near end, which is exactly wrong for a game about reading a maze.
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200)
   camera.position.set(GRID_W / 2, 26, GRID_H / 2 + 17)
   camera.lookAt(GRID_W / 2, 0, GRID_H / 2)
@@ -59,7 +79,6 @@ export function createScene(canvasParent: HTMLElement): Scene {
   key.position.set(-12, 24, 8)
   scene.add(key)
 
-  // --- ground: the raycast target, and the only thing the pointer hits -------
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(GRID_W, GRID_H),
     new THREE.MeshBasicMaterial({ color: 0x14181d }),
@@ -72,18 +91,25 @@ export function createScene(canvasParent: HTMLElement): Scene {
   for (const t of SPAWN_TILES) scene.add(marker(t, 0x2a7f62))
   for (const t of EXIT_TILES) scene.add(marker(t, 0xa8443c))
 
-  // --- towers: instanced from the first commit ------------------------------
-  // Not premature. Swapping a Mesh-per-tower approach for instancing later
-  // means rewriting every placement path, and the design already commits to
-  // hundreds of instanced creeps on this same field.
   const towers = new THREE.InstancedMesh(
     new THREE.BoxGeometry(TILE * 0.82, TOWER_H, TILE * 0.82),
     new THREE.MeshLambertMaterial({ color: 0x8d949c }),
-    MAX_TOWERS,
+    TILE_COUNT,
   )
   towers.count = 0
   towers.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
   scene.add(towers)
+
+  // Creeps are instanced from the start because the design bounds their
+  // population only by gold. This is the mesh that has to survive 500 of them.
+  const creeps = new THREE.InstancedMesh(
+    new THREE.SphereGeometry(CREEP_R, 10, 8),
+    new THREE.MeshLambertMaterial({ color: 0xd8613f }),
+    MAX_CREEPS,
+  )
+  creeps.count = 0
+  creeps.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+  scene.add(creeps)
 
   const hover = new THREE.Mesh(
     new THREE.BoxGeometry(TILE * 0.9, 0.06, TILE * 0.9),
@@ -92,14 +118,14 @@ export function createScene(canvasParent: HTMLElement): Scene {
   hover.visible = false
   scene.add(hover)
 
-  const placed = new Set<number>()
   const scratch = new THREE.Matrix4()
   const raycaster = new THREE.Raycaster()
   const pointer = new THREE.Vector2()
 
   let hovered: Tile | null = null
-  let hoverCb: (t: Tile | null) => void = () => {}
-  let countCb: (n: number) => void = () => {}
+  let lastSyncedTick = -1
+  let hoverCb: (t: Tile | null, d: number | null) => void = () => {}
+  let statsCb: (s: Stats) => void = () => {}
 
   function tileUnderPointer(ev: PointerEvent): Tile | null {
     const rect = renderer.domElement.getBoundingClientRect()
@@ -109,55 +135,99 @@ export function createScene(canvasParent: HTMLElement): Scene {
     const hit = raycaster.intersectObject(ground, false)[0]
     if (!hit) return null
     const t: Tile = { x: Math.floor(hit.point.x), y: Math.floor(hit.point.z) }
-    return inBounds(t) ? t : null
+    return inBounds(t.x, t.y) ? t : null
   }
 
-  /** Step 1 legality: on the grid, not taken, not a spawn or exit tile. */
-  function canPlace(t: Tile): boolean {
-    return !placed.has(tileIndex(t)) && !isSpawn(t) && !isExit(t)
-  }
-
-  function place(t: Tile): void {
+  /**
+   * Hover preview: how much longer would this placement make the walk?
+   *
+   * The `+54 tiles` teaching signal. It is a candidate field rebuild, so it
+   * runs on tile change only — never on raw pointer movement.
+   */
+  function mazeDelta(t: Tile): number | null {
+    const state = driver.current
+    if (!canBuild(state, t.x, t.y)) return null
+    const before = mazeLength(state.lane.field)
     const i = tileIndex(t)
-    if (!canPlace(t)) return
-    placed.add(i)
-    scratch.makeTranslation(t.x + 0.5, TOWER_H / 2, t.y + 0.5)
-    towers.setMatrixAt(towers.count, scratch)
-    towers.count += 1
-    towers.instanceMatrix.needsUpdate = true
-    countCb(placed.size)
+    state.lane.blocked[i] = 1
+    const after = mazeLength(buildField(state.lane.blocked))
+    state.lane.blocked[i] = 0
+    if (after === UNREACHABLE || before === UNREACHABLE) return null
+    return after - before
   }
 
   renderer.domElement.addEventListener('pointermove', (ev) => {
     const t = tileUnderPointer(ev)
     const changed = t?.x !== hovered?.x || t?.y !== hovered?.y
     hovered = t
-    if (t && canPlace(t)) {
+    if (t && canBuild(driver.current, t.x, t.y)) {
       hover.position.set(t.x + 0.5, 0.03, t.y + 0.5)
       hover.visible = true
     } else {
       hover.visible = false
     }
-    if (changed) hoverCb(t)
+    if (changed) hoverCb(t, t ? mazeDelta(t) : null)
   })
 
   renderer.domElement.addEventListener('pointerleave', () => {
     hover.visible = false
     hovered = null
-    hoverCb(null)
+    hoverCb(null, null)
   })
 
   renderer.domElement.addEventListener('pointerdown', (ev) => {
     const t = tileUnderPointer(ev)
-    if (t) place(t)
+    if (t && canBuild(driver.current, t.x, t.y)) driver.queueBuild(t.x, t.y)
   })
+
+  function syncTowers(): void {
+    const blocked = driver.current.lane.blocked
+    let n = 0
+    for (let i = 0; i < TILE_COUNT; i++) {
+      if (blocked[i] !== 1) continue
+      scratch.makeTranslation(tileX(i) + 0.5, TOWER_H / 2, tileY(i) + 0.5)
+      towers.setMatrixAt(n, scratch)
+      n += 1
+    }
+    towers.count = n
+    towers.instanceMatrix.needsUpdate = true
+  }
+
+  /** Draw creeps between the previous and current tick. */
+  function syncCreeps(alpha: number): void {
+    const curr = driver.current.lane.creeps
+    const prev = driver.previous.lane.creeps
+    for (let i = 0; i < curr.count; i++) {
+      const cx = curr.x[i] as number
+      const cy = curr.y[i] as number
+      let x = cx
+      let y = cy
+      // Interpolate only when the same creep occupied this slot last tick, and
+      // only over a short distance. A teleport back to spawn or a fresh release
+      // must snap; gliding it across the field would look like a bug and would
+      // hide the rule that put it there.
+      if (i < prev.count && prev.id[i] === curr.id[i]) {
+        const px = prev.x[i] as number
+        const py = prev.y[i] as number
+        const dx = cx - px
+        const dy = cy - py
+        const travelled = (dx < 0 ? -dx : dx) + (dy < 0 ? -dy : dy)
+        if (travelled < 2) {
+          x = px + dx * alpha
+          y = py + dy * alpha
+        }
+      }
+      scratch.makeTranslation(x, CREEP_R + 0.02, y)
+      creeps.setMatrixAt(i, scratch)
+    }
+    creeps.count = curr.count
+    creeps.instanceMatrix.needsUpdate = true
+  }
 
   function resize(): void {
     const w = window.innerWidth
     const h = window.innerHeight
     renderer.setSize(w, h)
-    // Fit the lane to the viewport with a margin, preserving aspect so the
-    // grid stays square whatever the window shape.
     const margin = 3
     const halfW = (GRID_W + margin) / 2
     const halfH = (GRID_H + margin) / 2
@@ -174,10 +244,26 @@ export function createScene(canvasParent: HTMLElement): Scene {
 
   return {
     onTileHover: (cb) => { hoverCb = cb },
-    onTowerCount: (cb) => { countCb = cb },
+    onStats: (cb) => { statsCb = cb },
     start: () => {
       resize()
-      renderer.setAnimationLoop(() => renderer.render(scene, camera))
+      renderer.setAnimationLoop((nowMs) => {
+        const ran = driver.advance(nowMs)
+        const state = driver.current
+        if (ran > 0 && state.tick !== lastSyncedTick) {
+          syncTowers()
+          lastSyncedTick = state.tick
+          const maze = mazeLength(state.lane.field)
+          statsCb({
+            towers: towers.count,
+            creeps: state.lane.creeps.count,
+            maze: maze === UNREACHABLE ? -1 : maze,
+            tick: state.tick,
+          })
+        }
+        syncCreeps(driver.alpha)
+        renderer.render(scene, camera)
+      })
     },
   }
 }
@@ -188,10 +274,7 @@ function gridLines(): THREE.LineSegments {
   for (let y = 0; y <= GRID_H; y++) pts.push(0, 0.01, y, GRID_W, 0.01, y)
   const geo = new THREE.BufferGeometry()
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3))
-  return new THREE.LineSegments(
-    geo,
-    new THREE.LineBasicMaterial({ color: 0x272c33 }),
-  )
+  return new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0x272c33 }))
 }
 
 function marker(t: Tile, color: number): THREE.Mesh {
