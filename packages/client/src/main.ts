@@ -1,10 +1,14 @@
 import { createScene, type Selection } from './scene'
-import { TowerKind, ARCHETYPES, levelOf, MAX_LEVEL, TICK_HZ } from '@ltw/sim'
+import { TowerKind, ARCHETYPES, levelOf, MAX_LEVEL, TICK_HZ, MatchResult } from '@ltw/sim'
 
 const scene = createScene(document.body)
 
 const el = (id: string) => document.getElementById(id)
+const lives = el('lives')
+const leaks = el('leaks')
 const gold = el('gold')
+const over = el('over')
+const overDetail = el('overDetail')
 const towers = el('towers')
 const creeps = el('creeps')
 const kills = el('kills')
@@ -78,6 +82,21 @@ scene.onSelect((sel: Selection | null) => {
 
 scene.onStats((s) => {
   if (gold) gold.textContent = String(s.gold)
+  if (leaks) leaks.textContent = String(s.leaks)
+  if (lives) {
+    lives.textContent = String(s.lives)
+    // Turn red under real pressure. A leak is a drain, not a one-off penalty,
+    // so the number falling is the thing to watch.
+    if (s.lives <= 5) lives.setAttribute('data-low', 'true')
+    else lives.removeAttribute('data-low')
+  }
+  if (over) {
+    over.hidden = s.result === MatchResult.Playing
+    if (overDetail && s.result !== MatchResult.Playing) {
+      overDetail.textContent =
+        `${s.leaks} leaks, ${s.kills} kills. Reload to try again — rematch arrives with the server at step 10.`
+    }
+  }
   if (towers) towers.textContent = String(s.towers)
   if (creeps) creeps.textContent = String(s.creeps)
   if (kills) kills.textContent = String(s.kills)

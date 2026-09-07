@@ -25,6 +25,7 @@ import {
   ARCHETYPES,
   levelOf,
   MAX_LEVEL,
+  MatchResult,
   type Tile,
   type FlowField,
 } from '@ltw/sim'
@@ -83,6 +84,9 @@ export interface Stats {
   readonly tick: number
   readonly gold: number
   readonly kills: number
+  readonly lives: number
+  readonly leaks: number
+  readonly result: MatchResult
 }
 
 export interface Selection {
@@ -189,6 +193,40 @@ export function createScene(canvasParent: HTMLElement): Scene {
   creeps.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
   scene.add(creeps)
 
+  /**
+   * Lap pips.
+   *
+   * Instanced markers, not numerals. Text is not instanceable: 500 numeral
+   * labels is 500 draw calls, and the count peaks exactly when the field is
+   * most crowded and the frame budget tightest — a losing position, where
+   * nearly every creep is on a high lap. Precision fades past five laps, which
+   * is the right trade: you need to know a creep is bad, not that it is on lap
+   * nine. Lap 1 draws nothing.
+   */
+  const MAX_PIPS = 5
+  const pips = new THREE.InstancedMesh(
+    new THREE.SphereGeometry(0.07, 6, 5),
+    new THREE.MeshBasicMaterial({ color: 0xe8b84b }),
+    MAX_CREEPS * MAX_PIPS,
+  )
+  pips.count = 0
+  pips.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+  scene.add(pips)
+
+  /**
+   * Leak trail: the route the creep that just leaked was taking.
+   *
+   * Under the loop rule you ask "why does this keep getting through" about the
+   * same creep repeatedly, so the answer has to be visible rather than
+   * inferred. This draws the current field route at the moment of the leak,
+   * which is the route the creep walked unless the maze changed mid-lap — an
+   * approximation, and a deliberate one: retaining a per-creep tile history for
+   * hundreds of creeps costs far more than it teaches.
+   */
+  const leakTrail = new PathLine(0xd0483c, 0.85, 0.08)
+  scene.add(leakTrail.object)
+  let leakTrailUntil = 0
+
   const hoverMaterial = new THREE.MeshBasicMaterial({
     color: 0x4f8cc9,
     transparent: true,
@@ -225,6 +263,7 @@ export function createScene(canvasParent: HTMLElement): Scene {
   let selected: Tile | null = null
   let tool: TowerKind = TowerKind.Single
   let lastSyncedTick = -1
+  let lastLeaks = 0
   let hoverCb: (h: HoverInfo) => void = () => {}
   let statsCb: (s: Stats) => void = () => {}
   let selectCb: (sel: Selection | null) => void = () => {}
@@ -391,6 +430,7 @@ export function createScene(canvasParent: HTMLElement): Scene {
   function syncCreeps(alpha: number): void {
     const curr = driver.current.lane.creeps
     const prev = driver.previous.lane.creeps
+    let pipCount = 0
     for (let i = 0; i < curr.count; i++) {
       const cx = curr.x[i] as number
       const cy = curr.y[i] as number
@@ -413,9 +453,21 @@ export function createScene(canvasParent: HTMLElement): Scene {
       }
       scratch.makeTranslation(x, CREEP_R + 0.02, y)
       creeps.setMatrixAt(i, scratch)
+
+      // Pips ride above the creep, one per lap, capped. Lap 1 draws none:
+      // a creep on its first pass is the population that does not matter yet.
+      const laps = curr.laps[i] as number
+      const show = laps > MAX_PIPS ? MAX_PIPS : laps
+      for (let p = 0; p < show; p++) {
+        scratch.makeTranslation(x - 0.16 + p * 0.08, CREEP_R + 0.34, y)
+        pips.setMatrixAt(pipCount, scratch)
+        pipCount += 1
+      }
     }
     creeps.count = curr.count
     creeps.instanceMatrix.needsUpdate = true
+    pips.count = pipCount
+    pips.instanceMatrix.needsUpdate = true
   }
 
   function resize(): void {
@@ -468,6 +520,16 @@ export function createScene(canvasParent: HTMLElement): Scene {
             if (state.lane.towers.kind[tileIndex(selected)] === -1) select(null)
             else select(selected)
           }
+          // A leak just happened: show the route that produced it. Comparing
+          // leak counts is cheaper and more reliable than watching lap numbers
+          // on individual creeps, which move between array slots as creeps die.
+          if (state.leaks > lastLeaks) {
+            leakTrail.set(pathFrom(state.lane.field, SPAWN_INDICES[0] as number))
+            leakTrailUntil = state.tick + 60
+          }
+          lastLeaks = state.leaks
+          if (state.tick > leakTrailUntil) leakTrail.hide()
+
           const maze = mazeLength(state.lane.field)
           statsCb({
             towers: towerCount,
@@ -476,6 +538,9 @@ export function createScene(canvasParent: HTMLElement): Scene {
             tick: state.tick,
             gold: state.gold,
             kills: state.kills,
+            lives: state.lives,
+            leaks: state.leaks,
+            result: state.result,
           })
         }
         syncCreeps(driver.alpha)

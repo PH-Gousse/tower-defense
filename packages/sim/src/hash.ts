@@ -56,14 +56,45 @@ export class Hasher {
   }
 }
 
-/** Hash every field that defines the match, in declared order. */
+/**
+ * Hash every field that defines the match, in declared order.
+ *
+ * "Every field" is the whole contract, and it is easy to break: this function
+ * silently stopped covering the match twice while the state grew under it —
+ * gold and towers went unhashed at step 4, lives at step 5 — so two clients
+ * could have disagreed about a tower's level and the detector would have said
+ * they agreed.
+ *
+ * `test/hash.test.ts` now mutates every field in turn and asserts the hash
+ * moves. Adding a field to GameState without adding it here fails that test.
+ * Treat it as the reason this function is trustworthy, not as an extra.
+ */
 export function hashState(s: GameState): number {
   const h = new Hasher()
+
+  // --- match-level scalars ---------------------------------------------------
   h.int(s.tick)
   h.int(s.nextCreepId)
+  h.int(s.gold)
+  h.int(s.kills)
+  h.int(s.lives)
+  h.int(s.leaks)
+  h.int(s.result)
 
+  // --- terrain ---------------------------------------------------------------
   const blocked = s.lane.blocked
   for (let i = 0; i < blocked.length; i++) h.byte(blocked[i] as number)
+
+  const t = s.lane.towers
+  for (let i = 0; i < t.kind.length; i++) {
+    // Skip empty tiles cheaply, but still hash the index so a tower moving
+    // between tiles cannot cancel out.
+    if (t.kind[i] === -1) continue
+    h.int(i)
+    h.byte(t.kind[i] as number)
+    h.byte(t.level[i] as number)
+    h.int(t.cooldown[i] as number)
+  }
 
   // The flow field is derived from `blocked`, so hashing it is redundant for
   // correctness — but it is cheap and it turns "our fields diverged" into a
@@ -71,6 +102,7 @@ export function hashState(s: GameState): number {
   const dist = s.lane.field.dist
   for (let i = 0; i < dist.length; i++) h.int(dist[i] as number)
 
+  // --- creeps ----------------------------------------------------------------
   const c = s.lane.creeps
   h.int(c.count)
   for (let i = 0; i < c.count; i++) {
@@ -80,6 +112,8 @@ export function hashState(s: GameState): number {
     h.int(c.hp[i] as number)
     h.int(c.laps[i] as number)
     h.float(c.speed[i] as number)
+    h.int(c.slowPercent[i] as number)
+    h.int(c.slowUntil[i] as number)
   }
 
   return h.value

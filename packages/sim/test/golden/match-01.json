@@ -80,6 +80,11 @@
       "tower": 0
     }
   ],
-  "expectedHash": "ded775ca",
-  "_coverage": "At these values the match kills 7 creeps and leaves 5 alive having each completed 2 laps \u2014 so one fixture exercises death, survival, looping and damage persisting across laps. Chosen deliberately: at hp=100 towers killed everything before any creep lapped, and the loop mechanic went untested."
+  "expectedHash": "adc38458",
+  "_coverage": "At these values the match kills 7 creeps and leaves 5 alive having each completed 2 laps, with 18 leaks taking lives from 20 down to 2 \u2014 so one fixture exercises death, survival, looping, damage persisting across laps, and the leak-costs-a-life rule, stopping just short of defeat. Match-end is covered by unit tests instead, because lengthening this fixture past the loss would freeze the sim and stop exercising everything after it.",
+  "_hashHistory": [
+    "ad3da200 - step 2/3, movement only",
+    "ded775ca - step 4, towers began shooting (real behaviour change)",
+    "adc38458 - step 5, leaks cost lives AND hashState was fixed to cover gold/towers/lives, which it had silently never covered"
+  ]
 }

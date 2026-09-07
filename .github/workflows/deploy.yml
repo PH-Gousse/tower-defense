@@ -37,6 +37,8 @@ jobs:
         run: pnpm lint
       - name: Sim tests on V8 (node)
         run: pnpm --filter @ltw/sim test
+      - name: Client driver tests (headless — no WebGL needed)
+        run: pnpm --filter @ltw/client test
 
       - uses: oven-sh/setup-bun@v2
         with:

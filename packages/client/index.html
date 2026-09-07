@@ -20,6 +20,16 @@
     #hud div { padding: 7px 13px; border-right: 1px solid #23272e; }
     #hud div:last-child { border-right: 0; margin-left: auto; color: #7d858f; }
     #note[data-refused] { color: #e0655a; }
+    #lives[data-low] { color: #e0655a; }
+
+    #over {
+      position: fixed; inset: 0; display: grid; place-items: center;
+      background: rgba(8,10,12,.78); backdrop-filter: blur(3px);
+      font: 13px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif; color: #e6e8ea;
+      text-align: center; z-index: 10;
+    }
+    #over h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
+    #over p { margin: 0; color: #8b939d; }
 
     #palette {
       position: fixed; left: 0; right: 0; bottom: 0;
@@ -65,10 +75,12 @@
 </head>
 <body>
   <div id="hud">
+    <div><b>Lives</b><span id="lives">20</span></div>
     <div><b>Gold</b><span id="gold">600</span></div>
     <div><b>Towers</b><span id="towers">0</span></div>
     <div><b>Creeps</b><span id="creeps">0</span></div>
     <div><b>Kills</b><span id="kills">0</span></div>
+    <div><b>Leaks</b><span id="leaks">0</span></div>
     <div><b>Maze</b><span id="maze">39</span></div>
     <div><b>Tile</b><span id="tile">&mdash;</span></div>
     <div><b>Placement</b><span id="note">hover a tile</span></div>
@@ -100,6 +112,13 @@
     </table>
     <button id="btnUpgrade">Upgrade</button>
     <button id="btnSell" class="sell">Sell</button>
+  </div>
+
+  <div id="over" hidden>
+    <div>
+      <h2>Out of lives</h2>
+      <p id="overDetail">Reload to try again. Rematch arrives with the server at step 10.</p>
+    </div>
   </div>
 
   <script type="module" src="/src/main.ts"></script>

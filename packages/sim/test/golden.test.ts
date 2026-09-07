@@ -99,6 +99,13 @@ describe('golden fixture', () => {
     // Survivors looped: the leak-and-loop path ran.
     const laps = Array.from(final.lane.creeps.laps.slice(0, final.lane.creeps.count))
     expect(Math.min(...laps)).toBeGreaterThanOrEqual(1)
+    // Leaks cost lives, and the match runs close to the edge without ending.
+    // If it ended, the sim would freeze and everything after that tick would
+    // stop being exercised.
+    expect(final.leaks).toBeGreaterThan(0)
+    expect(final.lives).toBeLessThan(20)
+    expect(final.lives).toBeGreaterThan(0)
+
     // At least one survivor carries damage: HP persists across laps rather
     // than resetting at the exit.
     //

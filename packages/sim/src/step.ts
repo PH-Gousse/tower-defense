@@ -16,7 +16,7 @@ import {
   UNREACHABLE,
   type FlowField,
 } from './field'
-import { cloneState, spawnPointFor, MAX_CREEPS, type GameState } from './state'
+import { cloneState, spawnPointFor, MAX_CREEPS, MatchResult, type GameState } from './state'
 import { TowerKind, levelOf, investedIn, SELL_REFUND, MAX_LEVEL } from './data'
 import { createSpatialHash, rebuildHash, fireTowers, type SpatialHash } from './towers'
 
@@ -231,6 +231,12 @@ export function step(
   config: SimConfig = DEFAULT_CONFIG,
 ): GameState {
   const s = cloneState(prev, into)
+
+  // A finished match is frozen: the tick stops, commands are ignored, and
+  // nothing moves. Both clients show the result rather than watching creeps
+  // keep lapping a lane whose owner has already lost.
+  if (prev.result !== MatchResult.Playing) return s
+
   s.tick = prev.tick + 1
 
   // --- commands, in total order --------------------------------------------
@@ -377,12 +383,31 @@ function moveCreeps(s: GameState): void {
       const idx = cy * GRID_W + cx
 
       if (isExitIndex(idx)) {
-        // Leaking (life transfer, lap increment) lands at step 5. For now the
-        // creep loops so the field keeps being exercised.
+        // A leak does two things, and deliberately not a third.
+        //
+        //   1. The lane owner loses a life.
+        //   2. The creep returns to the spawn and runs the maze again, keeping
+        //      its damage and its lap count.
+        //
+        // The sender gains nothing. Lives only ever go down. Crediting the
+        // sender would make each leak a 2-point swing, so a leader would
+        // compound in lives and income simultaneously with nothing pushing
+        // back — and there may be no assignment of constants that keeps that
+        // non-degenerate.
+        //
+        // Note what is NOT here: no lap cap, no decay, no timeout. Tower damage
+        // is the only thing that removes a creep. A creep your maze cannot kill
+        // costs a life every lap, forever, and that is the intended pressure.
+        s.lives -= 1
+        s.leaks += 1
         c.laps[i] = (c.laps[i] as number) + 1
         const p = spawnPointFor(c.laps[i] as number)
         c.x[i] = p.x
         c.y[i] = p.y
+        if (s.lives <= 0) {
+          s.lives = 0
+          s.result = MatchResult.Defeat
+        }
         break
       }
 

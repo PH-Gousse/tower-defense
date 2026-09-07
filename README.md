@@ -12,7 +12,7 @@ run the maze again**, until towers kill it. Leaks are a drain, not a penalty.
 
 ## Status
 
-**Step 4 of 11: towers.** A pure simulation package with a flow field, driven at a fixed
+**Step 5 of 11: the loop.** A pure simulation package with a flow field, driven at a fixed
 20Hz by the client. Creeps walk the maze; towers reroute them; a placement that would seal
 the lane is refused.
 
@@ -20,6 +20,11 @@ Three tower archetypes at three levels each, with a spatial hash so targeting st
 the creep population grows. Towers shoot, creeps die, and you can upgrade or sell any tower
 by clicking it. Placement is still refused **with the reason in words** when it would seal
 the lane, and hovering previews both the route you would create and how many tiles it adds.
+
+A creep that reaches the exit costs you a life and then **loops back to run the maze again**,
+keeping its damage and its lap count. Nothing but tower damage removes it. Lap count shows as
+pips on the creep, the route that produced a leak flashes red, and at zero lives the match
+ends. One creep your maze cannot kill is enough to lose.
 
 Gold is a fixed budget for now — income, kill bounty and creep tiers arrive at step 6.
 
@@ -34,7 +39,7 @@ pnpm install
 pnpm dev        # http://localhost:5173
 pnpm build      # typecheck + production build
 pnpm typecheck  # types only
-pnpm test       # sim test suite (vitest)
+pnpm test       # sim + client test suites (vitest)
 pnpm lint       # determinism guards
 ```
 

@@ -72,10 +72,37 @@ export interface GameState {
   gold: number
   /** Creeps killed this match. Kill bounty pays off this at step 6. */
   kills: number
+  /**
+   * Lives remaining for this lane's owner.
+   *
+   * A leak costs one. The sender gains nothing — lives only ever go down, for
+   * everyone. That asymmetry is the damping term: crediting the sender would
+   * make a leak a 2-point swing, so a leader would compound in lives and income
+   * at once and there may be no constants that keep that non-degenerate.
+   */
+  lives: number
+  /** Total leaks this match, including ones that did not end it. */
+  leaks: number
+  result: MatchResult
   readonly lane: Lane
 }
 
 export const STARTING_GOLD = 600
+
+/**
+ * Lives.
+ *
+ * A working figure, not a settled constant. The decision the design records is
+ * "enough that one bad leak is a crisis with time to respond", and which number
+ * delivers that is a tuning question for the harness.
+ */
+export const STARTING_LIVES = 20
+
+export enum MatchResult {
+  Playing = 0,
+  /** This lane's owner ran out of lives. */
+  Defeat = 1,
+}
 
 export const MAX_CREEPS = 2048
 
@@ -107,6 +134,9 @@ export function createState(): GameState {
     nextCreepId: 1,
     gold: STARTING_GOLD,
     kills: 0,
+    lives: STARTING_LIVES,
+    leaks: 0,
+    result: MatchResult.Playing,
     lane: { blocked, field, creeps: createCreeps(), towers: createTowers() },
   }
 }
@@ -123,6 +153,9 @@ export function cloneState(from: GameState, into: GameState): GameState {
   into.nextCreepId = from.nextCreepId
   into.gold = from.gold
   into.kills = from.kills
+  into.lives = from.lives
+  into.leaks = from.leaks
+  into.result = from.result
   into.lane.towers.kind.set(from.lane.towers.kind)
   into.lane.towers.level.set(from.lane.towers.level)
   into.lane.towers.cooldown.set(from.lane.towers.cooldown)
