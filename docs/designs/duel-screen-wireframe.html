@@ -82,14 +82,15 @@
 </head>
 <body>
 
-<h1>Line Tower Wars — duel screen (v2, matches current spec)</h1>
-<p class="caption">Redrawn after the spec changed: 3 archetypes &times; 3 levels with an inline upgrade panel, timed creep tier locks, per-creep lap counters, persistent maze score, leak trail. Rough sketch, not a visual design.</p>
+<h1>Line Tower Wars — duel screen (v3, matches current spec)</h1>
+<p class="caption">v3 after the eng review: lap counts are instanced <b>pips</b>, not numerals (500 text labels would be 500 draw calls); a leak costs the defender a life and credits nobody. Rough sketch, not a visual design.</p>
 
 <div class="screen">
   <div class="hud">
     <div><span class="k">Lives</span><span class="v">14</span></div>
     <div><span class="k">Opponent</span><span class="v">17</span></div>
     <div><span class="k">Gold</span><span class="v">312</span></div>
+    <div><span class="k">Start gold</span><span class="v sm">60</span></div>
     <div><span class="k">Income</span><span class="v">47<span class="v sm"> /15s</span></span></div>
     <div><span class="k">Next pay</span><span class="v">0:06</span></div>
     <div><span class="k">Next tier</span><span class="v sm">1:22</span></div>
@@ -127,14 +128,14 @@
                     fill="none" stroke="#c33" stroke-width="1.5" stroke-dasharray="4 4" opacity=".55"/>
         </svg>
 
-        <div class="c hot" style="left:196px;top:200px">          <b>lap 5</b></div>
-        <div class="c" style="left:104px;top:210px"><b>2</b></div>
-        <div class="c" style="left:252px;top:150px"><b>1</b></div>
-        <div class="c" style="left:330px;top:96px"><b>1</b></div>
-        <div class="c" style="left:404px;top:170px"><b>3</b></div>
-        <div class="c" style="left:466px;top:132px"><b>1</b></div>
+        <div class="c hot" style="left:196px;top:200px"><b>&bull;&bull;&bull;&bull;&bull;</b></div>
+        <div class="c" style="left:104px;top:210px"><b>&bull;&bull;</b></div>
+        <div class="c" style="left:252px;top:150px"><b></b></div>
+        <div class="c" style="left:330px;top:96px"><b></b></div>
+        <div class="c" style="left:404px;top:170px"><b>&bull;&bull;&bull;</b></div>
+        <div class="c" style="left:466px;top:132px"><b></b></div>
 
-        <div class="note" style="left:196px;top:238px;border-color:#c33;color:#c33">Runner &middot; lap 5 &middot; 34% HP &middot; leak trail shown</div>
+        <div class="note" style="left:196px;top:238px;border-color:#c33;color:#c33">Runner &middot; 5 pips = lap 5 &middot; 34% HP &middot; leak trail shown</div>
 
         <!-- INLINE UPGRADE PANEL: the Section 11 decision -->
         <div class="panel" style="left:180px;top:96px">
@@ -167,7 +168,7 @@
       </div>
       <div class="feed">
         <div><b>You sent</b> 4&times; Runner &rarr; their lane</div>
-        <div><b>Leak</b> your Runner, lap 2 &middot; <b>+1 life</b></div>
+        <div><b>Leak</b> your Runner &middot; <b>they lose 1</b> (you gain nothing)</div>
         <div style="color:#c33"><b>Their Runner</b> lap 5 in your lane &mdash; kill it</div>
         <div><b>Tier 2</b> unlocks in 1:22</div>
       </div>
@@ -251,10 +252,11 @@
      the tower (1/2/3 + border weight) so you can read your maze's strength without
      clicking anything.
 
-  2. LAP COUNTERS ON CREEPS.
+  2. LAP COUNTS AS INSTANCED PIPS, NOT NUMERALS.
      The loop rule makes lap count the most important number attached to any object.
-     A creep on lap 5 is the reason you are losing. It is drawn beside the creep and
-     turns red under pressure, and the feed calls it out by name.
+     Drawn from the same InstancedMesh as the creep bodies, instanceColor carrying the
+     under-pressure red. Text is not instanceable: 500 numeral labels is 500 draw calls,
+     and the count peaks exactly when the field is most crowded. Lap 1 shows no pip.
 
   3. LEAK TRAIL.
      The dashed red route is the path the lap-5 Runner keeps taking. Under a rule where

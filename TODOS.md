@@ -78,15 +78,6 @@ the right numbers" across thousands of matches.
 **Trigger:** hand-tuning with the thin runner stops converging.
 **Effort:** M → S. **Priority: P2.**
 
-### Server-side integration tests
-**What:** Two fake sockets exercising wire validation, the version handshake, strict-wait
-stall and resume, and one-input-per-player-per-tick.
-
-**Why:** Explicitly out of the accepted unit-test tier. It is the layer where the realistic
-failure lives — a stale tab after a redeploy.
-**Trigger:** before or alongside the Colyseus migration, since that rewrites this layer.
-**Effort:** M → S. **Priority: P2.**
-
 ---
 
 ## P3 — real features, no urgency
@@ -141,9 +132,9 @@ These are unresolved *questions*, not deferred work. Each is answered by measure
 a decision.
 
 1. **Economy and tuning constants** — income curve, income-per-gold by tier, bounty, sell
-   refund fraction, trap multiplier (3× is a guess), tier unlock times, starting lives (20 is
-   a working figure), tower costs. The longest pole in the project and not covered by the
-   build estimate.
+   refund fraction, spawn-queue interval (4 ticks is a guess), tier unlock ticks, starting
+   lives (20) and starting gold (60), tower costs. The longest pole in the project and not
+   covered by the build estimate.
 2. **Aggro soak** — targeting is always lowest `dist`, so a long-lived tank absorbs every
    tower while fresh swarms walk behind it unharassed. Feature or degenerate? Unknown.
 3. **Creep population ceiling** — bounded only by gold; nothing but damage removes a creep.
@@ -153,3 +144,53 @@ a decision.
 5. **Background-tab throttling** — alt-tabbing stalls both players under lockstep. On the web
    this is a common path, not an edge case. The strongest argument for an authoritative
    server at v2.
+6. **Is a non-decided midgame reachable at all?** Creep HP is uncapped and escalates on a
+   timer; tower power caps at three levels. Lives only fall, nothing but damage removes a
+   creep, income compounds. The first creep your maze cannot kill may decide the match minutes
+   before it ends. This is not "pick better constants" — it may be structural. The harness
+   needs a **match-decided metric** (the tick after which the loser never regains a life) as
+   its first measurement. If the answer is no, the fixes are structural: a fourth tower tier,
+   tower damage scaling with creep tier, or a cap on creep HP growth.
+
+---
+
+## Added by the engineering review
+
+### Server + browser integration tests
+**What:** Two fake sockets exercising the Durable Object relay — wire validation, version
+handshake, strict-wait stall and resume, one-command-per-player-per-tick, watermark handling.
+Plus Playwright for the three.js render path and the Zustand throttle.
+
+**Why:** Explicitly excluded from the v1 test tier, which covers the sim and two extracted
+client predicates. This is the layer where the realistic failure lives — a stale tab after a
+mid-session redeploy — and nothing else records that it is uncovered.
+**Trigger:** before or alongside any Colyseus migration, since that rewrites this layer.
+**Effort:** L (human) → M (with CC). **Priority: P2.**
+
+### SDF text atlas for lap counts
+**What:** Pack digits into a signed-distance-field atlas so lap counts render as real numerals
+in a single instanced draw call.
+
+**Why:** v1 uses pips because 500 text labels is 500 draw calls. Pips stop being precise past
+four or five laps — you know a creep is bad without knowing it is on lap 9.
+**Trigger:** you find yourself squinting to count pips during a real match.
+**Effort:** M → S. **Priority: P3.**
+
+### `## Testing` section in CLAUDE.md
+**What:** Once `package.json` exists, record the test command and framework (Vitest) in
+CLAUDE.md.
+
+**Why:** Review tooling auto-detects the framework from CLAUDE.md first. This review had to
+infer it from the design doc because the repo is empty.
+**Trigger:** the moment `package.json` lands, at step 1.
+**Effort:** S → S. **Priority: P2.**
+
+### Sequencing note — lane C is the least verifiable
+**What:** The Workers relay (step 10) can run in a parallel worktree once the state shape and
+command schema freeze at step 2. Consider running it **last and alone** instead.
+
+**Why:** It is the only lane with deferred tests, an unfamiliar runtime, and no local feedback
+loop. Parallelising it means holding two mental models at once on the workstream least able to
+tell you when it is wrong.
+**Trigger:** when you reach step 10 and are deciding whether to parallelise.
+**Effort:** n/a — a scheduling decision. **Priority: P3.**

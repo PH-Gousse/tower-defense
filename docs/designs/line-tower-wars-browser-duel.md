@@ -70,8 +70,8 @@ is there.
 | 4 | 1v1 now, team-shaped data model | Lives/gold belong to a `Team` with one member. Priced YAGNI: one indirection today, a rewrite later |
 | 5 | **Floats, with arithmetic restricted to `+ - * / sqrt`** | Those five are bit-exact across engines under IEEE 754. Transcendentals (`sin`, `cos`, `pow`, `exp`) differ by libm and are lint-banned. *(Final position after Q16.16 fixed-point → floats → integers → floats. The integer variant was stronger in principle — determinism by construction rather than by lint rule — but the builder's call is floats, and the cross-engine golden fixture is what keeps the lint rule honest.)* |
 | 6 | Flow field, not per-creep A\* | Creep population is bounded only by gold. Per-creep A\* is O(creeps × search) per placement; a flow field is one integer Dijkstra from the exit per field, O(tiles). It also yields the no-block check, the path-preview delta, the maze score and unambiguous targeting for free |
-| 7 | Plain `ws` in v1; adopt Colyseus or PartyKit at v2 | The relay core is ~40 lines but the v1 server is ~300 once lobby, `start`, RTT negotiation, room codes, join-by-URL, input enforcement and socket-close handling are counted. Adopt Colyseus at v2 for reconnect and presence |
-| 8 | **pnpm monorepo: `packages/sim`, `packages/client`, `packages/server`** | The Node server imports the same sim package the browser runs — which is precisely the trigger the earlier single-app decision named ("split out when something else needs to import the sim"). It is also what lets the server become authoritative later with no rewrite |
+| 7 | Cloudflare Workers + Durable Objects for the relay; no `ws`, no Colyseus in v1 | `ws` is a Node library and does not run on Workers — the relay uses `WebSocketPair` and the Hibernation API. One Durable Object per match. Colyseus stays a v2 option for reconnect and presence, and would mean leaving Workers |
+| 8 | **pnpm monorepo: `sim` / `client` / `server` / `harness`** | The Workers relay and the Node harness both import the same sim the browser runs — precisely the trigger the earlier single-app decision named ("split out when something else needs to import the sim"). It is also what lets the server become authoritative later with no rewrite |
 | 9 | Three towers × three levels, three creep types, no damage/armour types in v1 | Clean rock-paper-scissors. Elements, research, abilities and armour types layer on later |
 | 10 | **Bot emits `Input` records, never mutates state** | A saved bot match then replays on any future version, and the bot becomes unit-testable in isolation |
 
@@ -91,7 +91,16 @@ This section is the spec. Everything above is rationale.
   `lane` (the defender's field, where it physically exists). A creep never appears in its
   owner's lane.
 - **A tower may be placed on a tile a creep occupies.** Creeps are not obstacles, so nothing
-  stops it. Handled by stuck-creep recovery.
+  stops it. The creep reroutes; if it has no route at all, see Pathing.
+- **A send enqueues creeps in the opponent's lane; the lane releases one every 4 ticks.**
+  A send never spawns its creeps simultaneously. Six identical Swarms entering on the same tick
+  at the same tile would never separate — creeps do not collide, movement is deterministic, and
+  they all read the same `dir` from the same tile — so they would travel as a single point
+  forever: one dot on screen, and one splash hit killing all six. That collapses the Splash
+  tower's entire reason to exist. A per-lane spawn queue fixes it deterministically, without
+  the randomness the sim does not have. The 4-tick interval is a tuning constant.
+- **Released creeps alternate between the two spawn tiles** (`y=11`, then `y=12`, by release
+  order). This is a determinism-critical ordering point.
 
 ### Determinism
 
@@ -120,7 +129,13 @@ Enforced in `packages/sim` by ESLint:
 
 **Ordered iteration points that must be pinned:** flow-field neighbours (N, E, S, W),
 spatial-hash bucket iteration (bucket index ascending, then creep id), tower firing order
-(tile index ascending), creep update order (creep id ascending).
+(tile index ascending), creep update order (creep id ascending), and **spawn-queue release
+order** (queue order, alternating spawn tiles).
+
+**`step()` returns a new state; it does not mutate in place.** The renderer needs the previous
+tick to interpolate against, so the driver keeps the last two states. At ~500 creeps that is
+double-buffering two typed-array-backed structures, not two object graphs — allocate the pair
+once and swap, rather than allocating per tick.
 
 **RNG.** Nothing in v1's rules consumes randomness — no crits, no spawn jitter, no random
 targeting. `rng.ts` (mulberry32, seeded) exists solely for the bot to break ties between
@@ -143,15 +158,24 @@ toward). Creeps read `dir` at their current tile; they do not own paths.
   `+54 tiles` teaching signal.
 - **Maze score is free.** The spawn tile's `dist` is the maze length.
 
-**Reachability is enforced for every creep, not just the spawn.** A placement is refused if,
-after the candidate rebuild, **any creep on that field** has infinite `dist` — not only if the
-spawn tiles do. This is what makes pocket-trapping impossible rather than merely expensive, and
-it costs one read of `dist` per creep against a field that was rebuilt anyway.
+**A creep with no path teleports to its lane's spawn.** No per-creep placement check, no
+refusal, no snap ordering, no assert. If a field rebuild leaves a creep on a tile with infinite
+`dist`, it reappears at the spawn and continues, keeping its damage and its lap count.
 
-**Stuck-creep recovery.** A creep can still end up between tiles when a neighbouring tower
-lands. Snap to the nearest walkable tile by `(dx² + dy², then tileIndex)` ascending, then read
-the field. With per-creep reachability enforced at placement, a snap that finds nothing within
-radius 2 should be **unreachable in practice** — see Trapped creeps.
+**This is the entire pocket-trap fix.** Walling a creep in costs the trapper towers and
+achieves nothing, so trapping is never worth doing — which was always the actual requirement.
+Two earlier designs were tried and both were worse:
+
+- *Pricing the trap at three lives* left it profitable for any creep surviving more than three
+  laps — precisely the Tank, whose design purpose is outlasting your maze. Any fixed penalty is
+  beaten by a creep that outlives it.
+- *Refusing the placement* made build legality depend on where enemy creeps were standing. That
+  makes the rules flicker in the one mechanic the game is about, turns cheap Swarm sends into a
+  build-denial weapon that scales with how badly the defender is already losing, and breaks
+  local prediction — legality is evaluated at click time but applied up to a second later, by
+  which point creeps have moved.
+
+Render the jump-back visibly, or it reads as a bug rather than a rule.
 
 ### Targeting — spatial hash
 
@@ -195,24 +219,11 @@ match ends because the defender reaches zero. Matches end because someone loses,
 weaker guarantee. Two passive players who never send still never end a match — accepted for
 v1, fixed by the v2 wave clock.
 
-### Trapped creeps
-
-Sealing a pocket around a creep must never be better than letting it loop. **Trapping is
-prevented at placement, not priced.**
-
-An earlier draft charged a trapped creep's owner three lives. That does not close the hole: a
-looping creep costs one life *per lap*, so trapping still wins for any creep that would survive
-more than three laps — precisely the Tank, whose whole design purpose is outlasting your maze.
-Any fixed multiplier moves the threshold without removing it.
-
-**So the no-block rule extends to every creep** (see Pathing): a placement that would strand
-any creep on the field is refused, exactly like one that would seal spawn→exit. Local
-prediction already renders a refusal with its reason, so "would trap a creep" reads the same as
-"would seal the lane."
-
-**Removal is now an assert, not a rule.** If stuck-creep recovery ever fails to find a walkable
-tile within radius 2, that is a bug in the reachability check, not a game state to price. Log
-it, trigger a desync dump, and remove the creep charging nobody. It should never fire.
+**Win condition.** Each team starts at **20 lives** (a working figure; the decision is "enough
+that one bad leak is a crisis with time to respond"). First to zero loses, and the match ends
+immediately — the sim stops accepting commands and both clients show the result. **If both
+reach zero on the same tick, the match is a draw.** A match also ends on concede, or when a
+socket closes: the remaining player wins.
 
 ### Economy
 
@@ -223,7 +234,11 @@ Two numbers per player: **gold in hand** and **income**.
   gold spent; stronger tiers give less. Sending is the only way income grows.
 - **Killing a creep in your lane pays a small bounty** to you, the lane owner.
 - **Selling a tower refunds a fraction of what was spent on it** and triggers a field rebuild.
-- **Creep tiers unlock on a wall-clock timer** from match start.
+- **Creep tiers unlock on a tick count** from match start, never a wall clock. There is no
+  wall clock in the sim (`Date.now` is banned there), and wall-clock time would diverge across
+  a lockstep stall.
+- **Starting gold: 60** — enough for exactly one Single-target tower, so the opening move is a
+  real choice rather than 40 seconds of waiting for the first income tick. A tuning constant.
 
 ### Towers (v1)
 
@@ -316,7 +331,7 @@ players. Without this bootstrap, strict-wait lockstep deadlocks at tick 0.
 **Input schema:**
 
 ```ts
-enum Kind { None = 0, Build = 1, Upgrade = 2, Sell = 3, Send = 4, Concede = 5 }
+enum Kind { None = 0, Build = 1, Upgrade = 2, Sell = 3, Send = 4 }
 
 type Input =
   | { tick: number; player: 0 | 1; kind: Kind.None }
@@ -324,7 +339,6 @@ type Input =
   | { tick: number; player: 0 | 1; kind: Kind.Upgrade; x: number; y: number }
   | { tick: number; player: 0 | 1; kind: Kind.Sell;    x: number; y: number }
   | { tick: number; player: 0 | 1; kind: Kind.Send;    creep: number }
-  | { tick: number; player: 0 | 1; kind: Kind.Concede }
 ```
 
 `tower` and `creep` are indices into the data files, never names.
@@ -340,15 +354,33 @@ constant misplacement; without sell, every mis-click permanently degrades the ma
 mechanic the game is about. The refund fraction is a tuning constant — too generous and
 rebuilding the maze every wave becomes a strategy.
 
-**`Kind.Concede`** ends the match immediately, opponent wins, and offers rematch. The realistic
-losing ending is a player watching creeps lap for minutes and closing the tab — which already
-scores as the opponent winning. Concede is the same outcome, dignified and instant, and it is
-what makes rematch reachable after a loss.
+**Concede is a relay message, not a `Kind`.** It ends the match immediately, opponent wins,
+rematch offered. It must live **outside** the command stream: a concede stamped for `T+delay`
+cannot be applied while the sim is stalled waiting for a peer input, so under strict wait you
+would be unable to concede exactly when your opponent has backgrounded their tab — the common
+case the doc already names, and the precise situation concede exists for. The relay ends the
+match on receipt and tells both clients; the sim never sees it.
+
+`Kind.Concede` is therefore removed from the `Input` union. The realistic losing ending is a
+player watching creeps lap for minutes and closing the tab, which already scores as the
+opponent winning; concede is the same outcome, dignified and instant, and it is what makes
+rematch reachable after a loss.
 
 **Exactly one input per player per tick**, enforced server-side. **Total order within a tick:**
 sorted by `player` ascending, then `kind` ascending.
 
-**`Kind.None` is wire-only** — stripped when the log is persisted or turned into a match URL.
+**`Kind.None` is a watermark, not a per-tick message.** A client sends "no input through tick
+T" every 10 ticks (twice a second), and the peer treats every tick up to T as `None`. An actual
+command is sent immediately and carries its own watermark.
+
+One message per tick per client would be ~2,400 messages per minute per match, forever, even
+while both players idle — and with a 15-second decision cadence they idle most of the time.
+That volume also defeats the **Hibernation API**, whose whole purpose is evicting memory
+between messages: a message every 25ms means the Durable Object never hibernates, so "bills
+near zero when idle" would be true of an empty room and false of a live match. The watermark
+cuts wire traffic 10x and keeps the idle path genuinely idle.
+
+`Kind.None` is stripped entirely when the log is persisted or turned into a match URL.
 
 **All rule checks live inside `step()`** — gold, income, cooldowns, placement legality, sell
 refunds, tier gating. Never in the client.
@@ -364,9 +396,14 @@ stays versioned with the data it validates against, and there is one place to ch
 creep type is added.
 
 **Room codes:** 6 characters from an unambiguous alphabet (no `0/O`, no `1/l/I`) — about a
-billion combinations, generated from `crypto.getRandomValues` (the relay, unlike the sim, may
-use real randomness) and checked against live objects for collision. Enough that a stranger
-does not stumble into your match, short enough to read aloud.
+billion combinations, from `crypto.getRandomValues` (the relay, unlike the sim, may use real
+randomness). Short enough to read aloud, long enough that a stranger does not stumble in.
+
+**Collision handling is by rejection, not by lookup.** Durable Objects are addressed with
+`idFromName(code)`: every name always resolves, there is no enumeration API, and asking whether
+a code is taken would instantiate the object for it. So do not check — generate, and let the
+object itself refuse a second lobby if one is already seated. At a billion codes and a handful
+of concurrent matches, a collision is a curiosity, not a risk.
 
 **Version handshake on connect.** Client sends protocol and data version; a mismatch is refused
 with "reload, the game updated" rather than allowed to desync. This is the realistic failure —
@@ -385,6 +422,11 @@ client closes that window by predicting and reconciling:
 2. If legal, draw the tower as a **translucent pending ghost**; the path preview updates as if
    it existed.
 3. On confirmation the ghost becomes solid. On refusal it fades out **with the reason**.
+
+**Client-side input queue.** The server accepts one command per player per tick, so two clicks
+inside the same 50ms tick would lose the second. Drag-placing a run of towers is the core verb,
+so the client queues locally and re-stamps each command to the next free tick rather than
+dropping it. Ghosts render for every queued command, not only the one in flight.
 
 **Three outcomes, not two.** A ghost carries the tick it was stamped for. Once the sim advances
 past that tick with no matching command applied, the command is provably lost — the server
@@ -447,10 +489,14 @@ spatial-hash bucket iteration; creep update order.
 
 - a leaked creep costs the defender one life, credits **nobody**, and respawns in the *same* lane
 - damage persists across laps; a creep never heals
-- **[REGRESSION]** a placement that would strand *any* creep on the field is refused — the
-  superseded rule charged a trapped creep three lives, which left pocket-trapping profitable
-  for any creep surviving more than three laps. Assert the refusal, and assert that the
-  removal path never fires on a legal board
+- **[REGRESSION]** a creep with no path teleports to its lane's spawn, keeping damage and lap
+  count. Two superseded rules were tried first: charging three lives (beatable by any creep
+  surviving more than three laps) and refusing the placement (which made legality depend on
+  creep positions and handed the attacker a build-denial weapon). Assert the teleport, and
+  assert that no placement is ever refused for a reason other than sealing spawn→exit
+- a send releases one creep every 4 ticks, alternating spawn tiles — six Swarms must occupy
+  six distinct positions, not one. Assert their positions differ after 24 ticks
+- concede is handled by the relay and never appears in the command stream
 - placement that would seal spawn→exit is refused; placement on an occupied tile is refused
 - both teams at zero on the same tick is a draw
 - income pays on schedule; sending raises income permanently; a kill pays the lane owner
@@ -464,6 +510,15 @@ plus its expected final hash, asserted in CI under Node **and a non-V8 engine** 
 Playwright/WebKit, Firefox, or Bun/JSC. Node plus headless Chrome are both V8 and would test
 one engine while claiming two. This fixture, not the lint rule, is what actually guarantees
 premise 3.
+
+**The fixture pins its own frozen data set.** Tuning is hundreds of edits to `data/*.json`, and
+every one changes the final hash. If the fixture reads live data you will regenerate it rather
+than investigate it, which turns the keystone regression test into a rubber stamp. Commit
+`test/golden/data-v1/` alongside the log and hash, and never edit it — a new fixture gets a new
+frozen set.
+
+**It starts at step 2, not step 9.** Ten lines and a CI matrix entry with one creep walking, so
+determinism bugs surface as they are introduced rather than all at once after tuning.
 
 **Remaining sim coverage** — every branch, all headless, no browser:
 
@@ -615,13 +670,16 @@ cares about. The sequencing half of its argument was adopted in full.
 | 3 towers × 3 levels, 3 creep types | **In v1** | |
 | Flow-field pathing + spatial hash | **In v1** | Supersedes per-creep A\* |
 | Floats, `+ - * / sqrt` only, lint-enforced | **In v1** | Final position after fixed-point → floats → integers → floats. Cross-engine golden fixture is the real guarantee |
-| pnpm monorepo (`sim` / `client` / `server`) | **In v1** | The server imports the sim; this is what makes an authoritative server later a config change |
+| pnpm monorepo (`sim` / `client` / `server` / `harness`) | **In v1** | The server imports the sim; this is what makes an authoritative server later a config change |
 | three.js + InstancedMesh, React/Zustand overlay | **In v1** | Sim state never enters React — throttled snapshot only |
 | Cloudflare Durable Objects as the relay | **In v1** | Removes the cold-start problem *and* the always-on hosting cost. Resolves the launch-blocking risk |
 | Bot emits Inputs | **In v1** | Keeps stored logs valid across versions |
 | Leak does not credit the sender | **In v1** | Damping term; supersedes credit-per-lap |
-| Trapped creep costs 3 lives | **In v1** | Closes the pocket-trap dominant strategy |
-| `Kind.Sell`, `Kind.Concede` | **In v1** | |
+| Pathless creep teleports to spawn | **In v1** | Closes pocket-trapping without a penalty to tune or a placement rule that flickers. Supersedes both "costs 3 lives" and "refuse the placement" |
+| Spawn queue, 1 creep per 4 ticks | **In v1** | Without it a 6-Swarm send is one object forever and Splash has no purpose |
+| Concede moves to the relay | **In v1** | A concede inside the command stream cannot be applied while the sim is stalled — the exact case it exists for |
+| `Kind.None` as a 10-tick watermark | **In v1** | Per-tick None was ~2,400 msg/min/match and would stop the Durable Object ever hibernating |
+| `Kind.Sell` | **In v1** | Free-form mazing means constant misplacement |
 | Rematch button | **In v1** | |
 | Leak trail + maze score | **In v1** | Reads off the flow field |
 | Desync dump | **In v1** | ~20 min; the project's only observability |
@@ -653,7 +711,12 @@ the protocol.
 
 ## Effort
 
-**~6-8 weeks of evenings, or 2-3 days of focused CC time.**
+**~6-8 weeks of evenings, or 4-6 days of focused CC time.**
+
+The earlier "2-3 days" figure was too low, and the sequencing decisions were made against it.
+That budget has to cover the sim, the flow field, a three.js renderer, a React/Zustand overlay,
+the bot, a Workers Durable Object relay, lockstep with negotiation and prediction, desync
+tooling and cross-engine CI. Step 10 alone is not half a day.
 
 **That covers building the systems, not tuning them.** Every economy constant is unchosen (Open
 Q3), and hand-tuning a real-time game one match at a time is unbounded. The thin harness is in
@@ -666,15 +729,24 @@ v1 so tuning is measured rather than felt, but expect tuning to take as long aga
    v2 problem.
 2. **Creep population ceiling.** Bounded only by gold; nothing but damage removes a creep.
    Render cost grows. Target 500 creeps at 20Hz inside 25ms, unmeasured.
-3. **Economy, damping and tuning constants.** Income curve, income-per-gold by tier, bounty,
-   sell refund fraction, trap multiplier (3× is a guess), tier unlock times, starting lives (20
-   is a working figure), maze length targets, tower costs. Also: does always-target-lowest-`dist`
+3. **Economy and tuning constants.** Income curve, income-per-gold by tier, bounty, sell refund
+   fraction, spawn-queue interval (4 ticks is a guess), tier unlock ticks, starting lives (20)
+   and starting gold (60), maze length targets, tower costs. Also: does always-target-lowest-`dist`
    plus long-lived tanks produce a degenerate aggro-soak? All unchosen, all for the harness.
-4. **Reconnect.** v1 ends the match on socket close, and a deploy kills live matches. The main
+4. **Is a non-decided midgame reachable at all?** Creep HP is uncapped and escalates on a timer;
+   tower power caps at three levels. Lives only decrease, nothing but damage removes a creep,
+   and income compounds. So the first creep your maze cannot kill may decide the match minutes
+   before it ends, leaving a long known-lost tail that concede papers over rather than fixes.
+   This is not "pick better constants" — it is a question about whether *any* constants work
+   against an uncapped-HP-versus-capped-DPS race. **The harness needs a "match decided" metric**
+   (the tick after which the eventual loser never regains a life) as its first measurement, and
+   if the answer is no, the fix is structural: a fourth tower tier, tower damage scaling with
+   creep tier, or a cap on creep HP growth.
+5. **Reconnect.** v1 ends the match on socket close, and a deploy kills live matches. The main
    reason to adopt Colyseus at v2.
-5. **Does a scaled opponent view carry counter-picking?** Premise-level read on a 40%-scale
+6. **Does a scaled opponent view carry counter-picking?** Premise-level read on a 40%-scale
    lane. Check as soon as it renders.
-6. **Background-tab throttling.** Alt-tabbing stalls both players under lockstep. Visible overlay
+7. **Background-tab throttling.** Alt-tabbing stalls both players under lockstep. Visible overlay
    in v1; the strongest argument for an authoritative server at v2 — which the monorepo and the
    shared sim package make cheap when the time comes.
 
@@ -726,25 +798,31 @@ Resequenced so a URL exists on day one and the bot is playable before any netcod
 1. **Skeleton, deployed.** pnpm workspace, Vite client, three.js scene with a 40 × 24 grid,
    click to place a box. Push to GitHub, wire Actions, deploy static. The project has a URL.
 2. **`packages/sim` with one creep walking a flow field.** `state.ts`, pure `step.ts` at 20Hz
-   on a fixed accumulator, `field.ts` Dijkstra. Add the ESLint arithmetic and ordering bans
-   now, before there is code to retrofit. Vitest from the first test.
+   on a fixed accumulator, `field.ts` Dijkstra. Add the ESLint arithmetic and ordering bans now,
+   before there is code to retrofit. Vitest from the first test — **including the cross-engine
+   golden fixture with one creep and its own frozen data set.** Ten lines and a CI matrix entry,
+   and it means determinism bugs surface as they are introduced rather than all at once after
+   tuning.
 3. **Mazing.** Placement wired to a candidate rebuild: refuse on infinite spawn `dist`, hover
    preview, `+54 tiles` delta, maze score. The hardest file in the project.
 4. **Towers, killing, selling.** Spatial hash, three archetypes, three levels, targeting by
    lowest `dist`, sell with refund.
 5. **The loop.** Leak takes a life from the defender, respawns the creep in the same lane,
-   increments and renders `laps`. Trapped creeps cost three. Leak trail.
+   increments and renders `laps`. A pathless creep teleports to spawn. Spawn queue releases one
+   creep per 4 ticks. Leak trail.
 6. **Economy.** Gold, income at 25 per 300 ticks, send raises income, kill bounty, timed tiers.
    Now it is a game.
 7. **Bot + thin harness.** `bot.ts` emitting Inputs; `harness/run.ts` running bot-vs-bot
    headless. **Playable end to end, single player, no server — and the first real read on
    whether this is fun.** Deploy it.
 8. **Tune.** Use the harness. Expect this to take a while; it is the longest pole.
-9. **Determinism: `hash.ts`, golden fixture, desync dump.** Canonical LE serialization, FNV-1a,
-   ring buffer, committed fixture asserted in CI on Node **and a non-V8 engine**.
+9. **Determinism, the rest of it: `hash.ts`, ring buffer, desync dump.** The golden fixture
+   already exists from step 2 and has been growing since; this adds the per-tick hash, the
+   40-tick ring buffer, the peer exchange and the downloadable dump.
 10. **Server and 1v1.** Durable Object per match: lobby, `start`, RTT negotiation, wire
-    validation, version handshake, ordered relay, room codes, join-by-URL, socket close,
-    concede, rematch, local prediction.
+    validation, version handshake, ordered relay with `None` watermarks, room codes,
+    join-by-URL, socket close, out-of-band concede, rematch, local prediction with an input
+    queue.
 11. **Play it with a friend.**
 
 Steps 1-7 need no server at all. The relay only appears at step 10, by which point you already
@@ -799,3 +877,36 @@ you.
   that population.
 - When an outside reader argued your v1 should be cut to a bot-only game, you kept the duel and
   took the resequencing. That is the right way to use a second opinion.
+
+---
+
+## GSTACK REVIEW REPORT
+
+| Review | Trigger | Why | Runs | Status | Findings |
+|--------|---------|-----|------|--------|----------|
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 1 | CLEAR | 6 proposals, 4 accepted, 2 deferred; 14 findings, 0 critical gaps |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | ISSUES_OPEN | 21 issues, 0 critical gaps, 1 unresolved |
+| Outside Voice | (auto, both reviews) | Independent 2nd opinion | 2 | ISSUES_FOUND | 13 findings this round, all folded |
+| Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | — |
+| DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | — |
+
+**CROSS-MODEL:** Both outside-voice passes ran as Claude subagents (Codex not installed —
+same model family, fresh context, not a genuinely outside model; weigh agreement accordingly).
+Round one found the two structural defects on the identity mechanic that the CEO review missed
+entirely: pocket-trapping dominated the loop rule, and the loop rule had no damping term.
+Round two reversed a fix the eng review had just made — refusing placements that strand a creep
+made build legality depend on enemy creep positions, which turned cheap Swarm sends into a
+build-denial weapon against whoever was already losing. Three of the eng review's own
+recommendations were overturned by it. The reviewer and the outside voice disagreed on three
+points; the builder resolved all three.
+
+**VERDICT:** CEO CLEARED. ENG NOT CLEARED — 1 unresolved decision, carried from the CEO review
+rather than raised here. 0 critical gaps. All 21 eng findings and all 13 outside-voice findings
+are folded into this document.
+
+**UNRESOLVED DECISIONS:**
+- Whether replay recording (server as recorder, logs to object storage), replay playback with a
+  scrubber, spectator links, and the full AI-vs-AI sweep harness belong in v1. Asked during the
+  CEO review and not answered; all four remain deferred to v2 by standing position, not by
+  decision. Recording is the cheapest and unlocks the other three. **Decide before step 10** —
+  it changes what the relay writes.
