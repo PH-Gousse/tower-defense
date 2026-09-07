@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { createState, type GameState } from '../src/state'
-import { step, canBuild, Kind, DEFAULT_CONFIG, type Command } from '../src/step'
+import { step, canBuild, checkBuild, Refusal, Kind, DEFAULT_CONFIG, type Command } from '../src/step'
 import { GRID_W, GRID_H, tileIndex, SPAWN_INDICES } from '../src/grid'
-import { UNREACHABLE, buildField } from '../src/field'
+import { UNREACHABLE, buildField, mazeLength } from '../src/field'
 import { hashState } from '../src/hash'
 
 /** Run n ticks with an optional command schedule, returning the final state. */
@@ -134,5 +134,45 @@ describe('step', () => {
   it('is reproducible: same commands, same hash', () => {
     const cmds = { 2: [build(10, 10)], 5: [build(11, 11)], 9: [build(12, 12)] }
     expect(hashState(run(20, cmds))).toBe(hashState(run(20, cmds)))
+  })
+})
+
+describe('checkBuild refusal reasons', () => {
+  it('names why, rather than just refusing', () => {
+    const s = createState()
+    expect(checkBuild(s, -1, 5).refusal).toBe(Refusal.OutOfBounds)
+    expect(checkBuild(s, 0, 11).refusal).toBe(Refusal.SpawnOrExit)
+    expect(checkBuild(s, GRID_W - 1, 12).refusal).toBe(Refusal.SpawnOrExit)
+    s.lane.blocked[tileIndex({ x: 8, y: 8 })] = 1
+    expect(checkBuild(s, 8, 8).refusal).toBe(Refusal.Occupied)
+  })
+
+  it('reports WouldSealLane for the tile that closes the last gap', () => {
+    const s = createState()
+    for (let y = 0; y < GRID_H; y++) {
+      if (y === 5) continue
+      s.lane.blocked[tileIndex({ x: 20, y })] = 1
+    }
+    const check = checkBuild(s, 20, 5)
+    expect(check.refusal).toBe(Refusal.WouldSealLane)
+    expect(check.mazeAfter).toBe(UNREACHABLE)
+  })
+
+  it('reports the resulting maze length when the placement is allowed', () => {
+    const s = createState()
+    const before = mazeLength(s.lane.field)
+    // A single tower directly in the lane forces a one-tile detour each way.
+    const check = checkBuild(s, 20, 11)
+    expect(check.refusal).toBe(Refusal.None)
+    expect(check.mazeAfter).toBeGreaterThan(before)
+  })
+
+  it('leaves the blocked set untouched — the probe must not mutate state', () => {
+    const s = createState()
+    const before = hashState(s)
+    checkBuild(s, 20, 11)
+    checkBuild(s, 20, 5)
+    checkBuild(s, -5, -5)
+    expect(hashState(s)).toBe(before)
   })
 })

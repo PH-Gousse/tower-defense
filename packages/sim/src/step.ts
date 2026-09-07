@@ -8,7 +8,14 @@ import {
   isSpawnIndex,
   isExitIndex,
 } from './grid'
-import { buildField, spawnsReachable, UNREACHABLE, type FlowField } from './field'
+import {
+  buildField,
+  spawnsReachable,
+  mazeLength,
+  createField,
+  UNREACHABLE,
+  type FlowField,
+} from './field'
 import { cloneState, spawnPointFor, type GameState } from './state'
 
 /**
@@ -80,21 +87,79 @@ function commandOrder(a: Command, b: Command): number {
   return a.kind - b.kind
 }
 
-/** Can this tower be placed? Exported because the client predicts with it. */
-export function canBuild(state: GameState, x: number, y: number): boolean {
-  if (!inBounds(x, y)) return false
-  const i = tileIndex({ x, y })
-  if (state.lane.blocked[i] === 1) return false
-  if (isSpawnIndex(i) || isExitIndex(i)) return false
-
-  // Candidate rebuild: would this seal the lane? Note it checks the spawn
-  // tiles only. Creeps stranded mid-field are handled by teleport, not by
-  // refusing the placement.
-  state.lane.blocked[i] = 1
-  const probe = buildField(state.lane.blocked)
-  state.lane.blocked[i] = 0
-  return spawnsReachable(probe)
+/**
+ * Why a placement was refused.
+ *
+ * A bare boolean was not enough. The no-block rule is invisible until you hit
+ * it, and "the click did nothing" teaches the player nothing — so the refusal
+ * has to name itself. This enum is what the renderer turns into the red ghost
+ * and its one-line explanation.
+ */
+export enum Refusal {
+  None = 0,
+  OutOfBounds = 1,
+  Occupied = 2,
+  SpawnOrExit = 3,
+  WouldSealLane = 4,
 }
+
+export interface BuildCheck {
+  readonly refusal: Refusal
+  /** Maze length after this placement, or UNREACHABLE. Only set when allowed. */
+  readonly mazeAfter: number
+}
+
+const ALLOWED: BuildCheck = { refusal: Refusal.None, mazeAfter: 0 }
+
+/**
+ * Full placement check, with a reason and the resulting maze length.
+ *
+ * `scratch` lets a caller reuse field buffers. The client hovers across tiles
+ * many times a second and each check is a candidate rebuild, so without it this
+ * allocates two typed arrays per tile crossed.
+ */
+export function checkBuild(
+  state: GameState,
+  x: number,
+  y: number,
+  scratch?: FlowField,
+): BuildCheck {
+  if (!inBounds(x, y)) return { refusal: Refusal.OutOfBounds, mazeAfter: 0 }
+  const i = tileIndex({ x, y })
+  if (state.lane.blocked[i] === 1) return { refusal: Refusal.Occupied, mazeAfter: 0 }
+  if (isSpawnIndex(i) || isExitIndex(i)) {
+    return { refusal: Refusal.SpawnOrExit, mazeAfter: 0 }
+  }
+
+  // Candidate rebuild: would this seal the lane? Note it checks the spawn tiles
+  // only. Creeps stranded mid-field are handled by teleport, not by refusing
+  // the placement — refusing on creep positions would make legality flicker as
+  // they move, and would let a cheap swarm send lock tiles out of your maze.
+  state.lane.blocked[i] = 1
+  const probe = buildField(state.lane.blocked, scratch)
+  const reachable = spawnsReachable(probe)
+  const after = reachable ? mazeLength(probe) : UNREACHABLE
+  state.lane.blocked[i] = 0
+
+  if (!reachable) return { refusal: Refusal.WouldSealLane, mazeAfter: UNREACHABLE }
+  return { refusal: Refusal.None, mazeAfter: after }
+}
+
+/** Can this tower be placed? Thin wrapper; `step()` needs only the verdict. */
+export function canBuild(state: GameState, x: number, y: number): boolean {
+  return checkBuild(state, x, y, stepScratch).refusal === Refusal.None
+}
+
+/**
+ * Scratch field for `canBuild` inside `step()`.
+ *
+ * Safe because `step()` is synchronous and single-threaded, and nothing reads
+ * this between calls. It exists so a tick that applies commands does not
+ * allocate. Callers outside the sim should pass their own.
+ */
+const stepScratch: FlowField = createField()
+
+export { ALLOWED }
 
 export function step(
   prev: GameState,

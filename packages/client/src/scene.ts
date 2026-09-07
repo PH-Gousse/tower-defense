@@ -4,19 +4,34 @@ import {
   GRID_H,
   SPAWN_TILES,
   EXIT_TILES,
+  SPAWN_INDICES,
   TILE_COUNT,
   MAX_CREEPS,
   UNREACHABLE,
+  Refusal,
   inBounds,
   tileIndex,
   tileX,
   tileY,
-  canBuild,
+  checkBuild,
   buildField,
+  createField,
   mazeLength,
+  pathFrom,
   type Tile,
+  type FlowField,
 } from '@ltw/sim'
 import { Driver } from './driver'
+import { PathLine } from './pathline'
+
+/** One line of plain English per refusal. The rule teaches itself or it does not exist. */
+const REFUSAL_TEXT: Record<Refusal, string> = {
+  [Refusal.None]: '',
+  [Refusal.OutOfBounds]: 'Outside the lane',
+  [Refusal.Occupied]: 'A tower is already here',
+  [Refusal.SpawnOrExit]: 'Cannot build on the entrance or the exit',
+  [Refusal.WouldSealLane]: 'No path IN to OUT — creeps must always have a way through',
+}
 
 /**
  * Step 2: the renderer reads sim state and draws it.
@@ -51,8 +66,16 @@ export interface Stats {
   readonly tick: number
 }
 
+export interface HoverInfo {
+  readonly tile: Tile | null
+  /** Extra tiles this placement would add to the walk, or null when refused. */
+  readonly mazeDelta: number | null
+  readonly refusal: Refusal
+  readonly refusalText: string
+}
+
 export interface Scene {
-  readonly onTileHover: (cb: (t: Tile | null, mazeDelta: number | null) => void) => void
+  readonly onTileHover: (cb: (h: HoverInfo) => void) => void
   readonly onStats: (cb: (s: Stats) => void) => void
   start: () => void
 }
@@ -111,12 +134,33 @@ export function createScene(canvasParent: HTMLElement): Scene {
   creeps.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
   scene.add(creeps)
 
+  const hoverMaterial = new THREE.MeshBasicMaterial({
+    color: 0x4f8cc9,
+    transparent: true,
+    opacity: 0.5,
+  })
   const hover = new THREE.Mesh(
     new THREE.BoxGeometry(TILE * 0.9, 0.06, TILE * 0.9),
-    new THREE.MeshBasicMaterial({ color: 0x4f8cc9, transparent: true, opacity: 0.5 }),
+    hoverMaterial,
   )
   hover.visible = false
   scene.add(hover)
+
+  const OK_COLOUR = 0x4f8cc9
+  const REFUSED_COLOUR = 0xc4453c
+
+  // Two routes: what creeps do now, and what they would do if you built here.
+  // Seeing the difference is how a player learns to maze; the number alone
+  // tells you a placement is good without telling you why.
+  const currentPath = new PathLine(0x5b6470, 0.55, 0.04)
+  const candidatePath = new PathLine(0x63c8a0, 0.95, 0.06)
+  scene.add(currentPath.object)
+  scene.add(candidatePath.object)
+
+  // Reused across hovers: a candidate rebuild per tile would otherwise allocate
+  // two typed arrays every time the pointer crosses a tile boundary.
+  const probeField: FlowField = createField()
+  const routeScratch: number[] = []
 
   const scratch = new THREE.Matrix4()
   const raycaster = new THREE.Raycaster()
@@ -124,7 +168,7 @@ export function createScene(canvasParent: HTMLElement): Scene {
 
   let hovered: Tile | null = null
   let lastSyncedTick = -1
-  let hoverCb: (t: Tile | null, d: number | null) => void = () => {}
+  let hoverCb: (h: HoverInfo) => void = () => {}
   let statsCb: (s: Stats) => void = () => {}
 
   function tileUnderPointer(ev: PointerEvent): Tile | null {
@@ -139,45 +183,75 @@ export function createScene(canvasParent: HTMLElement): Scene {
   }
 
   /**
-   * Hover preview: how much longer would this placement make the walk?
+   * Preview the tile under the cursor.
    *
-   * The `+54 tiles` teaching signal. It is a candidate field rebuild, so it
-   * runs on tile change only — never on raw pointer movement.
+   * Runs on tile change only, never on raw pointer movement: each call is a
+   * candidate field rebuild, and the pointer fires far more often than it
+   * crosses a tile boundary.
+   *
+   *   allowed  ──▶ blue ghost + green candidate route + "+54 tiles"
+   *   refused  ──▶ red ghost  + the reason, in words
    */
-  function mazeDelta(t: Tile): number | null {
+  function previewTile(t: Tile | null): void {
+    if (!t) {
+      hover.visible = false
+      candidatePath.hide()
+      hoverCb({ tile: null, mazeDelta: null, refusal: Refusal.None, refusalText: '' })
+      return
+    }
+
     const state = driver.current
-    if (!canBuild(state, t.x, t.y)) return null
+    const check = checkBuild(state, t.x, t.y, probeField)
+    const allowed = check.refusal === Refusal.None
+
+    hover.position.set(t.x + 0.5, 0.03, t.y + 0.5)
+    hoverMaterial.color.setHex(allowed ? OK_COLOUR : REFUSED_COLOUR)
+    hover.visible = true
+
+    if (allowed) {
+      // checkBuild already rebuilt the field into probeField with this tile
+      // blocked, so the route is there for the taking — no second rebuild.
+      const i = tileIndex(t)
+      state.lane.blocked[i] = 1
+      buildField(state.lane.blocked, probeField)
+      state.lane.blocked[i] = 0
+      candidatePath.set(pathFrom(probeField, SPAWN_INDICES[0] as number, routeScratch))
+    } else {
+      candidatePath.hide()
+    }
+
     const before = mazeLength(state.lane.field)
-    const i = tileIndex(t)
-    state.lane.blocked[i] = 1
-    const after = mazeLength(buildField(state.lane.blocked))
-    state.lane.blocked[i] = 0
-    if (after === UNREACHABLE || before === UNREACHABLE) return null
-    return after - before
+    const delta =
+      allowed && before !== UNREACHABLE && check.mazeAfter !== UNREACHABLE
+        ? check.mazeAfter - before
+        : null
+
+    hoverCb({
+      tile: t,
+      mazeDelta: delta,
+      refusal: check.refusal,
+      refusalText: REFUSAL_TEXT[check.refusal],
+    })
   }
 
   renderer.domElement.addEventListener('pointermove', (ev) => {
     const t = tileUnderPointer(ev)
     const changed = t?.x !== hovered?.x || t?.y !== hovered?.y
     hovered = t
-    if (t && canBuild(driver.current, t.x, t.y)) {
-      hover.position.set(t.x + 0.5, 0.03, t.y + 0.5)
-      hover.visible = true
-    } else {
-      hover.visible = false
-    }
-    if (changed) hoverCb(t, t ? mazeDelta(t) : null)
+    if (changed) previewTile(t)
   })
 
   renderer.domElement.addEventListener('pointerleave', () => {
-    hover.visible = false
     hovered = null
-    hoverCb(null, null)
+    previewTile(null)
   })
 
   renderer.domElement.addEventListener('pointerdown', (ev) => {
     const t = tileUnderPointer(ev)
-    if (t && canBuild(driver.current, t.x, t.y)) driver.queueBuild(t.x, t.y)
+    if (!t) return
+    if (checkBuild(driver.current, t.x, t.y, probeField).refusal === Refusal.None) {
+      driver.queueBuild(t.x, t.y)
+    }
   })
 
   function syncTowers(): void {
@@ -253,6 +327,9 @@ export function createScene(canvasParent: HTMLElement): Scene {
         if (ran > 0 && state.tick !== lastSyncedTick) {
           syncTowers()
           lastSyncedTick = state.tick
+          currentPath.set(pathFrom(state.lane.field, SPAWN_INDICES[0] as number))
+          // The hover preview is stale once the field changes under it.
+          if (hovered) previewTile(hovered)
           const maze = mazeLength(state.lane.field)
           statsCb({
             towers: towers.count,

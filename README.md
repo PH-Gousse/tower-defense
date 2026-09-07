@@ -12,9 +12,13 @@ run the maze again**, until towers kill it. Leaks are a drain, not a penalty.
 
 ## Status
 
-**Step 2 of 11: the sim.** A pure simulation package with a flow field, driven at a fixed
+**Step 3 of 11: mazing.** A pure simulation package with a flow field, driven at a fixed
 20Hz by the client. Creeps walk the maze; towers reroute them; a placement that would seal
 the lane is refused.
+
+Build towers and watch creeps reroute. The route they take is drawn on the field, hovering a
+tile previews the route you would create and how many tiles it adds, and a placement that
+would seal the lane is refused **with the reason in words** rather than silently ignored.
 
 Determinism is verified, not asserted: the golden fixture replays a committed command log to
 a committed hash on **two different engines** (V8 via node, JavaScriptCore via bun). They

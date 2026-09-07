@@ -19,6 +19,7 @@
     }
     #hud div { padding: 7px 13px; border-right: 1px solid #23272e; }
     #hud div:last-child { border-right: 0; margin-left: auto; color: #7d858f; }
+    #note[data-refused] { color: #e0655a; }
     #hud b { display: block; font-size: 9.5px; letter-spacing: .08em;
              text-transform: uppercase; color: #7d858f; font-weight: 600; }
     #hud span { font-variant-numeric: tabular-nums; font-size: 15px; }
@@ -30,7 +31,7 @@
     <div><b>Creeps</b><span id="creeps">0</span></div>
     <div><b>Maze</b><span id="maze">39</span></div>
     <div><b>Tile</b><span id="tile">—</span></div>
-    <div><b>Step 2</b><span id="note">sim + flow field</span></div>
+    <div><b>Placement</b><span id="note">hover a tile</span></div>
   </div>
   <script type="module" src="/src/main.ts"></script>
 </body>
