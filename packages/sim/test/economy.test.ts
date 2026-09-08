@@ -3,7 +3,10 @@ import { createState, STARTING_GOLD, STARTING_INCOME, INCOME_EVERY_TICKS } from 
 import { checkSend, checkUpgrade, checkSell, sellValue, Refusal } from '../src/step'
 import { TowerKind, levelOf, investedIn, SELL_REFUND, CREEPS, creepSpec, tierUnlockTick, UNLOCK_EVERY_TICKS } from '../src/data'
 import { tileIndex } from '../src/grid'
-import { build, upgrade, sell, send, run, tick, withGold, SWARM, RUNNER, TANK, SWARM2 } from './helpers'
+import { build, upgrade, sell, send, run, tick, withGold, SWARM, RUNNER, TANK, SWARM2, withoutBuildPhase } from './helpers'
+
+// Not a test of the opening: see withoutBuildPhase.
+withoutBuildPhase()
 
 describe('income', () => {
   it('pays into gold every 15 seconds, not continuously', () => {

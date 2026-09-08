@@ -2,7 +2,10 @@ import { describe, it, expect } from 'vitest'
 import { createSpatialHash, rebuildHash } from '../src/towers'
 import { TowerKind, levelOf, ARCHETYPES, creepSpec } from '../src/data'
 import { hashState } from '../src/hash'
-import { build, send, run, runUntil, SWARM, RUNNER, TANK } from './helpers'
+import { build, send, run, runUntil, SWARM, RUNNER, TANK, withoutBuildPhase } from './helpers'
+
+// Not a test of the opening: see withoutBuildPhase.
+withoutBuildPhase()
 
 describe('spatial hash', () => {
   it('buckets creeps by tile, ascending within a bucket', () => {

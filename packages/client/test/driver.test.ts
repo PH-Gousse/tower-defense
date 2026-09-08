@@ -2,8 +2,26 @@ import { describe, it, expect } from 'vitest'
 import { Driver } from '../src/driver'
 import {
   TICK_MS, TowerKind, MatchResult, tileIndex, creepSpec, STARTING_INCOME, BOT_HARD, Kind,
+  SEND_UNLOCK_TICKS,
   type Command,
 } from '@ltw/sim'
+
+/**
+ * Run the driver out of the opening build phase and return the clock it left
+ * off at. Sends are refused until then, and these tests are about the driver's
+ * command path rather than about the opening -- see the sim's opening.test.ts.
+ *
+ * Stepped ten ticks at a time because `advance` clamps how far one call may
+ * catch up; a single jump to the unlock tick would be swallowed by that clamp.
+ */
+function openBuildPhase(d: Driver, from = 0): number {
+  let t = from
+  while (d.current.tick < SEND_UNLOCK_TICKS) {
+    t += TICK_MS * 10
+    d.advance(t)
+  }
+  return t
+}
 
 /**
  * The driver is the only piece of the client that can be tested without a
@@ -84,8 +102,8 @@ describe('Driver', () => {
     // creep on the board is the one this test sent.
     const d = new Driver(0, null)
     d.advance(0)
+    let t = openBuildPhase(d)
     d.queueSend(1)
-    let t = 0
     for (let f = 1; f <= 40; f++) { t += TICK_MS * 10; d.advance(t) }
     expect(d.current.lanes[1]!.creeps.count).toBe(1)
     expect(d.current.lanes[1]!.creeps.x[0] as number).toBeGreaterThan(1)
@@ -95,8 +113,9 @@ describe('Driver', () => {
   it('raises income permanently when you send', () => {
     const d = new Driver(0, null)
     d.advance(0)
+    const t = openBuildPhase(d)
     d.queueSend(0)
-    d.advance(TICK_MS)
+    d.advance(t + TICK_MS)
     expect(d.mySide.income).toBe(STARTING_INCOME + creepSpec(0).incomeBonus)
   })
 

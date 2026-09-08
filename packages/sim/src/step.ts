@@ -38,6 +38,7 @@ import {
   CREEPS,
   creepSpec,
   tierUnlockTick,
+  SEND_UNLOCK_TICKS,
 } from './data'
 import { createSpatialHash, rebuildHash, fireTowers, type SpatialHash } from './towers'
 
@@ -108,6 +109,8 @@ export enum Refusal {
   NoTowerHere = 6,
   AlreadyMaxLevel = 7,
   TierLocked = 8,
+  /** The opening build phase is still running; nobody may send yet. */
+  BuildPhase = 9,
 }
 
 export interface BuildCheck {
@@ -217,6 +220,9 @@ export function sellValue(state: GameState, player: number, x: number, y: number
 export function checkSend(state: GameState, player: number, creep: number): Refusal {
   if (creep < 0 || creep >= CREEPS.length) return Refusal.OutOfBounds
   const spec = creepSpec(creep)
+  // Before the tier check, because during the opening it is the truer reason:
+  // a tier-0 creep is not "not unlocked yet", it is "nobody may send yet".
+  if (state.tick < SEND_UNLOCK_TICKS) return Refusal.BuildPhase
   if (state.tick < tierUnlockTick(spec.tier)) return Refusal.TierLocked
   if ((state.players[player] as Player).gold < spec.cost) return Refusal.NotEnoughGold
   return Refusal.None
@@ -237,7 +243,18 @@ export function step(prev: GameState, commands: readonly Command[], into: GameSt
   // Income arrives in a lump every 15 seconds. That cadence is the game's
   // decision rhythm: roughly four times a minute you choose between towers and
   // creeps, not continuously.
-  if (s.tick % INCOME_EVERY_TICKS === 0) {
+  //
+  // The clock starts when SENDING does, not at tick 0, and that is a
+  // correctness fix rather than a preference. Income only grows by sending, so
+  // a payout that lands before anybody is allowed to send is a period the
+  // attacker can never have compounded. With the opening build phase measured
+  // against the fixed-template bot, counter-picking went from 12-0 to 4-8 the
+  // moment the phase grew long enough to swallow the first payout -- a cliff,
+  // not a slope, and it sat exactly at the tick where the first send stopped
+  // preceding the first income. Anchoring the schedule to the unlock keeps the
+  // two in the order the economy was tuned around, whatever the phase's length.
+  const sinceOpen = s.tick - SEND_UNLOCK_TICKS
+  if (sinceOpen > 0 && sinceOpen % INCOME_EVERY_TICKS === 0) {
     for (let p = 0; p < PLAYER_COUNT; p++) {
       const pl = s.players[p] as Player
       pl.gold += pl.income

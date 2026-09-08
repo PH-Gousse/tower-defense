@@ -68,6 +68,7 @@ const REFUSAL_TEXT: Record<Refusal, string> = {
   [Refusal.NoTowerHere]: 'No tower on this tile',
   [Refusal.AlreadyMaxLevel]: 'Already at maximum level',
   [Refusal.TierLocked]: 'Not unlocked yet',
+  [Refusal.BuildPhase]: 'Build phase — no sending yet',
 }
 
 /** One colour per archetype so a maze is readable without clicking anything. */

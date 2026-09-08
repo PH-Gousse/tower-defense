@@ -121,7 +121,12 @@ export const STARTING_GOLD = 600
  */
 export const STARTING_LIVES = 20
 
-/** Income paid into gold every INCOME_EVERY_TICKS. Sending is the only way it grows. */
+/**
+ * Income paid into gold every INCOME_EVERY_TICKS. Sending is the only way it grows.
+ *
+ * The clock starts when sending opens, not at tick 0 — see SEND_UNLOCK_TICKS.
+ * A payout before anyone may send is a period the attacker can never compound.
+ */
 export const STARTING_INCOME = 25
 /** 15 seconds at 20Hz. The decision cadence of the whole game. */
 export const INCOME_EVERY_TICKS = 300

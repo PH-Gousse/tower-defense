@@ -7,7 +7,10 @@ import { hashState } from '../src/hash'
 import { GRID_W, GRID_H, tileIndex, SPAWN_INDICES } from '../src/grid'
 import { buildField, spawnsReachable } from '../src/field'
 import { TowerKind } from '../src/data'
-import { send, run, tick, TANK } from './helpers'
+import { send, run, tick, TANK, withoutBuildPhase } from './helpers'
+
+// Not a test of the opening: see withoutBuildPhase.
+withoutBuildPhase()
 
 describe('maze templates', () => {
   it('never proposes a tile that would seal the lane', () => {

@@ -2,6 +2,8 @@
   "version": 4,
   "_comment": "Step 8. The roster is a RULE, not a list. A finite list cannot guarantee a match ends: the tower board saturates at a bounded lap damage (~157,000 for 136 level-3 towers, measured by `pnpm --filter @ltw/harness lap`), so a ladder that stops short leaves a maze nothing can break, and two competent players stalemate forever. Growth is geometric and the tiers keep coming, so creep HP passes any bounded maze eventually and somebody always loses. Tier N stats are base * growth^N, generated at load up to maxTier.",
   "unlockEveryTicks": 600,
+  "_sendUnlockComment": "The opening build phase, in ticks at 20Hz. Sending was legal from tick 0, which meant the first wave could be in your lane before you had placed a single tower -- there was no opening, just a scramble. 400 is 20 seconds: enough to spend the 600 starting gold as a maze rather than a reflex, and deliberately SHORT of the 600-tick tier-1 unlock so that unlock stays its own separate beat instead of arriving in the same instant sending does.",
+  "sendUnlockTicks": 400,
   "maxTier": 20,
   "growth": {
     "_comment": "Per tier. hp ABOVE cost is the load-bearing choice: it makes HP per gold RISE as you buy up, which is what lets a creep ever beat a maze -- towers are permanent and creeps die once, so a tower fires on every lap for the rest of the match while a creep pays once. income stays well below cost so buying up still earns less per gold: buy down for economy, buy up for threat. cost was 2.0 and is the single strongest lever on match length: at 2.0 the higher tiers were unaffordable for twenty minutes and the whole contest landed in the last ninety seconds.",

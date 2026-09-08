@@ -5,7 +5,10 @@ import { GRID_W, ENTRANCE_ROW, EXIT_ROW, tileIndex } from '../src/grid'
 import { UNREACHABLE, buildField, mazeLength } from '../src/field'
 import { hashState } from '../src/hash'
 import { TowerKind } from '../src/data'
-import { build, send, run, tick, SWARM, RUNNER, TANK } from './helpers'
+import { build, send, run, tick, SWARM, RUNNER, TANK, withoutBuildPhase } from './helpers'
+
+// Not a test of the opening: see withoutBuildPhase.
+withoutBuildPhase()
 
 /**
  * Block a whole row of lane 0 by hand, leaving `gaps` open.
