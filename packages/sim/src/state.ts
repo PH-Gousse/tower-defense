@@ -32,6 +32,10 @@ export interface Creeps {
   readonly slowPercent: Int32Array
   /** Tick at which the current slow expires. */
   readonly slowUntil: Int32Array
+  /** Who sent this creep. Owned by the sender, resident in the defender's lane. */
+  readonly owner: Int8Array
+  /** Index into CREEPS, so bounty and stats are recoverable on death. */
+  readonly spec: Int32Array
   count: number
 }
 
@@ -56,35 +60,54 @@ export interface Lane {
   readonly field: FlowField
   readonly creeps: Creeps
   readonly towers: Towers
+  /**
+   * Per-lane spawn queue.
+   *
+   * A send enqueues its creeps here; the lane releases one every
+   * SPAWN_EVERY_TICKS. Six identical creeps entering on the same tick at the
+   * same tile would never separate — they would travel as a single point and
+   * one splash hit would kill all of them, which erases the Splash tower's
+   * entire reason to exist.
+   *
+   * `queueOwner` records who sent each pending creep, because a creep is owned
+   * by its sender for scoring but exists only in the defender's lane.
+   */
+  readonly queueCreep: Int32Array
+  readonly queueOwner: Int8Array
+  queueHead: number
+  queueTail: number
+  /** Ticks until the next release. */
+  nextRelease: number
+  /** Monotonic count of creeps released here; drives spawn-tile alternation. */
+  released: number
+}
+
+/** A player. Lane `i` is defended by player `i`. */
+export interface Player {
+  gold: number
+  income: number
+  lives: number
+  leaks: number
+  kills: number
 }
 
 export interface GameState {
   tick: number
   /** Next creep id to hand out. Monotonic, never reused. */
   nextCreepId: number
-  /**
-   * Gold in hand.
-   *
-   * Step 4 has a fixed budget and no income: enough to make build, upgrade and
-   * sell mean something, without pretending the economy exists. Income ticks,
-   * kill bounty and tier unlocks arrive at step 6.
-   */
-  gold: number
-  /** Creeps killed this match. Kill bounty pays off this at step 6. */
-  kills: number
-  /**
-   * Lives remaining for this lane's owner.
-   *
-   * A leak costs one. The sender gains nothing — lives only ever go down, for
-   * everyone. That asymmetry is the damping term: crediting the sender would
-   * make a leak a 2-point swing, so a leader would compound in lives and income
-   * at once and there may be no constants that keep that non-degenerate.
-   */
-  lives: number
-  /** Total leaks this match, including ones that did not end it. */
-  leaks: number
   result: MatchResult
-  readonly lane: Lane
+  /** Index of the winning player once `result` is not Playing; -1 for a draw. */
+  winner: number
+  /** players[i] defends lanes[i]. */
+  readonly players: readonly Player[]
+  readonly lanes: readonly Lane[]
+}
+
+export const PLAYER_COUNT = 2
+
+/** The lane a player sends INTO. A creep never appears in its owner's lane. */
+export function opponentOf(player: number): number {
+  return player === 0 ? 1 : 0
 }
 
 export const STARTING_GOLD = 600
@@ -98,10 +121,19 @@ export const STARTING_GOLD = 600
  */
 export const STARTING_LIVES = 20
 
+/** Income paid into gold every INCOME_EVERY_TICKS. Sending is the only way it grows. */
+export const STARTING_INCOME = 25
+/** 15 seconds at 20Hz. The decision cadence of the whole game. */
+export const INCOME_EVERY_TICKS = 300
+/** Ticks between spawn-queue releases. */
+export const SPAWN_EVERY_TICKS = 4
+
 export enum MatchResult {
   Playing = 0,
-  /** This lane's owner ran out of lives. */
-  Defeat = 1,
+  /** Someone won; `winner` says who. */
+  Decided = 1,
+  /** Both players hit zero on the same tick. */
+  Draw = 2,
 }
 
 export const MAX_CREEPS = 2048
@@ -116,6 +148,8 @@ function createCreeps(): Creeps {
     speed: new Float64Array(MAX_CREEPS),
     slowPercent: new Int32Array(MAX_CREEPS),
     slowUntil: new Int32Array(MAX_CREEPS),
+    owner: new Int8Array(MAX_CREEPS),
+    spec: new Int32Array(MAX_CREEPS),
     count: 0,
   }
 }
@@ -126,18 +160,42 @@ function createTowers(): Towers {
   return { kind, level: new Int8Array(TILE_COUNT), cooldown: new Int32Array(TILE_COUNT) }
 }
 
-export function createState(): GameState {
+const QUEUE_CAP = 512
+
+function createLane(): Lane {
   const blocked = new Uint8Array(TILE_COUNT)
-  const field = buildField(blocked, createField())
+  return {
+    blocked,
+    field: buildField(blocked, createField()),
+    creeps: createCreeps(),
+    towers: createTowers(),
+    queueCreep: new Int32Array(QUEUE_CAP),
+    queueOwner: new Int8Array(QUEUE_CAP),
+    queueHead: 0,
+    queueTail: 0,
+    nextRelease: 0,
+    released: 0,
+  }
+}
+
+function createPlayer(): Player {
+  return {
+    gold: STARTING_GOLD,
+    income: STARTING_INCOME,
+    lives: STARTING_LIVES,
+    leaks: 0,
+    kills: 0,
+  }
+}
+
+export function createState(): GameState {
   return {
     tick: 0,
     nextCreepId: 1,
-    gold: STARTING_GOLD,
-    kills: 0,
-    lives: STARTING_LIVES,
-    leaks: 0,
     result: MatchResult.Playing,
-    lane: { blocked, field, creeps: createCreeps(), towers: createTowers() },
+    winner: -1,
+    players: [createPlayer(), createPlayer()],
+    lanes: [createLane(), createLane()],
   }
 }
 
@@ -151,28 +209,49 @@ export function createState(): GameState {
 export function cloneState(from: GameState, into: GameState): GameState {
   into.tick = from.tick
   into.nextCreepId = from.nextCreepId
-  into.gold = from.gold
-  into.kills = from.kills
-  into.lives = from.lives
-  into.leaks = from.leaks
   into.result = from.result
-  into.lane.towers.kind.set(from.lane.towers.kind)
-  into.lane.towers.level.set(from.lane.towers.level)
-  into.lane.towers.cooldown.set(from.lane.towers.cooldown)
-  into.lane.blocked.set(from.lane.blocked)
-  into.lane.field.dist.set(from.lane.field.dist)
-  into.lane.field.dir.set(from.lane.field.dir)
-  const a = from.lane.creeps
-  const b = into.lane.creeps
-  b.id.set(a.id)
-  b.x.set(a.x)
-  b.y.set(a.y)
-  b.hp.set(a.hp)
-  b.laps.set(a.laps)
-  b.speed.set(a.speed)
-  b.slowPercent.set(a.slowPercent)
-  b.slowUntil.set(a.slowUntil)
-  b.count = a.count
+  into.winner = from.winner
+
+  for (let p = 0; p < PLAYER_COUNT; p++) {
+    const src = from.players[p] as Player
+    const dst = into.players[p] as Player
+    dst.gold = src.gold
+    dst.income = src.income
+    dst.lives = src.lives
+    dst.leaks = src.leaks
+    dst.kills = src.kills
+  }
+
+  for (let l = 0; l < from.lanes.length; l++) {
+    const src = from.lanes[l] as Lane
+    const dst = into.lanes[l] as Lane
+    dst.blocked.set(src.blocked)
+    dst.field.dist.set(src.field.dist)
+    dst.field.dir.set(src.field.dir)
+    dst.towers.kind.set(src.towers.kind)
+    dst.towers.level.set(src.towers.level)
+    dst.towers.cooldown.set(src.towers.cooldown)
+    dst.queueCreep.set(src.queueCreep)
+    dst.queueOwner.set(src.queueOwner)
+    dst.queueHead = src.queueHead
+    dst.queueTail = src.queueTail
+    dst.nextRelease = src.nextRelease
+    dst.released = src.released
+
+    const a = src.creeps
+    const b = dst.creeps
+    b.id.set(a.id)
+    b.owner.set(a.owner)
+    b.x.set(a.x)
+    b.y.set(a.y)
+    b.hp.set(a.hp)
+    b.laps.set(a.laps)
+    b.speed.set(a.speed)
+    b.slowPercent.set(a.slowPercent)
+    b.slowUntil.set(a.slowUntil)
+    b.spec.set(a.spec)
+    b.count = a.count
+  }
   return into
 }
 
@@ -182,24 +261,5 @@ export function spawnPointFor(release: number): { x: number; y: number } {
   return { x: t.x + 0.5, y: t.y + 0.5 }
 }
 
-export function addCreep(
-  state: GameState,
-  hp: number,
-  speed: number,
-  release: number,
-): void {
-  const c = state.lane.creeps
-  if (c.count >= MAX_CREEPS) return
-  const i = c.count
-  const p = spawnPointFor(release)
-  c.id[i] = state.nextCreepId
-  c.x[i] = p.x
-  c.y[i] = p.y
-  c.hp[i] = hp
-  c.laps[i] = 0
-  c.speed[i] = speed
-  c.count = i + 1
-  state.nextCreepId += 1
-}
 
 export { TILE_COUNT, GRID_W }

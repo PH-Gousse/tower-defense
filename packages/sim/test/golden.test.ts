@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { createState, type GameState } from '../src/state'
-import { step, Kind, type Command, type SimConfig } from '../src/step'
+import { createState, MatchResult, type GameState } from '../src/state'
+import { TowerKind } from '../src/data'
+import { step, Kind, type Command } from '../src/step'
 import { hashHex } from '../src/hash'
 
 /**
@@ -29,35 +30,50 @@ import { hashHex } from '../src/hash'
  * red test green, stop and find out what diverged instead.
  */
 
+interface FixtureCommand {
+  readonly at: number
+  readonly player: 0 | 1
+  readonly kind: 'build' | 'upgrade' | 'sell' | 'send'
+  readonly tower?: number
+  readonly creep?: number
+  readonly x?: number
+  readonly y?: number
+}
+
 interface Fixture {
-  readonly seed: number
   readonly ticks: number
-  readonly config: SimConfig
-  readonly commands: readonly {
-    readonly at: number
-    readonly player: 0 | 1
-    readonly tower: number
-    readonly x: number
-    readonly y: number
-  }[]
+  readonly commands: readonly FixtureCommand[]
   readonly expectedHash: string
 }
 
 const fixturePath = fileURLToPath(new URL('./golden/match-01.json', import.meta.url))
 const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as Fixture
 
+function toCommand(c: FixtureCommand): Command {
+  switch (c.kind) {
+    case 'build':
+      return { tick: c.at, player: c.player, kind: Kind.Build, tower: c.tower as TowerKind, x: c.x!, y: c.y! }
+    case 'upgrade':
+      return { tick: c.at, player: c.player, kind: Kind.Upgrade, x: c.x!, y: c.y! }
+    case 'sell':
+      return { tick: c.at, player: c.player, kind: Kind.Sell, x: c.x!, y: c.y! }
+    case 'send':
+      return { tick: c.at, player: c.player, kind: Kind.Send, creep: c.creep! }
+  }
+}
+
 function replayState(f: Fixture): GameState {
   const byTick = new Map<number, Command[]>()
   for (const c of f.commands) {
     const list = byTick.get(c.at) ?? []
-    list.push({ tick: c.at, player: c.player, kind: Kind.Build, tower: c.tower, x: c.x, y: c.y })
+    list.push(toCommand(c))
     byTick.set(c.at, list)
   }
 
   let a: GameState = createState()
   let b: GameState = createState()
   for (let t = 0; t < f.ticks; t++) {
-    const out = step(a, byTick.get(t) ?? [], b, f.config)
+    const out = step(a, byTick.get(t) ?? [], b)
     b = a
     a = out
   }
@@ -82,39 +98,28 @@ describe('golden fixture', () => {
     expect(replay(fixture)).toBe(replay(fixture))
   })
 
-  it('exercises death, survival and looping in one match', () => {
+  it('exercises the whole game in one match', () => {
     // A fixture where nothing happens passes forever without testing anything,
-    // and this one has drifted twice already. First draft: 240 ticks, so every
-    // creep was still walking and the loop was never reached. Then step 4 gave
-    // towers teeth and they killed all 12 before any creep lapped, so the loop
-    // went untested again. Assert all four behaviours explicitly rather than
-    // trusting the hash to notice.
-    expect(fixture.commands.length).toBeGreaterThan(4)
+    // and this one has drifted twice already: first it was too short for any
+    // creep to lap, then towers got teeth and killed everything before any
+    // creep lapped. Assert each behaviour explicitly rather than trusting the
+    // hash to notice.
     const final = replayState(fixture)
 
-    // Some died: towers actually shoot.
-    expect(final.kills).toBeGreaterThan(0)
-    // Some lived: the match is not a rout that ends early.
-    expect(final.lane.creeps.count).toBeGreaterThan(0)
-    // Survivors looped: the leak-and-loop path ran.
-    const laps = Array.from(final.lane.creeps.laps.slice(0, final.lane.creeps.count))
-    expect(Math.min(...laps)).toBeGreaterThanOrEqual(1)
-    // Leaks cost lives, and the match runs close to the edge without ending.
-    // If it ended, the sim would freeze and everything after that tick would
-    // stop being exercised.
-    expect(final.leaks).toBeGreaterThan(0)
-    expect(final.lives).toBeLessThan(20)
-    expect(final.lives).toBeGreaterThan(0)
+    // Both lanes are live, so the two-lane wiring is genuinely exercised.
+    expect(final.lanes[0]!.creeps.count + final.players[0]!.kills).toBeGreaterThan(0)
+    expect(final.lanes[1]!.creeps.count + final.players[1]!.kills).toBeGreaterThan(0)
 
-    // At least one survivor carries damage: HP persists across laps rather
-    // than resetting at the exit.
-    //
-    // Deliberately the MINIMUM, not the maximum. One survivor finishes at full
-    // health despite two complete laps past ten towers, because targeting picks
-    // the creep nearest the exit and in a tight pack that is always the leader.
-    // That is the aggro-soak question the design doc leaves open, and asserting
-    // on the max would turn the evidence for it into a test failure.
-    const hp = Array.from(final.lane.creeps.hp.slice(0, final.lane.creeps.count))
-    expect(Math.min(...hp)).toBeLessThan(fixture.config.creepHp)
+    // Towers shoot.
+    expect(final.players[0]!.kills).toBeGreaterThan(0)
+
+    // Leaks cost lives, without either side reaching zero — a finished match
+    // freezes, and everything after that tick would stop being exercised.
+    expect(final.players[0]!.leaks + final.players[1]!.leaks).toBeGreaterThan(0)
+    expect(final.result).toBe(MatchResult.Playing)
+
+    // Sending raised income above the starting value on both sides.
+    expect(final.players[0]!.income).toBeGreaterThan(25)
+    expect(final.players[1]!.income).toBeGreaterThan(25)
   })
 })

@@ -1,90 +1,153 @@
 {
-  "_comment": "FROZEN. Do not edit to make a red test green \u2014 find out what diverged. This fixture owns its config so balance tuning cannot silently change the expected hash. The hash legitimately changed once, at step 4, when towers began shooting: the match itself is different, not the arithmetic.",
-  "seed": 20260907,
-  "ticks": 1400,
-  "config": {
-    "creepHp": 800,
-    "creepSpeed": 0.08,
-    "spawnEveryTicks": 4,
-    "spawnTotal": 12
-  },
-  "commands": [
-    {
-      "at": 3,
-      "player": 0,
-      "x": 10,
-      "y": 11,
-      "tower": 0
-    },
-    {
-      "at": 7,
-      "player": 0,
-      "x": 10,
-      "y": 12,
-      "tower": 0
-    },
-    {
-      "at": 11,
-      "player": 0,
-      "x": 10,
-      "y": 13,
-      "tower": 0
-    },
-    {
-      "at": 19,
-      "player": 0,
-      "x": 14,
-      "y": 10,
-      "tower": 0
-    },
-    {
-      "at": 23,
-      "player": 0,
-      "x": 14,
-      "y": 11,
-      "tower": 0
-    },
-    {
-      "at": 31,
-      "player": 0,
-      "x": 14,
-      "y": 12,
-      "tower": 0
-    },
-    {
-      "at": 47,
-      "player": 0,
-      "x": 20,
-      "y": 13,
-      "tower": 0
-    },
-    {
-      "at": 59,
-      "player": 0,
-      "x": 20,
-      "y": 12,
-      "tower": 0
-    },
-    {
-      "at": 83,
-      "player": 0,
-      "x": 26,
-      "y": 11,
-      "tower": 0
-    },
-    {
-      "at": 97,
-      "player": 0,
-      "x": 26,
-      "y": 12,
-      "tower": 0
-    }
-  ],
-  "expectedHash": "adc38458",
-  "_coverage": "At these values the match kills 7 creeps and leaves 5 alive having each completed 2 laps, with 18 leaks taking lives from 20 down to 2 \u2014 so one fixture exercises death, survival, looping, damage persisting across laps, and the leak-costs-a-life rule, stopping just short of defeat. Match-end is covered by unit tests instead, because lengthening this fixture past the loss would freeze the sim and stop exercising everything after it.",
+  "_comment": "FROZEN. Do not edit to make a red test green \u2014 find out what diverged. The hash moves only when the SIMULATION legitimately changes; the history below records every time it has.",
   "_hashHistory": [
     "ad3da200 - step 2/3, movement only",
     "ded775ca - step 4, towers began shooting (real behaviour change)",
-    "adc38458 - step 5, leaks cost lives AND hashState was fixed to cover gold/towers/lives, which it had silently never covered"
-  ]
+    "adc38458 - step 5, leaks cost lives AND hashState was fixed to cover gold/towers/lives, which it had silently never covered",
+    "f390d440 - step 6, two lanes, real creep roster, economy; creeps now arrive from sends rather than a config"
+  ],
+  "_coverage": "Runs the full 2600 ticks without either player reaching zero, so the sim never freezes and everything after that tick keeps being exercised. Both lanes are live: player 0 ends on 14 lives / 6 leaks / 21 kills / income 39, player 1 on 12 lives / 8 leaks / 15 kills / income 53. Exercises building, upgrading, selling, sends from both sides, the spawn queue, tower fire, kill bounty, leaks costing lives, income ticks and tier-1 unlocks.",
+  "ticks": 2600,
+  "commands": [
+    {
+      "at": 5,
+      "player": 0,
+      "kind": "build",
+      "tower": 0,
+      "x": 10,
+      "y": 11
+    },
+    {
+      "at": 15,
+      "player": 0,
+      "kind": "build",
+      "tower": 0,
+      "x": 10,
+      "y": 12
+    },
+    {
+      "at": 25,
+      "player": 0,
+      "kind": "build",
+      "tower": 2,
+      "x": 12,
+      "y": 11
+    },
+    {
+      "at": 30,
+      "player": 1,
+      "kind": "build",
+      "tower": 0,
+      "x": 8,
+      "y": 11
+    },
+    {
+      "at": 45,
+      "player": 1,
+      "kind": "build",
+      "tower": 0,
+      "x": 8,
+      "y": 12
+    },
+    {
+      "at": 55,
+      "player": 1,
+      "kind": "build",
+      "tower": 1,
+      "x": 11,
+      "y": 11
+    },
+    {
+      "at": 60,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 120,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 200,
+      "player": 0,
+      "kind": "build",
+      "tower": 1,
+      "x": 16,
+      "y": 12
+    },
+    {
+      "at": 320,
+      "player": 1,
+      "kind": "send",
+      "creep": 2
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "upgrade",
+      "x": 10,
+      "y": 11
+    },
+    {
+      "at": 620,
+      "player": 0,
+      "kind": "send",
+      "creep": 1
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 900,
+      "player": 0,
+      "kind": "sell",
+      "x": 12,
+      "y": 11
+    },
+    {
+      "at": 1000,
+      "player": 1,
+      "kind": "upgrade",
+      "x": 8,
+      "y": 11
+    },
+    {
+      "at": 1250,
+      "player": 1,
+      "kind": "send",
+      "creep": 1
+    },
+    {
+      "at": 1400,
+      "player": 0,
+      "kind": "send",
+      "creep": 3
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 3
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "build",
+      "tower": 0,
+      "x": 20,
+      "y": 11
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "send",
+      "creep": 1
+    }
+  ],
+  "expectedHash": "f390d440"
 }

@@ -213,11 +213,33 @@ income, and there is likely no assignment of constants that keeps that non-degen
 - **Each creep tracks `laps`, rendered on the model.** A creep on lap 5 is the most important
   object on the screen.
 
-**Correction to an earlier claim:** it is *not* true that "every creep dies eventually, so
-matches end on their own." A creep whose HP exceeds your maze's damage-per-lap never dies; the
-match ends because the defender reaches zero. Matches end because someone loses, which is a
-weaker guarantee. Two passive players who never send still never end a match — accepted for
-v1, fixed by the v2 wave clock.
+**The leak/kill race — measured at step 6, and both earlier claims were wrong.**
+
+The first draft said "every creep dies eventually, so matches end on their own." The
+correction said the opposite: "a creep whose HP exceeds your maze's damage-per-lap never
+dies." Neither holds.
+
+Because damage persists across laps and laps are unlimited, accumulated damage passes any
+finite HP. **A creep taking any nonzero damage per lap always dies**, in roughly
+`HP / damage-per-lap` laps. The only creep that truly never dies is one nothing ever shoots.
+
+So the match is a **race**, and this is the number that decides it:
+
+```
+      laps-to-kill  =  creep HP / your maze's damage per lap
+      lives-you-lose =  min(laps-to-kill, lives remaining)
+```
+
+Measured: one level-1 Single-target against a Tank II kills it — after taking **16 of the
+defender's 20 lives**. Six towers on the same route cut that to a handful. The creep dies
+either way; what the maze buys is how much it costs you.
+
+That reframes the balance question usefully. It is not "can this creep be killed" but "does
+killing it cost more lives than I have", which is a ratio the harness can measure directly
+at step 8 rather than a qualitative judgement.
+
+Two passive players who never send still never end a match — accepted for v1, fixed by the
+v2 wave clock.
 
 **Win condition.** Each team starts at **20 lives** (a working figure; the decision is "enough
 that one bad leak is a crisis with time to respond"). First to zero loses, and the match ends

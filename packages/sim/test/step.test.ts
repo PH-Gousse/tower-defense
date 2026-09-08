@@ -1,33 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { createState, type GameState } from '../src/state'
-import { step, canBuild, checkBuild, Refusal, Kind, DEFAULT_CONFIG, type Command } from '../src/step'
-import { TowerKind } from '../src/data'
-import { GRID_W, GRID_H, tileIndex, SPAWN_INDICES } from '../src/grid'
+import { createState } from '../src/state'
+import { step, canBuild, checkBuild, Refusal } from '../src/step'
+import { GRID_W, GRID_H, tileIndex } from '../src/grid'
 import { UNREACHABLE, buildField, mazeLength } from '../src/field'
 import { hashState } from '../src/hash'
-
-/** Run n ticks with an optional command schedule, returning the final state. */
-function run(
-  ticks: number,
-  cmdsAt: Record<number, Command[]> = {},
-  config = DEFAULT_CONFIG,
-): GameState {
-  let a = createState()
-  let b = createState()
-  for (let t = 0; t < ticks; t++) {
-    const out = step(a, cmdsAt[t] ?? [], b, config)
-    b = a
-    a = out
-  }
-  return a
-}
-
-const build = (
-  x: number,
-  y: number,
-  player: 0 | 1 = 0,
-  tower: TowerKind = TowerKind.Single,
-): Command => ({ tick: 0, player, kind: Kind.Build, tower, x, y })
+import { TowerKind } from '../src/data'
+import { build, send, run, tick, SWARM, RUNNER, TANK } from './helpers'
 
 describe('step', () => {
   it('does not mutate the previous state', () => {
@@ -40,139 +18,137 @@ describe('step', () => {
   })
 
   it('advances the tick by exactly one', () => {
-    const s = run(7)
-    expect(s.tick).toBe(7)
+    expect(run(7).tick).toBe(7)
   })
 
-  it('releases one creep every spawnEveryTicks, alternating spawn tiles', () => {
-    const config = { ...DEFAULT_CONFIG, spawnTotal: 4, spawnEveryTicks: 4 }
-    // 16 ticks releases at t=4,8,12,16.
-    const s = run(16, {}, config)
-    expect(s.lane.creeps.count).toBe(4)
-    // Alternating tiles means y differs between consecutive releases. Creeps
-    // that spawn on the same tick at the same tile never separate, and one
-    // splash hit would kill all of them.
-    const ys = Array.from(s.lane.creeps.y.slice(0, 4))
+  it('is reproducible: same commands, same hash', () => {
+    const cmds = { 2: [build(10, 10)], 5: [send(RUNNER)], 9: [build(12, 12)] }
+    expect(hashState(run(60, cmds))).toBe(hashState(run(60, cmds)))
+  })
+})
+
+describe('sends and the spawn queue', () => {
+  it('puts creeps in the opponent lane, never the sender own lane', () => {
+    // A creep is owned by its sender for scoring but exists only in the
+    // defender's lane. Player 1 sends, so lane 0 fills and lane 1 stays empty.
+    const s = run(30, { 0: [send(RUNNER, 1)] })
+    expect(s.lanes[0]!.creeps.count).toBe(1)
+    expect(s.lanes[1]!.creeps.count).toBe(0)
+    expect(s.lanes[0]!.creeps.owner[0]).toBe(1)
+  })
+
+  it('releases one creep at a time rather than all at once', () => {
+    // A swarm send is 6 creeps. Released together at the same tile they would
+    // never separate, so they would travel as a single point and one splash hit
+    // would kill all six.
+    const early = run(6, { 0: [send(SWARM)] })
+    const later = run(40, { 0: [send(SWARM)] })
+    expect(early.lanes[0]!.creeps.count).toBeLessThan(6)
+    expect(early.lanes[0]!.creeps.count).toBeGreaterThan(0)
+    expect(later.lanes[0]!.creeps.count).toBe(6)
+  })
+
+  it('alternates spawn tiles so consecutive releases separate', () => {
+    const s = run(40, { 0: [send(SWARM)] })
+    const ys = Array.from(s.lanes[0]!.creeps.y.slice(0, 4))
     expect(ys[0]).not.toBe(ys[1])
     expect(ys[0]).toBe(ys[2])
   })
 
   it('walks a creep toward the exit', () => {
-    const config = { ...DEFAULT_CONFIG, spawnTotal: 1, creepSpeed: 0.5 }
-    const early = run(10, {}, config)
-    const late = run(40, {}, config)
-    expect(early.lane.creeps.count).toBe(1)
-    expect(late.lane.creeps.x[0] as number).toBeGreaterThan(early.lane.creeps.x[0] as number)
+    const early = run(40, { 0: [send(RUNNER)] })
+    const late = run(200, { 0: [send(RUNNER)] })
+    expect(late.lanes[0]!.creeps.x[0] as number).toBeGreaterThan(
+      early.lanes[0]!.creeps.x[0] as number,
+    )
   })
+})
 
+describe('placement', () => {
   it('refuses a placement that would seal the lane', () => {
     const s = createState()
-    // Wall off all but one tile of a column, then check the last one is refused.
     for (let y = 0; y < GRID_H; y++) {
       if (y === 5) continue
-      s.lane.blocked[tileIndex({ x: 20, y })] = 1
+      s.lanes[0]!.blocked[tileIndex({ x: 20, y })] = 1
     }
-    expect(canBuild(s, 20, 5)).toBe(false)
+    expect(canBuild(s, 0, 20, 5)).toBe(false)
+    expect(checkBuild(s, 0, 20, 5).refusal).toBe(Refusal.WouldSealLane)
   })
 
   it('allows a placement that only lengthens the maze', () => {
     const s = createState()
     for (let y = 0; y < GRID_H; y++) {
       if (y === 5 || y === 6) continue
-      s.lane.blocked[tileIndex({ x: 20, y })] = 1
+      s.lanes[0]!.blocked[tileIndex({ x: 20, y })] = 1
     }
-    expect(canBuild(s, 20, 5)).toBe(true)
+    expect(canBuild(s, 0, 20, 5)).toBe(true)
   })
 
-  it('refuses building on spawn, exit, or an occupied tile', () => {
-    const s = createState()
-    expect(canBuild(s, 0, 11)).toBe(false)
-    expect(canBuild(s, GRID_W - 1, 11)).toBe(false)
-    s.lane.blocked[tileIndex({ x: 8, y: 8 })] = 1
-    expect(canBuild(s, 8, 8)).toBe(false)
-  })
-
-  it('refuses building out of bounds', () => {
-    const s = createState()
-    expect(canBuild(s, -1, 5)).toBe(false)
-    expect(canBuild(s, GRID_W, 5)).toBe(false)
-    expect(canBuild(s, 5, GRID_H)).toBe(false)
-  })
-
-  it('applies commands in (player, kind) order regardless of arrival order', () => {
-    const forward = run(3, { 0: [build(5, 5, 0), build(6, 6, 1)] })
-    const reversed = run(3, { 0: [build(6, 6, 1), build(5, 5, 0)] })
-    expect(hashState(forward)).toBe(hashState(reversed))
-  })
-
-  it('teleports a creep back to spawn when its tile loses all paths', () => {
-    const config = { ...DEFAULT_CONFIG, spawnTotal: 1, creepSpeed: 0.5 }
-    let a = createState()
-    let b = createState()
-    for (let t = 0; t < 30; t++) {
-      const out = step(a, [], b, config)
-      b = a
-      a = out
-    }
-    const walked = a.lane.creeps.x[0] as number
-    expect(walked).toBeGreaterThan(1.5)
-
-    // Seal the whole lane behind and ahead of the creep by hand, bypassing
-    // canBuild — this is the state the teleport exists to recover from.
-    for (let y = 0; y < GRID_H; y++) {
-      a.lane.blocked[tileIndex({ x: Math.floor(walked) + 1, y })] = 1
-      a.lane.blocked[tileIndex({ x: Math.floor(walked) - 1, y })] = 1
-    }
-    buildField(a.lane.blocked, a.lane.field)
-    expect(a.lane.field.dist[tileIndex({ x: Math.floor(walked), y: 11 })]).toBe(UNREACHABLE)
-
-    const after = step(a, [], b, config)
-    // Back at a spawn tile, not stuck mid-field.
-    expect(after.lane.creeps.x[0] as number).toBeLessThan(1)
-  })
-
-  it('is reproducible: same commands, same hash', () => {
-    const cmds = { 2: [build(10, 10)], 5: [build(11, 11)], 9: [build(12, 12)] }
-    expect(hashState(run(20, cmds))).toBe(hashState(run(20, cmds)))
-  })
-})
-
-describe('checkBuild refusal reasons', () => {
   it('names why, rather than just refusing', () => {
     const s = createState()
-    expect(checkBuild(s, -1, 5).refusal).toBe(Refusal.OutOfBounds)
-    expect(checkBuild(s, 0, 11).refusal).toBe(Refusal.SpawnOrExit)
-    expect(checkBuild(s, GRID_W - 1, 12).refusal).toBe(Refusal.SpawnOrExit)
-    s.lane.blocked[tileIndex({ x: 8, y: 8 })] = 1
-    expect(checkBuild(s, 8, 8).refusal).toBe(Refusal.Occupied)
+    expect(checkBuild(s, 0, -1, 5).refusal).toBe(Refusal.OutOfBounds)
+    expect(checkBuild(s, 0, 0, 11).refusal).toBe(Refusal.SpawnOrExit)
+    expect(checkBuild(s, 0, GRID_W - 1, 12).refusal).toBe(Refusal.SpawnOrExit)
+    s.lanes[0]!.blocked[tileIndex({ x: 8, y: 8 })] = 1
+    expect(checkBuild(s, 0, 8, 8).refusal).toBe(Refusal.Occupied)
   })
 
-  it('reports WouldSealLane for the tile that closes the last gap', () => {
+  it('reports the resulting maze length when allowed', () => {
     const s = createState()
-    for (let y = 0; y < GRID_H; y++) {
-      if (y === 5) continue
-      s.lane.blocked[tileIndex({ x: 20, y })] = 1
-    }
-    const check = checkBuild(s, 20, 5)
-    expect(check.refusal).toBe(Refusal.WouldSealLane)
-    expect(check.mazeAfter).toBe(UNREACHABLE)
-  })
-
-  it('reports the resulting maze length when the placement is allowed', () => {
-    const s = createState()
-    const before = mazeLength(s.lane.field)
-    // A single tower directly in the lane forces a one-tile detour each way.
-    const check = checkBuild(s, 20, 11)
+    const before = mazeLength(s.lanes[0]!.field)
+    const check = checkBuild(s, 0, 20, 11)
     expect(check.refusal).toBe(Refusal.None)
     expect(check.mazeAfter).toBeGreaterThan(before)
   })
 
-  it('leaves the blocked set untouched — the probe must not mutate state', () => {
+  it('leaves state untouched — the probe must not mutate', () => {
     const s = createState()
     const before = hashState(s)
-    checkBuild(s, 20, 11)
-    checkBuild(s, 20, 5)
-    checkBuild(s, -5, -5)
+    checkBuild(s, 0, 20, 11)
+    checkBuild(s, 0, 20, 5)
+    checkBuild(s, 0, -5, -5)
     expect(hashState(s)).toBe(before)
+  })
+
+  it('builds only in your own lane', () => {
+    const s = run(3, {
+      0: [build(5, 5, TowerKind.Single, 0), build(9, 9, TowerKind.Single, 1)],
+    })
+    expect(s.lanes[0]!.towers.kind[tileIndex({ x: 5, y: 5 })]).toBe(TowerKind.Single)
+    expect(s.lanes[0]!.towers.kind[tileIndex({ x: 9, y: 9 })]).toBe(-1)
+    expect(s.lanes[1]!.towers.kind[tileIndex({ x: 9, y: 9 })]).toBe(TowerKind.Single)
+  })
+})
+
+describe('command ordering', () => {
+  it('applies in (player, kind) order regardless of arrival order', () => {
+    const forward = run(3, {
+      0: [build(5, 5, TowerKind.Single, 0), build(6, 6, TowerKind.Single, 1)],
+    })
+    const reversed = run(3, {
+      0: [build(6, 6, TowerKind.Single, 1), build(5, 5, TowerKind.Single, 0)],
+    })
+    expect(hashState(forward)).toBe(hashState(reversed))
+  })
+})
+
+describe('teleport', () => {
+  it('returns a pathless creep to the spawn', () => {
+    let s = run(120, { 0: [send(TANK)] })
+    const walked = s.lanes[0]!.creeps.x[0] as number
+    expect(walked).toBeGreaterThan(1.5)
+
+    // Seal the lane by hand on both sides of the creep, bypassing canBuild.
+    // This is the state the teleport exists to recover from.
+    const col = Math.floor(walked)
+    for (let y = 0; y < GRID_H; y++) {
+      s.lanes[0]!.blocked[tileIndex({ x: col + 1, y })] = 1
+      s.lanes[0]!.blocked[tileIndex({ x: col - 1, y })] = 1
+    }
+    buildField(s.lanes[0]!.blocked, s.lanes[0]!.field)
+    expect(s.lanes[0]!.field.dist[tileIndex({ x: col, y: 11 })]).toBe(UNREACHABLE)
+
+    s = tick(s)
+    expect(s.lanes[0]!.creeps.x[0] as number).toBeLessThan(1)
   })
 })

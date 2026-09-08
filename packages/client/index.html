@@ -29,6 +29,13 @@
       text-align: center; z-index: 10;
     }
     #over h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
+    #fatal {
+      position: fixed; inset: 0; display: grid; place-items: center; z-index: 20;
+      background: #0e1013; color: #e6e8ea; text-align: center; padding: 24px;
+      font: 13px/1.6 -apple-system, "Segoe UI", system-ui, sans-serif;
+    }
+    #fatal h2 { margin: 0 0 8px; font-size: 20px; font-weight: 600; }
+    #fatal p { margin: 0; color: #8b939d; max-width: 34em; }
     #over p { margin: 0; color: #8b939d; }
 
     #palette {
@@ -49,6 +56,20 @@
     .tool .c { display: block; font-size: 11px; color: #7d858f; font-variant-numeric: tabular-nums; }
     .tool[data-broke] { opacity: .45; }
     #palette .hint { margin-left: auto; font-size: 11px; color: #6b727b; }
+    #palette .sep { width: 1px; align-self: stretch; background: #2a2f36; margin: 0 5px; }
+    #palette .label { font-size: 10px; letter-spacing: .07em; text-transform: uppercase; color: #7d858f; }
+    #sendRow { display: flex; gap: 6px; }
+    .creep {
+      display: block; text-align: left; cursor: pointer; font: inherit;
+      color: #e6e8ea; background: #1d1a19; border: 1px solid #43372f;
+      border-radius: 3px; padding: 6px 10px; min-width: 116px;
+    }
+    .creep:hover { border-color: #6b5748; }
+    .creep .n { display: block; font-size: 12.5px; }
+    .creep .c { display: block; font-size: 11px; color: #8a8079; font-variant-numeric: tabular-nums; }
+    .creep[data-broke] { opacity: .45; }
+    .creep[data-locked] { opacity: .5; border-style: dashed; }
+    .creep[data-locked] .c { color: #b8843c; }
     kbd { border: 1px solid #3a424c; border-radius: 2px; padding: 0 4px; font: inherit; font-size: 10px; }
 
     #panel {
@@ -76,7 +97,9 @@
 <body>
   <div id="hud">
     <div><b>Lives</b><span id="lives">20</span></div>
+    <div><b>Opponent</b><span id="oppLives">20</span></div>
     <div><b>Gold</b><span id="gold">600</span></div>
+    <div><b>Income</b><span id="income">25</span></div>
     <div><b>Towers</b><span id="towers">0</span></div>
     <div><b>Creeps</b><span id="creeps">0</span></div>
     <div><b>Kills</b><span id="kills">0</span></div>
@@ -98,7 +121,10 @@
     <button class="tool" data-tower="2">
       <span class="n">Slow</span><span class="c"><em id="cost2">80</em>g &middot; anti-runner</span>
     </button>
-    <span class="hint"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> pick &middot; click a tower to upgrade or sell</span>
+    <span class="sep"></span>
+    <span class="label">Send &rarr;</span>
+    <span id="sendRow"></span>
+    <span class="hint"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> towers &middot; <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd> send &middot; click a tower to upgrade or sell</span>
   </div>
 
   <!-- Inline panel on the field: upgrading is the most frequent mid-match

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { Driver } from '../src/driver'
-import { TICK_MS, TowerKind, MatchResult, DEFAULT_CONFIG, tileIndex } from '@ltw/sim'
+import { TICK_MS, TowerKind, MatchResult, tileIndex, creepSpec, STARTING_INCOME } from '@ltw/sim'
 
 /**
  * The driver is the only piece of the client that can be tested without a
@@ -75,13 +75,25 @@ describe('Driver', () => {
     expect(d.previous.tick).toBe(2)
   })
 
-  it('actually simulates: a creep spawns and walks', () => {
-    const d = new Driver({ ...DEFAULT_CONFIG, spawnTotal: 1, creepSpeed: 0.5 })
+  it('actually simulates: a sent creep appears and walks', () => {
+    // Player 0 sends, so the creeps land in lane 1 — a creep never appears in
+    // its own sender's lane.
+    const d = new Driver(0)
     d.advance(0)
-    d.advance(TICK_MS * 10)
-    for (let f = 1; f <= 20; f++) d.advance(TICK_MS * (10 + f * 10))
-    expect(d.current.lane.creeps.count).toBe(1)
-    expect(d.current.lane.creeps.x[0] as number).toBeGreaterThan(1)
+    d.queueSend(1)
+    let t = 0
+    for (let f = 1; f <= 40; f++) { t += TICK_MS * 10; d.advance(t) }
+    expect(d.current.lanes[1]!.creeps.count).toBe(1)
+    expect(d.current.lanes[1]!.creeps.x[0] as number).toBeGreaterThan(1)
+    expect(d.current.lanes[0]!.creeps.count).toBe(0)
+  })
+
+  it('raises income permanently when you send', () => {
+    const d = new Driver(0)
+    d.advance(0)
+    d.queueSend(0)
+    d.advance(TICK_MS)
+    expect(d.mySide.income).toBe(STARTING_INCOME + creepSpec(0).incomeBonus)
   })
 
   it('queues a build that the sim then applies', () => {
@@ -89,8 +101,8 @@ describe('Driver', () => {
     d.advance(0)
     d.queueBuild(6, 6, TowerKind.Single)
     d.advance(TICK_MS)
-    expect(d.current.lane.towers.kind[tileIndex({ x: 6, y: 6 })]).toBe(TowerKind.Single)
-    expect(d.current.gold).toBeLessThan(600)
+    expect(d.current.lanes[0]!.towers.kind[tileIndex({ x: 6, y: 6 })]).toBe(TowerKind.Single)
+    expect(d.current.players[0]!.gold).toBeLessThan(600)
   })
 
   it('queues upgrade and sell', () => {
@@ -100,24 +112,28 @@ describe('Driver', () => {
     d.advance(TICK_MS)
     d.queueUpgrade(6, 6)
     d.advance(TICK_MS * 2)
-    expect(d.current.lane.towers.level[tileIndex({ x: 6, y: 6 })]).toBe(2)
+    expect(d.current.lanes[0]!.towers.level[tileIndex({ x: 6, y: 6 })]).toBe(2)
 
-    const goldBefore = d.current.gold
+    const goldBefore = d.current.players[0]!.gold
     d.queueSell(6, 6)
     d.advance(TICK_MS * 3)
-    expect(d.current.lane.towers.kind[tileIndex({ x: 6, y: 6 })]).toBe(-1)
-    expect(d.current.gold).toBeGreaterThan(goldBefore)
+    expect(d.current.lanes[0]!.towers.kind[tileIndex({ x: 6, y: 6 })]).toBe(-1)
+    expect(d.current.players[0]!.gold).toBeGreaterThan(goldBefore)
   })
 
-  it('reaches defeat when creeps leak unopposed', () => {
-    const d = new Driver({ ...DEFAULT_CONFIG, spawnTotal: 1, creepSpeed: 1.0, creepHp: 100000 })
+  it('reaches a decided match when creeps leak unopposed', () => {
+    const d = new Driver(0)
     d.advance(0)
     let t = 0
-    for (let f = 0; f < 4000 && d.current.result === MatchResult.Playing; f++) {
+    for (let f = 0; f < 20000 && d.current.result === MatchResult.Playing; f++) {
+      // Keep feeding the opponent's lane; nothing defends it.
+      if (f % 400 === 0) d.queueSend(1)
       t += TICK_MS * 10
       d.advance(t)
     }
-    expect(d.current.result).toBe(MatchResult.Defeat)
-    expect(d.current.lives).toBe(0)
+    expect(d.current.result).toBe(MatchResult.Decided)
+    // Player 0 sent, so player 1 is the one who ran out.
+    expect(d.current.winner).toBe(0)
+    expect(d.current.players[1]!.lives).toBe(0)
   })
 })

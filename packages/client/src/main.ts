@@ -1,10 +1,29 @@
-import { createScene, type Selection } from './scene'
-import { TowerKind, ARCHETYPES, levelOf, MAX_LEVEL, TICK_HZ, MatchResult } from '@ltw/sim'
+import { createScene, WebGLUnavailable, type Selection, type Scene } from './scene'
+import {
+  TowerKind, ARCHETYPES, levelOf, MAX_LEVEL, TICK_HZ, MatchResult,
+  CREEPS, tierUnlockTick, INCOME_EVERY_TICKS,
+} from '@ltw/sim'
 
-const scene = createScene(document.body)
+let scene: Scene
+try {
+  scene = createScene(document.body)
+} catch (err) {
+  // Say why, and stop. Continuing would leave a page that looks like the game
+  // but responds to nothing.
+  const msg = document.createElement('div')
+  msg.id = 'fatal'
+  msg.innerHTML =
+    '<div><h2>WebGL is unavailable</h2>' +
+    '<p>This game renders with WebGL. Enable hardware acceleration, or try a different browser.</p></div>'
+  document.body.appendChild(msg)
+  if (!(err instanceof WebGLUnavailable)) throw err
+  throw err
+}
 
 const el = (id: string) => document.getElementById(id)
 const lives = el('lives')
+const oppLives = el('oppLives')
+const income = el('income')
 const leaks = el('leaks')
 const gold = el('gold')
 const over = el('over')
@@ -25,6 +44,34 @@ const btnUpgrade = el('btnUpgrade') as HTMLButtonElement | null
 const btnSell = el('btnSell') as HTMLButtonElement | null
 
 const tools = Array.from(document.querySelectorAll<HTMLButtonElement>('.tool'))
+const sendRow = el('sendRow')
+
+// --- send palette ----------------------------------------------------------
+// Build and Send stay separate palettes on purpose: they are opposite-facing
+// economies, and merging them makes a 140g send one misclick from a 110g tower.
+const creepButtons: HTMLButtonElement[] = []
+if (sendRow) {
+  CREEPS.forEach((spec, i) => {
+    const b = document.createElement('button')
+    b.className = 'creep'
+    b.dataset.creep = String(i)
+    b.innerHTML =
+      `<span class="n">${spec.name}</span>` +
+      `<span class="c">${spec.cost}g` +
+      (spec.count > 1 ? ` &times;${spec.count}` : '') +
+      ` &middot; +${spec.incomeBonus} inc</span>`
+    b.addEventListener('click', () => scene.send(i))
+    sendRow.appendChild(b)
+    creepButtons.push(b)
+  })
+}
+
+window.addEventListener('keydown', (ev) => {
+  const k = ev.key.toLowerCase()
+  if (k === 'q') scene.send(0)
+  if (k === 'w') scene.send(1)
+  if (k === 'e') scene.send(2)
+})
 
 // --- build palette ---------------------------------------------------------
 
@@ -82,6 +129,32 @@ scene.onSelect((sel: Selection | null) => {
 
 scene.onStats((s) => {
   if (gold) gold.textContent = String(s.gold)
+  if (income) income.textContent = `${s.income} /15s`
+  if (oppLives) oppLives.textContent = String(s.oppLives)
+
+  // Creep cards carry three states, not two: affordable, unaffordable, and
+  // not-yet-unlocked. Locked is first-class because tiers open on a timer and
+  // knowing what is coming changes what you save for.
+  for (const b of creepButtons) {
+    const i = Number(b.dataset.creep)
+    const spec = CREEPS[i]!
+    const locked = s.tick < tierUnlockTick(spec.tier)
+    if (locked) {
+      b.setAttribute('data-locked', 'true')
+      const secs = Math.ceil((tierUnlockTick(spec.tier) - s.tick) / TICK_HZ)
+      const c = b.querySelector('.c')
+      if (c) c.textContent = `unlocks in ${secs}s`
+    } else {
+      b.removeAttribute('data-locked')
+      const c = b.querySelector('.c')
+      if (c) {
+        c.textContent =
+          `${spec.cost}g` + (spec.count > 1 ? ` ×${spec.count}` : '') + ` · +${spec.incomeBonus} inc`
+      }
+      if (s.gold < spec.cost) b.setAttribute('data-broke', 'true')
+      else b.removeAttribute('data-broke')
+    }
+  }
   if (leaks) leaks.textContent = String(s.leaks)
   if (lives) {
     lives.textContent = String(s.lives)
@@ -93,8 +166,11 @@ scene.onStats((s) => {
   if (over) {
     over.hidden = s.result === MatchResult.Playing
     if (overDetail && s.result !== MatchResult.Playing) {
+      const won = s.winner === 0
+      const title = document.querySelector('#over h2')
+      if (title) title.textContent = s.result === MatchResult.Draw ? 'Draw' : won ? 'You win' : 'Out of lives'
       overDetail.textContent =
-        `${s.leaks} leaks, ${s.kills} kills. Reload to try again — rematch arrives with the server at step 10.`
+        `${s.leaks} leaks against you, ${s.kills} kills. Reload to try again — rematch arrives with the server at step 10.`
     }
   }
   if (towers) towers.textContent = String(s.towers)

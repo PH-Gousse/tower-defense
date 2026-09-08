@@ -1,14 +1,4 @@
-import {
-  createState,
-  step,
-  Kind,
-  TICK_MS,
-  DEFAULT_CONFIG,
-  type Command,
-  type GameState,
-  type SimConfig,
-  TowerKind,
-} from '@ltw/sim'
+import { createState, step, Kind, TICK_MS, type Command, type GameState, TowerKind } from '@ltw/sim'
 
 /**
  * Fixed-timestep driver.
@@ -40,7 +30,8 @@ export class Driver {
   private pending: Command[] = []
   private started = false
 
-  constructor(private readonly config: SimConfig = DEFAULT_CONFIG) {}
+  /** The player this client controls. Lane `me` is the one you defend. */
+  constructor(readonly me: 0 | 1 = 0) {}
 
   /** The state being rendered. */
   get current(): GameState {
@@ -67,16 +58,31 @@ export class Driver {
     return raw > 1 ? 1 : raw
   }
 
-  queueBuild(x: number, y: number, tower: TowerKind, player: 0 | 1 = 0): void {
-    this.pending.push({ tick: this.a.tick + 1, player, kind: Kind.Build, tower, x, y })
+  queueBuild(x: number, y: number, tower: TowerKind): void {
+    this.pending.push({ tick: this.a.tick + 1, player: this.me, kind: Kind.Build, tower, x, y })
   }
 
-  queueUpgrade(x: number, y: number, player: 0 | 1 = 0): void {
-    this.pending.push({ tick: this.a.tick + 1, player, kind: Kind.Upgrade, x, y })
+  queueUpgrade(x: number, y: number): void {
+    this.pending.push({ tick: this.a.tick + 1, player: this.me, kind: Kind.Upgrade, x, y })
   }
 
-  queueSell(x: number, y: number, player: 0 | 1 = 0): void {
-    this.pending.push({ tick: this.a.tick + 1, player, kind: Kind.Sell, x, y })
+  queueSell(x: number, y: number): void {
+    this.pending.push({ tick: this.a.tick + 1, player: this.me, kind: Kind.Sell, x, y })
+  }
+
+  /** Send a creep into the opponent's lane. Raises your income permanently. */
+  queueSend(creep: number): void {
+    this.pending.push({ tick: this.a.tick + 1, player: this.me, kind: Kind.Send, creep })
+  }
+
+  /** The lane you defend. */
+  get myLane() {
+    return this.a.lanes[this.me]!
+  }
+
+  /** Your gold, income and lives. */
+  get mySide() {
+    return this.a.players[this.me]!
   }
 
   /** Advance by real elapsed time. Returns how many ticks actually ran. */
@@ -98,7 +104,7 @@ export class Driver {
     while (this.acc >= TICK_MS && ran < MAX_CATCHUP_TICKS) {
       const commands = this.pending
       this.pending = []
-      const out = step(this.a, commands, this.b, this.config)
+      const out = step(this.a, commands, this.b)
       this.b = this.a
       this.a = out
       this.acc -= TICK_MS

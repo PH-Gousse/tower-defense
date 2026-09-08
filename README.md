@@ -12,7 +12,7 @@ run the maze again**, until towers kill it. Leaks are a drain, not a penalty.
 
 ## Status
 
-**Step 5 of 11: the loop.** A pure simulation package with a flow field, driven at a fixed
+**Step 6 of 11: the economy.** A pure simulation package with a flow field, driven at a fixed
 20Hz by the client. Creeps walk the maze; towers reroute them; a placement that would seal
 the lane is refused.
 
@@ -26,7 +26,13 @@ keeping its damage and its lap count. Nothing but tower damage removes it. Lap c
 pips on the creep, the route that produced a leak flashes red, and at zero lives the match
 ends. One creep your maze cannot kill is enough to lose.
 
-Gold is a fixed budget for now — income, kill bounty and creep tiers arrive at step 6.
+**Two lanes.** You defend yours and send creeps into your opponent's. Income arrives in a lump
+every 15 seconds and the only way it grows is by sending, so every lump is a fork: towers to
+survive what is coming, or creeps to pressure them and compound. Turtling loses the money war;
+over-sending leaves you exposed. Killing a creep in your own lane pays a bounty, and stronger
+creep tiers unlock on a timer so threat and economy escalate together.
+
+There is no opponent playing lane 1 yet — the AI arrives at step 7.
 
 Determinism is verified, not asserted: the golden fixture replays a committed command log to
 a committed hash on **two different engines** (V8 via node, JavaScriptCore via bun). They

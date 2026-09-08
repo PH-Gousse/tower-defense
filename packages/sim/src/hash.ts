@@ -75,45 +75,68 @@ export function hashState(s: GameState): number {
   // --- match-level scalars ---------------------------------------------------
   h.int(s.tick)
   h.int(s.nextCreepId)
-  h.int(s.gold)
-  h.int(s.kills)
-  h.int(s.lives)
-  h.int(s.leaks)
   h.int(s.result)
+  h.int(s.winner)
 
-  // --- terrain ---------------------------------------------------------------
-  const blocked = s.lane.blocked
-  for (let i = 0; i < blocked.length; i++) h.byte(blocked[i] as number)
-
-  const t = s.lane.towers
-  for (let i = 0; i < t.kind.length; i++) {
-    // Skip empty tiles cheaply, but still hash the index so a tower moving
-    // between tiles cannot cancel out.
-    if (t.kind[i] === -1) continue
-    h.int(i)
-    h.byte(t.kind[i] as number)
-    h.byte(t.level[i] as number)
-    h.int(t.cooldown[i] as number)
+  // --- players ---------------------------------------------------------------
+  for (let p = 0; p < s.players.length; p++) {
+    const pl = s.players[p]!
+    h.int(pl.gold)
+    h.int(pl.income)
+    h.int(pl.lives)
+    h.int(pl.leaks)
+    h.int(pl.kills)
   }
 
-  // The flow field is derived from `blocked`, so hashing it is redundant for
-  // correctness — but it is cheap and it turns "our fields diverged" into a
-  // hash mismatch instead of into a creep quietly taking a different route.
-  const dist = s.lane.field.dist
-  for (let i = 0; i < dist.length; i++) h.int(dist[i] as number)
+  // --- lanes -----------------------------------------------------------------
+  for (let l = 0; l < s.lanes.length; l++) {
+    const lane = s.lanes[l]!
 
-  // --- creeps ----------------------------------------------------------------
-  const c = s.lane.creeps
-  h.int(c.count)
-  for (let i = 0; i < c.count; i++) {
-    h.int(c.id[i] as number)
-    h.float(c.x[i] as number)
-    h.float(c.y[i] as number)
-    h.int(c.hp[i] as number)
-    h.int(c.laps[i] as number)
-    h.float(c.speed[i] as number)
-    h.int(c.slowPercent[i] as number)
-    h.int(c.slowUntil[i] as number)
+    const blocked = lane.blocked
+    for (let i = 0; i < blocked.length; i++) h.byte(blocked[i] as number)
+
+    const t = lane.towers
+    for (let i = 0; i < t.kind.length; i++) {
+      // Skip empty tiles cheaply, but still hash the index so a tower moving
+      // between tiles cannot cancel out.
+      if (t.kind[i] === -1) continue
+      h.int(i)
+      h.byte(t.kind[i] as number)
+      h.byte(t.level[i] as number)
+      h.int(t.cooldown[i] as number)
+    }
+
+    // The flow field is derived from `blocked`, so hashing it is redundant for
+    // correctness — but it is cheap and it turns "our fields diverged" into a
+    // hash mismatch instead of into a creep quietly taking a different route.
+    const dist = lane.field.dist
+    for (let i = 0; i < dist.length; i++) h.int(dist[i] as number)
+
+    // Pending sends are match state: two clients disagreeing about what is
+    // queued would diverge the moment it released.
+    h.int(lane.queueHead)
+    h.int(lane.queueTail)
+    h.int(lane.nextRelease)
+    h.int(lane.released)
+    for (let q = lane.queueHead; q < lane.queueTail; q++) {
+      h.int(lane.queueCreep[q] as number)
+      h.byte(lane.queueOwner[q] as number)
+    }
+
+    const c = lane.creeps
+    h.int(c.count)
+    for (let i = 0; i < c.count; i++) {
+      h.int(c.id[i] as number)
+      h.byte(c.owner[i] as number)
+      h.int(c.spec[i] as number)
+      h.float(c.x[i] as number)
+      h.float(c.y[i] as number)
+      h.int(c.hp[i] as number)
+      h.int(c.laps[i] as number)
+      h.float(c.speed[i] as number)
+      h.int(c.slowPercent[i] as number)
+      h.int(c.slowUntil[i] as number)
+    }
   }
 
   return h.value

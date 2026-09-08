@@ -22,47 +22,57 @@ import { TowerKind } from '../src/data'
 const MUTATIONS: readonly { name: string; apply: (s: GameState) => void }[] = [
   { name: 'tick', apply: (s) => { s.tick += 1 } },
   { name: 'nextCreepId', apply: (s) => { s.nextCreepId += 1 } },
-  { name: 'gold', apply: (s) => { s.gold += 1 } },
-  { name: 'kills', apply: (s) => { s.kills += 1 } },
-  { name: 'lives', apply: (s) => { s.lives -= 1 } },
-  { name: 'leaks', apply: (s) => { s.leaks += 1 } },
-  { name: 'result', apply: (s) => { s.result = MatchResult.Defeat } },
-  { name: 'lane.blocked', apply: (s) => { s.lane.blocked[tileIndex({ x: 7, y: 7 })] = 1 } },
-  { name: 'lane.field.dist', apply: (s) => { s.lane.field.dist[42] = 999 } },
+  { name: 'players[0].gold', apply: (s) => { s.players[0]!.gold += 1 } },
+  { name: 'kills', apply: (s) => { s.players[0]!.kills += 1 } },
+  { name: 'lives', apply: (s) => { s.players[0]!.lives -= 1 } },
+  { name: 'leaks', apply: (s) => { s.players[0]!.leaks += 1 } },
+  { name: 'result', apply: (s) => { s.result = MatchResult.Decided } },
+  { name: 'winner', apply: (s) => { s.winner = 1 } },
+  { name: 'players[0].income', apply: (s) => { s.players[0]!.income += 1 } },
+  { name: 'players[1].gold', apply: (s) => { s.players[1]!.gold += 1 } },
+  { name: 'players[1].lives', apply: (s) => { s.players[1]!.lives -= 1 } },
+  { name: 'lanes[1].blocked', apply: (s) => { s.lanes[1]!.blocked[tileIndex({ x: 3, y: 3 })] = 1 } },
+  { name: 'lane.queueTail', apply: (s) => { s.lanes[0]!.queueTail = 1 } },
+  { name: 'lane.nextRelease', apply: (s) => { s.lanes[0]!.nextRelease = 3 } },
+  { name: 'lane.released', apply: (s) => { s.lanes[0]!.released = 5 } },
+  { name: 'creeps.owner', apply: (s) => { s.lanes[0]!.creeps.count = 1; s.lanes[0]!.creeps.owner[0] = 1 } },
+  { name: 'creeps.spec', apply: (s) => { s.lanes[0]!.creeps.count = 1; s.lanes[0]!.creeps.spec[0] = 2 } },
+  { name: 'lane.blocked', apply: (s) => { s.lanes[0]!.blocked[tileIndex({ x: 7, y: 7 })] = 1 } },
+  { name: 'lane.field.dist', apply: (s) => { s.lanes[0]!.field.dist[42] = 999 } },
   {
     name: 'towers.kind',
-    apply: (s) => { s.lane.towers.kind[tileIndex({ x: 9, y: 9 })] = TowerKind.Splash },
+    apply: (s) => { s.lanes[0]!.towers.kind[tileIndex({ x: 9, y: 9 })] = TowerKind.Splash },
   },
   {
     name: 'towers.level',
     apply: (s) => {
       const i = tileIndex({ x: 9, y: 9 })
-      s.lane.towers.kind[i] = TowerKind.Single
-      s.lane.towers.level[i] = 3
+      s.lanes[0]!.towers.kind[i] = TowerKind.Single
+      s.lanes[0]!.towers.level[i] = 3
     },
   },
   {
     name: 'towers.cooldown',
     apply: (s) => {
       const i = tileIndex({ x: 9, y: 9 })
-      s.lane.towers.kind[i] = TowerKind.Single
-      s.lane.towers.cooldown[i] = 7
+      s.lanes[0]!.towers.kind[i] = TowerKind.Single
+      s.lanes[0]!.towers.cooldown[i] = 7
     },
   },
-  { name: 'creeps.count', apply: (s) => { s.lane.creeps.count = 1 } },
-  { name: 'creeps.id', apply: (s) => { s.lane.creeps.count = 1; s.lane.creeps.id[0] = 42 } },
-  { name: 'creeps.x', apply: (s) => { s.lane.creeps.count = 1; s.lane.creeps.x[0] = 3.5 } },
-  { name: 'creeps.y', apply: (s) => { s.lane.creeps.count = 1; s.lane.creeps.y[0] = 4.5 } },
-  { name: 'creeps.hp', apply: (s) => { s.lane.creeps.count = 1; s.lane.creeps.hp[0] = 55 } },
-  { name: 'creeps.laps', apply: (s) => { s.lane.creeps.count = 1; s.lane.creeps.laps[0] = 3 } },
-  { name: 'creeps.speed', apply: (s) => { s.lane.creeps.count = 1; s.lane.creeps.speed[0] = 0.5 } },
+  { name: 'creeps.count', apply: (s) => { s.lanes[0]!.creeps.count = 1 } },
+  { name: 'creeps.id', apply: (s) => { s.lanes[0]!.creeps.count = 1; s.lanes[0]!.creeps.id[0] = 42 } },
+  { name: 'creeps.x', apply: (s) => { s.lanes[0]!.creeps.count = 1; s.lanes[0]!.creeps.x[0] = 3.5 } },
+  { name: 'creeps.y', apply: (s) => { s.lanes[0]!.creeps.count = 1; s.lanes[0]!.creeps.y[0] = 4.5 } },
+  { name: 'creeps.hp', apply: (s) => { s.lanes[0]!.creeps.count = 1; s.lanes[0]!.creeps.hp[0] = 55 } },
+  { name: 'creeps.laps', apply: (s) => { s.lanes[0]!.creeps.count = 1; s.lanes[0]!.creeps.laps[0] = 3 } },
+  { name: 'creeps.speed', apply: (s) => { s.lanes[0]!.creeps.count = 1; s.lanes[0]!.creeps.speed[0] = 0.5 } },
   {
     name: 'creeps.slowPercent',
-    apply: (s) => { s.lane.creeps.count = 1; s.lane.creeps.slowPercent[0] = 40 },
+    apply: (s) => { s.lanes[0]!.creeps.count = 1; s.lanes[0]!.creeps.slowPercent[0] = 40 },
   },
   {
     name: 'creeps.slowUntil',
-    apply: (s) => { s.lane.creeps.count = 1; s.lane.creeps.slowUntil[0] = 99 },
+    apply: (s) => { s.lanes[0]!.creeps.count = 1; s.lanes[0]!.creeps.slowUntil[0] = 99 },
   },
 ]
 
@@ -87,10 +97,10 @@ describe('hashState covers the whole match', () => {
     // identical — the worst kind of false positive to debug.
     const a = createState()
     const b = createState()
-    a.lane.creeps.count = 1
-    b.lane.creeps.count = 1
-    a.lane.creeps.x[0] = 0
-    b.lane.creeps.x[0] = -0
+    a.lanes[0]!.creeps.count = 1
+    b.lanes[0]!.creeps.count = 1
+    a.lanes[0]!.creeps.x[0] = 0
+    b.lanes[0]!.creeps.x[0] = -0
     expect(hashState(a)).toBe(hashState(b))
   })
 
@@ -98,8 +108,8 @@ describe('hashState covers the whole match', () => {
     // NaN !== NaN, so hashing it would make the digest unstable. A NaN in the
     // sim is a bug, and this is where it surfaces.
     const s = createState()
-    s.lane.creeps.count = 1
-    s.lane.creeps.x[0] = Number.NaN
+    s.lanes[0]!.creeps.count = 1
+    s.lanes[0]!.creeps.x[0] = Number.NaN
     expect(() => hashState(s)).toThrow(/NaN/)
   })
 

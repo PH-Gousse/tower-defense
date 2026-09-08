@@ -1,7 +1,7 @@
 import { GRID_W, GRID_H, TILE_COUNT, tileX, tileY } from './grid'
 import { UNREACHABLE } from './field'
 import { TowerKind, levelOf, ARCHETYPES, type TowerArchetype } from './data'
-import type { GameState } from './state'
+import type { GameState, Lane } from './state'
 
 /**
  * Tower firing, and the spatial hash that makes it affordable.
@@ -52,8 +52,8 @@ export function createSpatialHash(maxCreeps: number): SpatialHash {
  * array order, which is ascending id. That stability is what gives targeting
  * its tiebreak for free.
  */
-export function rebuildHash(state: GameState, hash: SpatialHash): void {
-  const c = state.lane.creeps
+export function rebuildHash(lane: Lane, hash: SpatialHash): void {
+  const c = lane.creeps
   const { bucketStart, bucketItems, counts } = hash
   counts.fill(0)
 
@@ -95,8 +95,7 @@ function tileOf(x: number, y: number): number {
  * Towers are walked in tile-index order. Damage is instant with no projectile
  * travel, so a shot resolves in the tick it is fired.
  */
-export function fireTowers(state: GameState, hash: SpatialHash): void {
-  const lane = state.lane
+export function fireTowers(state: GameState, lane: Lane, hash: SpatialHash): void {
   const t = lane.towers
   const c = lane.creeps
 
@@ -111,7 +110,7 @@ export function fireTowers(state: GameState, hash: SpatialHash): void {
     const kind = t.kind[i] as TowerKind
     const level = t.level[i] as number
     const spec = levelOf(kind, level)
-    const target = findTarget(state, hash, i, spec.range)
+    const target = findTarget(state, lane, hash, i, spec.range)
     if (target === -1) continue
 
     t.cooldown[i] = spec.cooldownTicks
@@ -119,7 +118,7 @@ export function fireTowers(state: GameState, hash: SpatialHash): void {
     if (kind === TowerKind.Splash) {
       const arch = ARCHETYPES[TowerKind.Splash] as TowerArchetype
       const radius = arch.splashRadius ?? 1
-      damageAround(state, hash, target, radius, spec.damage)
+      damageAround(lane, hash, target, radius, spec.damage)
     } else {
       c.hp[target] = (c.hp[target] as number) - spec.damage
       if (kind === TowerKind.Slow) {
@@ -148,12 +147,13 @@ export function fireTowers(state: GameState, hash: SpatialHash): void {
  */
 function findTarget(
   state: GameState,
+  lane: Lane,
   hash: SpatialHash,
   towerTile: number,
   range: number,
 ): number {
-  const c = state.lane.creeps
-  const field = state.lane.field
+  const c = lane.creeps
+  const field = lane.field
   const tx = tileX(towerTile) + 0.5
   const ty = tileY(towerTile) + 0.5
   const r2 = range * range
@@ -195,13 +195,13 @@ function findTarget(
 
 /** Splash: everything within `radius` of the target takes full damage. */
 function damageAround(
-  state: GameState,
+  lane: Lane,
   hash: SpatialHash,
   target: number,
   radius: number,
   damage: number,
 ): void {
-  const c = state.lane.creeps
+  const c = lane.creeps
   const cx = c.x[target] as number
   const cy = c.y[target] as number
   const r2 = radius * radius

@@ -42,6 +42,7 @@ const REFUSAL_TEXT: Record<Refusal, string> = {
   [Refusal.NotEnoughGold]: 'Not enough gold',
   [Refusal.NoTowerHere]: 'No tower on this tile',
   [Refusal.AlreadyMaxLevel]: 'Already at maximum level',
+  [Refusal.TierLocked]: 'Not unlocked yet',
 }
 
 /** One colour per archetype so a maze is readable without clicking anything. */
@@ -86,7 +87,11 @@ export interface Stats {
   readonly kills: number
   readonly lives: number
   readonly leaks: number
+  readonly income: number
   readonly result: MatchResult
+  readonly winner: number
+  readonly oppLives: number
+  readonly oppCreeps: number
 }
 
 export interface Selection {
@@ -111,15 +116,41 @@ export interface Scene {
   readonly onStats: (cb: (s: Stats) => void) => void
   readonly onSelect: (cb: (sel: Selection | null) => void) => void
   readonly setTool: (tower: TowerKind) => void
+  readonly send: (creep: number) => void
   readonly upgradeSelected: () => void
   readonly sellSelected: () => void
   start: () => void
 }
 
-export function createScene(canvasParent: HTMLElement): Scene {
-  const driver = new Driver()
+/**
+ * Thrown when the browser cannot give us a WebGL context.
+ *
+ * Worth its own error type. Without it, three.js throws deep inside the
+ * renderer, `main.ts` dies on its first line, and every listener and palette
+ * built afterwards silently never exists — the page renders the static HUD and
+ * nothing at all responds. A blank game that looks fine is the worst failure
+ * mode this project has, and it is the same principle as the placement
+ * refusals: say why.
+ */
+export class WebGLUnavailable extends Error {
+  constructor(cause: unknown) {
+    super('WebGL is unavailable in this browser')
+    this.name = 'WebGLUnavailable'
+    this.cause = cause
+  }
+}
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true })
+export function createScene(canvasParent: HTMLElement): Scene {
+  const driver = new Driver(0)
+  /** This client controls player 0 and defends lane 0. */
+  const ME = 0
+
+  let renderer: THREE.WebGLRenderer
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: true })
+  } catch (err) {
+    throw new WebGLUnavailable(err)
+  }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   canvasParent.appendChild(renderer.domElement)
 
@@ -298,7 +329,7 @@ export function createScene(canvasParent: HTMLElement): Scene {
     }
 
     const state = driver.current
-    const check = checkBuild(state, t.x, t.y, tool, probeField)
+    const check = checkBuild(state, ME, t.x, t.y, tool, probeField)
     const allowed = check.refusal === Refusal.None
 
     hover.position.set(t.x + 0.5, 0.03, t.y + 0.5)
@@ -309,15 +340,15 @@ export function createScene(canvasParent: HTMLElement): Scene {
       // checkBuild already rebuilt the field into probeField with this tile
       // blocked, so the route is there for the taking — no second rebuild.
       const i = tileIndex(t)
-      state.lane.blocked[i] = 1
-      buildField(state.lane.blocked, probeField)
-      state.lane.blocked[i] = 0
+      state.lanes[ME]!.blocked[i] = 1
+      buildField(state.lanes[ME]!.blocked, probeField)
+      state.lanes[ME]!.blocked[i] = 0
       candidatePath.set(pathFrom(probeField, SPAWN_INDICES[0] as number, routeScratch))
     } else {
       candidatePath.hide()
     }
 
-    const before = mazeLength(state.lane.field)
+    const before = mazeLength(state.lanes[ME]!.field)
     const delta =
       allowed && before !== UNREACHABLE && check.mazeAfter !== UNREACHABLE
         ? check.mazeAfter - before
@@ -355,12 +386,12 @@ export function createScene(canvasParent: HTMLElement): Scene {
     const t = tileUnderPointer(ev)
     if (!t) { select(null); return }
     const state = driver.current
-    if (state.lane.towers.kind[tileIndex(t)] !== -1) {
+    if (state.lanes[ME]!.towers.kind[tileIndex(t)] !== -1) {
       select(t)
       return
     }
     select(null)
-    if (checkBuild(state, t.x, t.y, tool, probeField).refusal === Refusal.None) {
+    if (checkBuild(state, ME, t.x, t.y, tool, probeField).refusal === Refusal.None) {
       driver.queueBuild(t.x, t.y, tool)
     }
   })
@@ -375,8 +406,8 @@ export function createScene(canvasParent: HTMLElement): Scene {
     }
     const state = driver.current
     const i = tileIndex(t)
-    const kind = state.lane.towers.kind[i] as TowerKind
-    const level = state.lane.towers.level[i] as number
+    const kind = state.lanes[ME]!.towers.kind[i] as TowerKind
+    const level = state.lanes[ME]!.towers.level[i] as number
     const spec = levelOf(kind, level)
 
     selectRing.position.set(t.x + 0.5, 0.05, t.y + 0.5)
@@ -385,13 +416,13 @@ export function createScene(canvasParent: HTMLElement): Scene {
     rangeRing.scale.set(spec.range, spec.range, 1)
     rangeRing.visible = true
 
-    const canUpgrade = checkUpgrade(state, t.x, t.y) === Refusal.None
+    const canUpgrade = checkUpgrade(state, ME, t.x, t.y) === Refusal.None
     selectCb({
       tile: t,
       tower: kind,
       level,
       upgradeCost: level < MAX_LEVEL ? levelOf(kind, level + 1).cost : null,
-      sellValue: sellValue(state, t.x, t.y),
+      sellValue: sellValue(state, ME, t.x, t.y),
       canUpgrade,
     })
   }
@@ -403,7 +434,7 @@ export function createScene(canvasParent: HTMLElement): Scene {
    * a level 3 tower stands visibly taller than a level 1.
    */
   function syncTowers(): number {
-    const t = driver.current.lane.towers
+    const t = driver.current.lanes[ME]!.towers
     const counts = [0, 0, 0]
     for (let i = 0; i < TILE_COUNT; i++) {
       const kind = t.kind[i] as number
@@ -428,8 +459,8 @@ export function createScene(canvasParent: HTMLElement): Scene {
 
   /** Draw creeps between the previous and current tick. */
   function syncCreeps(alpha: number): void {
-    const curr = driver.current.lane.creeps
-    const prev = driver.previous.lane.creeps
+    const curr = driver.current.lanes[ME]!.creeps
+    const prev = driver.previous.lanes[ME]!.creeps
     let pipCount = 0
     for (let i = 0; i < curr.count; i++) {
       const cx = curr.x[i] as number
@@ -496,6 +527,7 @@ export function createScene(canvasParent: HTMLElement): Scene {
       tool = tower
       if (hovered) previewTile(hovered)
     },
+    send: (creep) => driver.queueSend(creep),
     upgradeSelected: () => {
       if (selected) driver.queueUpgrade(selected.x, selected.y)
     },
@@ -513,34 +545,38 @@ export function createScene(canvasParent: HTMLElement): Scene {
         if (ran > 0 && state.tick !== lastSyncedTick) {
           const towerCount = syncTowers()
           lastSyncedTick = state.tick
-          currentPath.set(pathFrom(state.lane.field, SPAWN_INDICES[0] as number))
+          currentPath.set(pathFrom(state.lanes[ME]!.field, SPAWN_INDICES[0] as number))
           // Both of these go stale the moment the field or the gold changes.
           if (hovered) previewTile(hovered)
           if (selected) {
-            if (state.lane.towers.kind[tileIndex(selected)] === -1) select(null)
+            if (state.lanes[ME]!.towers.kind[tileIndex(selected)] === -1) select(null)
             else select(selected)
           }
           // A leak just happened: show the route that produced it. Comparing
           // leak counts is cheaper and more reliable than watching lap numbers
           // on individual creeps, which move between array slots as creeps die.
-          if (state.leaks > lastLeaks) {
-            leakTrail.set(pathFrom(state.lane.field, SPAWN_INDICES[0] as number))
+          if (state.players[ME]!.leaks > lastLeaks) {
+            leakTrail.set(pathFrom(state.lanes[ME]!.field, SPAWN_INDICES[0] as number))
             leakTrailUntil = state.tick + 60
           }
-          lastLeaks = state.leaks
+          lastLeaks = state.players[ME]!.leaks
           if (state.tick > leakTrailUntil) leakTrail.hide()
 
-          const maze = mazeLength(state.lane.field)
+          const maze = mazeLength(state.lanes[ME]!.field)
           statsCb({
             towers: towerCount,
-            creeps: state.lane.creeps.count,
+            creeps: state.lanes[ME]!.creeps.count,
             maze: maze === UNREACHABLE ? -1 : maze,
             tick: state.tick,
-            gold: state.gold,
-            kills: state.kills,
-            lives: state.lives,
-            leaks: state.leaks,
+            gold: state.players[ME]!.gold,
+            kills: state.players[ME]!.kills,
+            lives: state.players[ME]!.lives,
+            leaks: state.players[ME]!.leaks,
+            income: state.players[ME]!.income,
             result: state.result,
+            winner: state.winner,
+            oppLives: state.players[1 - ME]!.lives,
+            oppCreeps: state.lanes[1 - ME]!.creeps.count,
           })
         }
         syncCreeps(driver.alpha)

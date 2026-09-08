@@ -1,12 +1,73 @@
 {
-  "version": 1,
+  "version": 2,
+  "_comment": "Step 6 values are placeholders with the right SHAPE. Tuning is step 8 and needs the harness. incomeBonus is permanent and paid to the SENDER; cheaper creeps must give more income per gold, which data.ts asserts at load.",
+  "unlockEveryTicks": 1200,
   "creeps": [
     {
+      "key": "swarm",
+      "name": "Swarm",
+      "tier": 0,
+      "cost": 20,
+      "count": 6,
+      "hp": 90,
+      "speed": 0.075,
+      "incomeBonus": 3,
+      "bounty": 2
+    },
+    {
       "key": "runner",
-      "hp": 100,
+      "name": "Runner",
+      "tier": 0,
+      "cost": 45,
+      "count": 1,
+      "hp": 220,
+      "speed": 0.145,
+      "incomeBonus": 4,
+      "bounty": 5
+    },
+    {
+      "key": "tank",
+      "name": "Tank",
+      "tier": 0,
+      "cost": 140,
+      "count": 1,
+      "hp": 1400,
+      "speed": 0.055,
+      "incomeBonus": 7,
+      "bounty": 16
+    },
+    {
+      "key": "swarm2",
+      "name": "Swarm II",
+      "tier": 1,
+      "cost": 55,
+      "count": 8,
+      "hp": 240,
       "speed": 0.08,
-      "countPerSend": 1,
-      "note": "Step 2 stand-in. Real roster (swarm/runner/tank) arrives with the economy at step 6."
+      "incomeBonus": 7,
+      "bounty": 5
+    },
+    {
+      "key": "runner2",
+      "name": "Runner II",
+      "tier": 1,
+      "cost": 120,
+      "count": 1,
+      "hp": 620,
+      "speed": 0.16,
+      "incomeBonus": 9,
+      "bounty": 13
+    },
+    {
+      "key": "tank2",
+      "name": "Tank II",
+      "tier": 1,
+      "cost": 360,
+      "count": 1,
+      "hp": 4200,
+      "speed": 0.06,
+      "incomeBonus": 15,
+      "bounty": 40
     }
   ]
 }
