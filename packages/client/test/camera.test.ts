@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { fitGround, groundWindow } from '../src/render/CameraRig'
+import { clampWindow, fitGround, groundWindow, OVERSCROLL } from '../src/render/CameraRig'
 import { groundUnderNdc } from '../src/render/picking'
 
 /**
@@ -219,126 +219,105 @@ describe('groundWindow', () => {
 })
 
 /**
- * The acceptance criterion, as arithmetic: with the target clamped, no corner
- * of the screen may fall outside the bounds rectangle.
+ * The pan clamp.
+ *
+ * Tested against the real `clampWindow` rather than a copy of it, because the
+ * bug this replaced was invisible to a test that only asked whether the clamp
+ * was self-consistent. It was perfectly consistent. There was just nowhere to
+ * go: the default framing shows the content plus its margin, so the strict
+ * "the whole view must fit inside the bounds" rule left no travel at all.
+ *
+ * So the first test here measures travel in tiles, which is the thing a player
+ * feels, and the second bounds it -- an overscroll large enough to fix the
+ * first complaint and unbounded would park both boards in a corner of the
+ * screen.
  */
 describe('the pan clamp', () => {
-  /** Reimplements `CameraRig.clampTarget` at yaw 0, where forward is -z. */
-  function clampAt(
-    targetX: number,
-    targetZ: number,
-    distance: number,
-    aspect: number,
-    b: { minX: number; minZ: number; maxX: number; maxZ: number },
-  ): { x: number; z: number } {
+  /** The game's own content rectangle: two 8x24 lanes, a 4-tile gap, 1 of margin. */
+  const BOUNDS = { minX: -1, minZ: -1, maxX: 21, maxZ: 25 }
+
+  /** At yaw 0 the gaze runs along -z, so the view's extent is (-far, +near). */
+  function travel(distance: number, aspect: number): { x: number; z: number } {
     const w = groundWindow(distance, PITCH, FOV, aspect)
-    const fit = (v: number, lo: number, hi: number, offLo: number, offHi: number): number => {
-      const a = lo - offLo
-      const c = hi - offHi
-      if (a >= c) return (a + c) / 2
-      return Math.min(Math.max(v, a), c)
-    }
+    const span = (lo: number, hi: number, offLo: number, offHi: number): number =>
+      clampWindow(9999, lo, hi, offLo, offHi) - clampWindow(-9999, lo, hi, offLo, offHi)
     return {
-      x: fit(targetX, b.minX, b.maxX, -w.halfW, w.halfW),
-      z: fit(targetZ, b.minZ, b.maxZ, -w.far, w.near),
+      x: span(BOUNDS.minX, BOUNDS.maxX, -w.halfW, w.halfW),
+      z: span(BOUNDS.minZ, BOUNDS.maxZ, -w.far, w.near),
     }
   }
 
-  const BOUNDS = { minX: -1, minZ: -1, maxX: 21, maxZ: 25 }
-
-  const PANS = [
-    [-9999, 0], [9999, 0], [0, -9999], [0, 9999],
-    [9999, 9999], [-9999, -9999], [9999, -9999], [-9999, 9999],
-  ] as const
-
-  /**
-   * The invariant, per axis: either the view sits inside the bounds, or the
-   * bounds sit inside the view. Never partly off one side.
-   *
-   * It has to be stated per axis and both ways round. Zoomed in, the view is
-   * the smaller rectangle and containment runs one way; zoomed out past the
-   * lanes it is the larger, and containment runs the other. Demanding the first
-   * everywhere is what the earlier version of this test got wrong -- it is
-   * unsatisfiable once the view is bigger than the content.
-   */
-  it('never lets the bounds fall partly off an edge, at any zoom or pan', () => {
-    const violations: string[] = []
-    for (const distance of [14, 18, 24, 32, 40, 55, 70]) {
-      for (const aspect of [DESKTOP, PHONE]) {
-        for (const [px, pz] of PANS) {
-          const t = clampAt(px, pz, distance, aspect, BOUNDS)
-          const w = groundWindow(distance, PITCH, FOV, aspect)
-          const axes = [
-            { name: 'x', lo: t.x - w.halfW, hi: t.x + w.halfW, bLo: BOUNDS.minX, bHi: BOUNDS.maxX },
-            { name: 'z', lo: t.z - w.far, hi: t.z + w.near, bLo: BOUNDS.minZ, bHi: BOUNDS.maxZ },
-          ]
-          for (const a of axes) {
-            const viewInside = a.lo >= a.bLo - 1e-6 && a.hi <= a.bHi + 1e-6
-            const boundsInside = a.lo <= a.bLo + 1e-6 && a.hi >= a.bHi - 1e-6
-            if (!viewInside && !boundsInside) {
-              violations.push(
-                `d=${distance} aspect=${aspect.toFixed(2)} pan=${px},${pz} axis=${a.name} ` +
-                  `view=[${a.lo.toFixed(2)},${a.hi.toFixed(2)}]`,
-              )
-            }
-          }
-        }
-      }
+  it('leaves real travel at the framing the game opens on', () => {
+    // The regression, in the units of the complaint. The strict rule scored
+    // x=0.00 z=0.56 here, which is a quarter of a tile per arrow press.
+    for (const [distance, aspect] of [[36.9, DESKTOP], [38.1, 1440 / 900], [39.0, 1000 / 800]] as const) {
+      const t = travel(distance, aspect)
+      expect(t.z).toBeGreaterThan(4)
+      expect(t.x).toBeGreaterThan(4)
     }
-    expect(violations).toEqual([])
   })
 
-  it('keeps every screen corner inside the bounds while the view still fits', () => {
-    // The strict form of the guarantee, asserted on real projected corners
-    // wherever it is satisfiable -- which is the zoom range a player pans in.
-    let checked = 0
-    const violations: string[] = []
-    for (let distance = 14; distance <= 70; distance += 0.5) {
+  it('reaches every part of the board when zoomed in', () => {
+    // Every tile has to be visible from somewhere, or a corner of your own maze
+    // is a place the camera cannot be pointed. What covers the content is the
+    // travel plus the view's own span, not the travel alone -- the view carries
+    // its width with it.
+    for (const aspect of [DESKTOP, PHONE]) {
+      const t = travel(8, aspect)
+      const w = groundWindow(8, PITCH, FOV, aspect)
+      expect(t.x + 2 * w.halfW).toBeGreaterThanOrEqual(BOUNDS.maxX - BOUNDS.minX)
+      expect(t.z + w.near + w.far).toBeGreaterThanOrEqual(BOUNDS.maxZ - BOUNDS.minZ)
+    }
+  })
+
+  it('bounds the overscroll, so the boards cannot slide into a corner', () => {
+    // The failure at the other end. Clamping the target into the bounds with no
+    // view term at all gave travel everywhere and let the default framing pan
+    // both lanes into the corner of a screen that is twice as wide as they are.
+    for (const distance of [8, 14, 24, 36.9, 55, 70]) {
       for (const aspect of [DESKTOP, PHONE]) {
         const w = groundWindow(distance, PITCH, FOV, aspect)
-        const fits =
-          2 * w.halfW <= BOUNDS.maxX - BOUNDS.minX && w.near + w.far <= BOUNDS.maxZ - BOUNDS.minZ
-        if (!fits) continue
-        for (const [px, pz] of PANS) {
-          const t = clampAt(px, pz, distance, aspect, BOUNDS)
-          const camera = pose(t.x, t.z, distance, aspect)
-          checked += 1
-          for (const c of viewCorners(camera)) {
-            if (
-              c.x < BOUNDS.minX - 1e-6 || c.x > BOUNDS.maxX + 1e-6 ||
-              c.z < BOUNDS.minZ - 1e-6 || c.z > BOUNDS.maxZ + 1e-6
-            ) {
-              violations.push(
-                `d=${distance} aspect=${aspect.toFixed(2)} pan=${px},${pz} ` +
-                  `corner=(${c.x.toFixed(2)},${c.z.toFixed(2)})`,
-              )
-            }
-          }
+        const axes = [
+          { lo: BOUNDS.minX, hi: BOUNDS.maxX, offLo: -w.halfW, offHi: w.halfW },
+          { lo: BOUNDS.minZ, hi: BOUNDS.maxZ, offLo: -w.far, offHi: w.near },
+        ]
+        for (const a of axes) {
+          const half = (a.offHi - a.offLo) / 2
+          const slack = OVERSCROLL * half
+          // Strict range, per the rule the overscroll widens.
+          let lo = a.lo - a.offLo
+          let hi = a.hi - a.offHi
+          if (lo > hi) { const mid = (lo + hi) / 2; lo = mid; hi = mid }
+          expect(clampWindow(9999, a.lo, a.hi, a.offLo, a.offHi)).toBeCloseTo(hi + slack, 9)
+          expect(clampWindow(-9999, a.lo, a.hi, a.offLo, a.offHi)).toBeCloseTo(lo - slack, 9)
         }
       }
     }
-    expect(violations).toEqual([])
-    // Guard against the loop above silently skipping everything.
-    expect(checked).toBeGreaterThan(50)
   })
 
-  it('does not jump as the zoom crosses the point where panning locks', () => {
-    // Either side of the distance at which the bounds stop being satisfiable,
-    // the clamped target has to be continuous -- otherwise the view lurches
-    // mid-scroll.
+  it('does not jump as the zoom crosses the point where the strict range dies', () => {
+    // Either side of the distance at which the bounds stop being satisfiable
+    // the clamped target has to be continuous, or the view lurches mid-scroll.
     let locked = 0
-    for (let d = 14; d < 70; d += 0.25) {
+    for (let d = 8; d < 70; d += 0.25) {
       const w = groundWindow(d, PITCH, FOV, DESKTOP)
-      if (BOUNDS.minZ + w.far >= BOUNDS.maxZ - w.near) {
-        locked = d
-        break
-      }
+      if (BOUNDS.minZ + w.far >= BOUNDS.maxZ - w.near) { locked = d; break }
     }
-    expect(locked).toBeGreaterThan(14)
+    expect(locked).toBeGreaterThan(8)
+    const at = (d: number): number => {
+      const w = groundWindow(d, PITCH, FOV, DESKTOP)
+      return clampWindow(9999, BOUNDS.minZ, BOUNDS.maxZ, -w.far, w.near)
+    }
+    expect(at(locked + 0.01)).toBeCloseTo(at(locked - 0.01), 1)
+  })
 
-    const before = clampAt(0, 9999, locked - 0.01, DESKTOP, BOUNDS)
-    const after = clampAt(0, 9999, locked + 0.01, DESKTOP, BOUNDS)
-    expect(after.z).toBeCloseTo(before.z, 1)
+  it('stays centred on the content when the view is bigger than it', () => {
+    // Zoomed all the way out the strict range collapses, and the midpoint it
+    // collapses to must be the middle of the bounds -- not an edge.
+    const w = groundWindow(70, PITCH, FOV, DESKTOP)
+    const lo = clampWindow(-9999, BOUNDS.minX, BOUNDS.maxX, -w.halfW, w.halfW)
+    const hi = clampWindow(9999, BOUNDS.minX, BOUNDS.maxX, -w.halfW, w.halfW)
+    expect((lo + hi) / 2).toBeCloseTo((BOUNDS.minX + BOUNDS.maxX) / 2, 9)
   })
 })
 
