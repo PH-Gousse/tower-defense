@@ -66,8 +66,40 @@ export function startCameraDemo(): void {
   // that this page wants edge scrolling.
   const rig = new CameraRig(host.canvas, { edgeSize: 24, bounds: CONTENT })
 
+  /**
+   * Reserve the same screen the game's HUD and palette occupy.
+   *
+   * Without this the demo frames the board edge to edge and the game does not,
+   * so a pitch or fov picked here lands tighter over there -- which makes the
+   * tuning tool quietly wrong about the only thing it exists to tune. The bands
+   * are measured rather than hardcoded so this runs the same `setSafeArea` path
+   * `main.ts` does; what they measure is printed in the HUD, so if the game's
+   * real chrome drifts away from these stand-ins it shows up as a number.
+   */
+  function chromeHeight(id: string): number {
+    return document.getElementById(id)?.getBoundingClientRect().height ?? 0
+  }
+
+  /**
+   * Last measured band heights, kept so the HUD can print them without
+   * re-measuring. `getBoundingClientRect` forces a layout flush, and the HUD
+   * repaints ten times a second -- putting that on this page in particular
+   * would be measuring the frame budget with a thumb on the scale. Caching also
+   * makes the readout honest: it shows the numbers actually handed to the rig,
+   * not a fresh pair that could have moved since.
+   */
+  let safeTop = 0
+  let safeBottom = 0
+
+  function syncSafeArea(): void {
+    safeTop = chromeHeight('chromeTop')
+    safeBottom = chromeHeight('chromeBottom')
+    rig.setSafeArea(safeTop, 0, safeBottom, 0)
+  }
+
   host.onResize((w, h) => {
     rig.setViewport(w, h)
+    syncSafeArea()
     applyFraming()
   })
 
@@ -204,6 +236,9 @@ export function startCameraDemo(): void {
         `target ${_target.x.toFixed(2)}, ${_target.z.toFixed(2)}` +
         `\ndistance ${rig.distance.toFixed(2)}` +
         `\npitch ${rig.pitchDeg.toFixed(1)}°   fov ${rig.fovDeg.toFixed(1)}°` +
+        // Printed so a drift between these stand-ins and the game's real HUD
+        // and palette is a number you can read, not a framing you cannot place.
+        `\nsafe area ${safeTop.toFixed(0)}px / ${safeBottom.toFixed(0)}px` +
         `\ntile ${hoverText}` +
         `\n${fps} fps`
     }

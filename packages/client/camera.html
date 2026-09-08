@@ -15,7 +15,7 @@
        page zoom, and the rig never sees the pointer events at all. */
 
     #camhud {
-      position: fixed; left: 12px; top: 12px; z-index: 5;
+      position: fixed; left: 12px; top: 61px; z-index: 5;
       white-space: pre; pointer-events: none;
       font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
       color: #d6dbe0; background: rgba(14,16,19,.78);
@@ -24,7 +24,7 @@
       font-variant-numeric: tabular-nums;
     }
     #camkeys {
-      position: fixed; left: 12px; bottom: 12px; z-index: 5; pointer-events: none;
+      position: fixed; left: 12px; bottom: 80px; z-index: 5; pointer-events: none;
       font: 11.5px/1.6 -apple-system, "Segoe UI", system-ui, sans-serif; color: #8b939d;
       background: rgba(14,16,19,.72); border: 1px solid #2a3038; border-radius: 4px;
       padding: 7px 10px;
@@ -33,6 +33,27 @@
       border: 1px solid #3a424c; border-radius: 2px; padding: 0 4px;
       font: inherit; font-size: 10.5px; color: #c2c9d0;
     }
+    /* Stand-ins for the game's HUD and palette.
+       The demo is a tuning tool, and a tuning tool that frames the board edge
+       to edge lies about the thing being tuned: the game insets its framing by
+       ~12% of the viewport height to clear these two bars, so pitch and fov
+       picked here would land tighter over there. These reserve the same space
+       and are measured through the same `setSafeArea` path the game uses.
+
+       The heights are the game's, restated -- the real ones are content-driven
+       (index.html's #hud cells and #palette buttons) and cannot be measured
+       from this page. The HUD readout prints what these actually measure, so a
+       drift shows up as a number rather than as a mystery. */
+    .chrome {
+      position: fixed; left: 0; right: 0; z-index: 4; pointer-events: none;
+      display: flex; align-items: center; justify-content: center;
+      font: 10px/1 -apple-system, "Segoe UI", system-ui, sans-serif;
+      letter-spacing: .07em; text-transform: uppercase; color: #4a525c;
+      background: rgba(14,16,19,.82); backdrop-filter: blur(6px);
+    }
+    #chromeTop { top: 0; height: 49px; border-bottom: 1px solid #2a2f36; }
+    #chromeBottom { bottom: 0; height: 68px; border-top: 1px solid #2a2f36; }
+
     #fatal {
       position: fixed; inset: 0; display: grid; place-items: center; z-index: 20;
       background: #0e1013; color: #e6e8ea; text-align: center; padding: 24px;
@@ -41,6 +62,8 @@
   </style>
 </head>
 <body>
+  <div class="chrome" id="chromeTop">game HUD</div>
+  <div class="chrome" id="chromeBottom">game palette</div>
   <div id="camhud">starting&hellip;</div>
   <div id="camkeys">
     <kbd>WASD</kbd> / <kbd>&larr;&uarr;&darr;&rarr;</kbd> pan &middot;
