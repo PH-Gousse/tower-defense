@@ -1,6 +1,12 @@
+import { beforeAll, afterAll } from 'vitest'
 import { createState, type GameState } from '../src/state'
 import { step, Kind, type Command } from '../src/step'
-import { TowerKind } from '../src/data'
+import {
+  TowerKind,
+  installBalanceData,
+  liveBalanceData,
+  type BalanceData,
+} from '../src/data'
 
 /**
  * Shared test rig.
@@ -13,6 +19,35 @@ import { TowerKind } from '../src/data'
  * subject of most assertions; **player 1 is the aggressor** whose sends land in
  * lane 0.
  */
+
+/**
+ * Turn off the opening build phase for one test file.
+ *
+ * Most of this suite is about a mechanic -- a tower's cooldown, the kill
+ * bounty, the loop rule -- and reaches it by sending a creep at tick 0 because
+ * sending is how creeps come to exist. The build phase is a match-opening
+ * balance number and has nothing to say about any of that, so rather than
+ * prefixing twenty tests with a 400-tick preamble that tests nothing and slows
+ * every run, those files declare that they are not testing the opening.
+ *
+ * This is the same reasoning that makes the golden fixture pin its own frozen
+ * `BalanceData`: a test coupled to a balance knob gets *regenerated* when the
+ * knob moves rather than investigated, which is how a regression test quietly
+ * becomes a rubber stamp. The build phase has its own tests, in
+ * `test/opening.test.ts`, which is where moving this number should show up.
+ *
+ * Restores in `afterAll`, because the module state is shared by every test in
+ * the file.
+ */
+export function withoutBuildPhase(): void {
+  let restore: BalanceData | null = null
+  beforeAll(() => {
+    restore = installBalanceData({ ...liveBalanceData(), sendUnlockTicks: 0 })
+  })
+  afterAll(() => {
+    if (restore) installBalanceData(restore)
+  })
+}
 
 /** Creep indices into data/creeps.json, in file order. */
 export const SWARM = 0

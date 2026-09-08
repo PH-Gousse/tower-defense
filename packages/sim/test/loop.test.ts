@@ -3,7 +3,10 @@ import { MatchResult, STARTING_LIVES } from '../src/state'
 import { hashState } from '../src/hash'
 import { GRID_H, tileIndex } from '../src/grid'
 import { TowerKind, creepSpec } from '../src/data'
-import { build, send, runUntil, tick, RUNNER, TANK, TANK2 } from './helpers'
+import { build, send, runUntil, tick, RUNNER, TANK, TANK2, withoutBuildPhase } from './helpers'
+
+// Not a test of the opening: see withoutBuildPhase.
+withoutBuildPhase()
 
 /**
  * The loop is the identity mechanic: a creep that beats your maze comes back

@@ -10,6 +10,7 @@ import {
   MAX_LEVEL,
   MAX_TIER,
   tierUnlockTick,
+  SEND_UNLOCK_TICKS,
 } from './data'
 import { opponentOf, type GameState, type Lane, type Player } from './state'
 import { Kind, Refusal, checkBuild, checkUpgrade, checkSend, type Command } from './step'
@@ -254,12 +255,21 @@ export function botCommand(
   const wantsCounter = adaptive === 'send' || adaptive === 'both'
   const theirMaze = wantsCounter ? readMaze(state.lanes[opponentOf(player)]!) : null
   const prefer = theirMaze === null ? null : (EXPLOITS[theirMaze] as CreepArchetypeKind)
-  const target = affordableSoon(
-    state,
-    me.income * (config.savingPeriods ?? MAX_SAVING_PERIODS),
-    unlocked,
-    prefer,
-  )
+  // Nothing to save toward during the opening build phase. `checkSend` would
+  // refuse the send anyway and `step` would drop it, so the bot would not cheat
+  // -- but it would BANK for a purchase it cannot make, and banking is a branch
+  // that forbids everything below it from spending. The bot would sit on its
+  // 600 opening gold doing nothing for the whole phase while the human built a
+  // maze. Zeroing the target here puts that gold into towers instead, which is
+  // what the phase is for.
+  const target = sendsOpen(state)
+    ? affordableSoon(
+        state,
+        me.income * (config.savingPeriods ?? MAX_SAVING_PERIODS),
+        unlocked,
+        prefer,
+      )
+    : -1
 
   // Two phases per tier: build the maze this tier needs, then bank for the
   // creep this tier offers. It is how a person plays and it is the only shape
@@ -647,3 +657,8 @@ function bestSend(state: GameState, player: 0 | 1, budget: number): number {
 }
 
 export { opponentOf, levelOf }
+
+/** Whether the opening build phase has ended and creeps may be sent. */
+function sendsOpen(state: GameState): boolean {
+  return state.tick >= SEND_UNLOCK_TICKS
+}

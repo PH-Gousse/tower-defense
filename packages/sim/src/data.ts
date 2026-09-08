@@ -142,7 +142,7 @@ export interface CreepSpec {
   readonly name: string
   /** Which shape this is, for counter-picking on both sides of the board. */
   readonly archetype: CreepArchetypeKind
-  /** Tier 0 is available from tick 0; tier N unlocks at N * UNLOCK_EVERY_TICKS. */
+  /** Tier 0 opens when sending does; tier N, UNLOCK_EVERY_TICKS later each. */
   readonly tier: number
   readonly cost: number
   /** How many creeps one purchase releases into the target lane. */
@@ -177,6 +177,8 @@ export interface CreepGrowth {
 export interface CreepsFile {
   readonly version: number
   readonly unlockEveryTicks: number
+  /** Opening build phase, in ticks. Absent means none. See SEND_UNLOCK_TICKS. */
+  readonly sendUnlockTicks?: number
   readonly maxTier: number
   readonly growth: CreepGrowth
   readonly archetypes: readonly CreepArchetype[]
@@ -247,6 +249,40 @@ export let CREEPS: readonly CreepSpec[] = expandCreeps(creepFile)
  */
 export const CREEP_FILE: CreepsFile = creepFile
 export let UNLOCK_EVERY_TICKS = creepFile.unlockEveryTicks
+
+/**
+ * The opening build phase: no creep may be sent before this tick.
+ *
+ * Sending was legal from tick 0, so the first wave could be walking your lane
+ * before you had placed a tower. That is not an opening, it is a scramble, and
+ * it punished the player who spent two seconds thinking about their maze.
+ *
+ * It is a balance number and it lives in the balance data, which matters for
+ * more than tidiness: the golden fixture pins its own frozen `BalanceData`, and
+ * a file recorded before this rule existed carries no `sendUnlockTicks` at all.
+ * Defaulting a missing value to 0 is what lets that fixture keep replaying the
+ * match it actually recorded, so the keystone determinism test still means what
+ * it claims. A rule hardcoded in `step.ts` would have silently rewritten it.
+ */
+export let SEND_UNLOCK_TICKS = assertSendUnlock(creepFile.sendUnlockTicks ?? 0)
+
+/**
+ * Asserted at load, like every other invariant in these files, because the
+ * failure is silent and expensive.
+ *
+ * The income schedule is `(tick - SEND_UNLOCK_TICKS) % INCOME_EVERY_TICKS`. A
+ * FRACTIONAL value there is never congruent to zero, so nobody is ever paid
+ * again and the whole economy stops -- which reads as catastrophic balance
+ * rather than as a typo, and would be chased for an afternoon. A NEGATIVE value
+ * shifts the tier ladder before tick 0 and pays the first income early. Neither
+ * is a game anybody meant to ship, and both are one keystroke away.
+ */
+function assertSendUnlock(v: number): number {
+  if (!Number.isInteger(v) || v < 0) {
+    throw new Error(`creeps.json: sendUnlockTicks must be a non-negative integer, got ${v}`)
+  }
+  return v
+}
 export const CREEP_DATA_VERSION = creepFile.version
 /** Highest tier the roster reaches. Tier N unlocks N minutes in. */
 export const MAX_TIER = creepFile.maxTier
@@ -256,6 +292,8 @@ export interface BalanceData {
   readonly sellRefund: number
   readonly archetypes: readonly TowerArchetype[]
   readonly unlockEveryTicks: number
+  /** Optional: a fixture recorded before the build phase existed has none. */
+  readonly sendUnlockTicks?: number
   readonly creeps: readonly CreepSpec[]
 }
 
@@ -265,6 +303,7 @@ export function liveBalanceData(): BalanceData {
     sellRefund: SELL_REFUND,
     archetypes: ARCHETYPES,
     unlockEveryTicks: UNLOCK_EVERY_TICKS,
+    sendUnlockTicks: SEND_UNLOCK_TICKS,
     creeps: CREEPS,
   }
 }
@@ -281,13 +320,25 @@ export function installBalanceData(next: BalanceData): BalanceData {
   SELL_REFUND = next.sellRefund
   ARCHETYPES = next.archetypes
   UNLOCK_EVERY_TICKS = next.unlockEveryTicks
+  // Missing means none: a fixture frozen before the build phase existed replays
+  // the match it recorded, rather than one where half its sends are refused.
+  SEND_UNLOCK_TICKS = assertSendUnlock(next.sendUnlockTicks ?? 0)
   CREEPS = next.creeps
   return previous
 }
 
-/** Tier N becomes buyable at this tick. Tier 0 is available immediately. */
+/**
+ * Tier N becomes buyable at this tick. Tier 0 opens the moment sending does.
+ *
+ * Anchored to the end of the build phase, for the same reason income is: the
+ * ladder is a clock on the CONTEST, and a preamble that runs before anyone may
+ * send should not eat into it. Left at tick 0, a 20-second opening delivered
+ * tier 1 only ten seconds after first contact instead of thirty, compressing
+ * the early game to the point where reading the opponent's maze stopped paying
+ * -- measured at 8-4 against the fixed template, from 12-0.
+ */
 export function tierUnlockTick(tier: number): number {
-  return tier * UNLOCK_EVERY_TICKS
+  return SEND_UNLOCK_TICKS + tier * UNLOCK_EVERY_TICKS
 }
 
 export function creepSpec(index: number): CreepSpec {
