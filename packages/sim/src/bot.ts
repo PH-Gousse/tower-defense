@@ -43,6 +43,15 @@ export interface BotConfig {
   readonly sendRatio: number
   /** Ticks between decisions. Higher is slower and easier. */
   readonly reactionTicks: number
+  /**
+   * Income periods banked before attacking.
+   *
+   * Sets the rhythm of the match: small and the bot sends often with light
+   * waves, large and it sends rarely with heavy ones. It is a knob because the
+   * two produce genuinely different games and only measurement can say which is
+   * the better one.
+   */
+  readonly savingPeriods?: number
   /** Index into MAZE_TEMPLATES. */
   readonly template: number
 }
@@ -65,16 +74,22 @@ export interface BotConfig {
 const OPENING_TOWERS = 6
 
 /**
- * Towers the bot adds per tier that has unlocked, past the opening.
+ * How much maze one point of income justifies.
  *
- * A cap on building is what lets the bot SAVE. Without one it found an
- * affordable tile on nearly every decision, so its gold never rose above its
- * income, so it could never afford a creep big enough to threaten anything --
- * and a harness measuring an opponent that cannot execute the winning strategy
- * measures nothing. Two bots ran 33 minutes and 1,891 sends without a single
- * leak because of this, which reads exactly like a balance problem and is not.
+ * The tower target has to be tied to the ECONOMY, not to the clock, and getting
+ * that wrong produced the worst behaviour in the project. Sized by tier, the bot
+ * aimed at 45 towers from minute two and then spent twenty minutes buying them
+ * one at a time on starting income -- because income only grows by sending, and
+ * it was not sending, because it was still building. A deadlock: 45 towers at
+ * 32 income is twenty minutes of nothing, and the measured match had both
+ * players untouched on 20 lives for 29 of its 31 minutes.
+ *
+ * Tied to income it self-corrects. A poor bot wants a small maze, sends to get
+ * richer, and can then afford a bigger one. Which is how a person plays: you do
+ * not open by building forty-five towers.
  */
-const TOWERS_PER_TIER = 7
+const TOWERS_PER_INCOME = 0.16
+
 
 /**
  * Ceiling on the maze the bot will build before it starts banking.
@@ -100,38 +115,29 @@ const MAX_TOWER_TARGET = 45
  * so it got poorer, so the tier receded further. Saving has to be bounded by
  * something the bot already has, and its own income is that thing.
  */
-const MAX_SAVING_PERIODS = 15
+const MAX_SAVING_PERIODS = 2
 
 /**
- * Difficulty is the reaction delay. The other two knobs are held constant, and
- * that is a measured decision rather than a design one.
+ * Difficulty is how much of its economy the bot commits to attacking.
  *
- * The first draft varied all three, on the reasonable-sounding theory that a
- * harder bot sends more and mazes differently. A round robin in the harness
- * said otherwise, twice over:
+ * It was the reaction delay, and that was a symptom of a broken economy rather
+ * than a design. Back then a higher spend ratio measurably played *worse*, so
+ * shipping it as "hard" would have shipped a weaker opponent under a stronger
+ * name, and the only axis left pointing the right way was latency.
  *
- *   - **Spend ratio is not a difficulty axis.** Sweeping it 0.2 to 0.8 put the
- *     low end on top: in the current tuning, gold spent on towers beats gold
- *     spent on creeps. A bot that "attacks harder" is a bot playing worse, so
- *     shipping 0.8 as *hard* would have shipped a weaker opponent under a
- *     stronger name. 0.25 is the band where the reaction ladder comes out
- *     monotone.
+ * Attacking pays now, and a sweep of the ratio comes out perfectly monotone:
+ * 0.8 beats 0.65 beats 0.5 beats 0.4 beats 0.3 beats 0.2, with no exceptions.
+ * That is both a better ladder and a far better answer to "what makes this one
+ * hard" than a number of milliseconds -- the hard bot sends more, which is what
+ * a stronger opponent does in a game about sending.
  *
- *   - **Templates are not either.** `posts` measured so much weaker that every
- *     config using it sank to the bottom of a 50-way ranking regardless of its
- *     other settings — its first six tiles lengthen the walk by literally zero.
- *     It was sandbagging *easy* by accident. All three now maze the same way.
- *
- * That defence beats offence at all is a balance finding, not a bot finding,
- * and it belongs to the tuning step rather than to this file.
- *
- * The three are verified transitive by a round robin in the harness tests:
- * every off-diagonal goes to the faster bot, margins widen with the gap, and
- * every mirror is a draw — which also proves the sim gives player 0 no edge.
+ * Verified transitive by a round robin in the harness: every off-diagonal goes
+ * to the more aggressive bot and every mirror is a draw, which also proves the
+ * sim gives neither seat an edge.
  */
-export const BOT_EASY: BotConfig = { sendRatio: 0.25, reactionTicks: 14, template: 0 }
-export const BOT_NORMAL: BotConfig = { sendRatio: 0.25, reactionTicks: 10, template: 0 }
-export const BOT_HARD: BotConfig = { sendRatio: 0.25, reactionTicks: 3, template: 0 }
+export const BOT_EASY: BotConfig = { sendRatio: 0.3, reactionTicks: 10, template: 0 }
+export const BOT_NORMAL: BotConfig = { sendRatio: 0.5, reactionTicks: 10, template: 0 }
+export const BOT_HARD: BotConfig = { sendRatio: 0.75, reactionTicks: 10, template: 0 }
 
 /**
  * One decision. Returns `null` when the bot chooses to do nothing this tick,
@@ -183,7 +189,20 @@ export function botCommand(
   // instead leaves reaction delay meaning only what it says — the same mix of
   // spending, sooner.
   const unlocked = unlockedTier(state.tick)
-  const target = strongestAt(unlocked)
+  // What it is saving for: the heaviest creep a few income periods will buy,
+  // not the heaviest the ladder offers.
+  //
+  // Aiming at the top of the ladder looked ambitious and was paralysis. By
+  // minute seven the newest tier's tank cost 2.3 million gold on an income of
+  // 25, so the bot banked toward it forever and sent one creep in twenty-two
+  // minutes -- which also meant its income never grew, because income only
+  // comes from sending. Aiming at what the next few income ticks can actually
+  // buy produces the opposite loop: send, earn, afford more, send bigger.
+  const target = affordableSoon(
+    state,
+    me.income * (config.savingPeriods ?? MAX_SAVING_PERIODS),
+    unlocked,
+  )
 
   // Two phases per tier: build the maze this tier needs, then bank for the
   // creep this tier offers. It is how a person plays and it is the only shape
@@ -202,12 +221,11 @@ export function botCommand(
   const defensiveness = (1 - config.sendRatio) * 2
   const towerTarget = Math.min(
     MAX_TOWER_TARGET,
-    OPENING_TOWERS + Math.round(TOWERS_PER_TIER * unlocked * defensiveness),
+    OPENING_TOWERS + Math.round(me.income * TOWERS_PER_INCOME * defensiveness),
   )
   const canBuild = towerCount(lane) < towerTarget
   // In the build phase gold is for towers; in the banking phase it is not.
   const buildBudget = canBuild ? me.gold : 0
-  const sendBudget = me.gold
 
   // There is no send/build alternation any more, and removing it was the fix
   // for a ladder that kept coming out backwards.
@@ -233,40 +251,58 @@ export function botCommand(
     if (upgrade) return upgrade
   }
 
-  if (emergency === -1) {
-    // What it is saving for: the heaviest creep the ladder currently offers.
-    if (target !== -1 && me.gold >= creepSpec(target).cost) {
+  if (emergency === -1 && target !== -1) {
+    if (me.gold >= creepSpec(target).cost) {
       return { tick: state.tick, player, kind: Kind.Send, creep: target }
     }
-    // Not there yet. Keep banking, unless the bank is already deep enough that
-    // waiting longer costs more income than the bigger creep is worth.
-    if (me.gold >= me.income * MAX_SAVING_PERIODS) {
-      const send = bestSend(state, player, sendBudget)
-      if (send !== -1) return { tick: state.tick, player, kind: Kind.Send, creep: send }
-    }
+    // Not yet. Bank -- and bank nothing below may spend.
+    return null
   }
 
-  // Maze is at its target and the next creep is out of reach. Deepen the maze
-  // rather than idle -- an upgrade is never wasted.
+  // Banking means banking. Nothing below may spend the gold the branch above is
+  // saving.
+  //
+  // This branch used to read "deepen the maze rather than idle -- an upgrade is
+  // never wasted" and spend the whole purse on upgrades whenever the target
+  // creep was out of reach, which is most of the time. So the bank never
+  // filled, the maze grew on every spare coin for the entire match, and nothing
+  // ever got through: measured, both players sat on all 20 lives for 29 minutes
+  // of a 31-minute match and then collapsed in 90 seconds once the geometric
+  // creep ladder finally outran a fully upgraded maze. It is the same mistake
+  // the build branch made earlier -- a branch below the saving logic quietly
+  // spending its savings -- and it is worth stating the rule rather than the
+  // fix: only ONE phase may spend.
+  if (target !== -1) return null
+
+  // Nothing to save toward at all. Now an upgrade is genuinely free money.
   const upgrade = bestUpgrade(state, player, lane, me.gold)
   if (upgrade) return upgrade
 
-  // Nothing to build and nothing worth saving toward. Send what it can.
   const send = bestSend(state, player, me.gold)
   if (send !== -1) return { tick: state.tick, player, kind: Kind.Send, creep: send }
   return null
 }
 
-/** The most expensive creep at a given tier: the heaviest thing money can buy. */
-function strongestAt(tier: number): number {
+/**
+ * The heaviest creep within reach of a budget, preferring the highest tier.
+ *
+ * Tier first, then cost: HP per gold rises as you buy up, so a tier-6 swarm is
+ * a better use of the same gold than a tier-3 tank, and the ladder is the only
+ * thing that ever breaks a maze.
+ */
+function affordableSoon(state: GameState, budget: number, maxTier: number): number {
   let best = -1
+  let bestTier = -1
   let bestCost = -1
   for (let i = 0; i < CREEPS.length; i++) {
     const spec = creepSpec(i)
-    if (spec.tier !== tier) continue
-    if (spec.cost > bestCost) {
-      bestCost = spec.cost
+    if (spec.tier > maxTier) continue
+    if (spec.cost > budget) continue
+    if (state.tick < tierUnlockTick(spec.tier)) continue
+    if (spec.tier > bestTier || (spec.tier === bestTier && spec.cost > bestCost)) {
       best = i
+      bestTier = spec.tier
+      bestCost = spec.cost
     }
   }
   return best

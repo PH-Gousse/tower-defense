@@ -162,12 +162,12 @@ describe('bot', () => {
       for (const k of s.lanes[0]!.towers.kind) if (k !== -1) towers += 1
       return towers
     }
-    // Long enough for several tiers to pass and the targets to pull apart. The
-    // early game is gold-bound rather than target-bound, so a short horizon
-    // measures the starting purse and not the ratio at all. Tiers arrive every
-    // 600 ticks and the roster tops out at tier 20, so 12,000 is the whole
-    // ladder -- twice this ran fine locally and blew the timeout on CI.
-    expect(towersAfter(0.1, 12000)).toBeGreaterThan(towersAfter(0.9, 12000))
+    // Measured before the tower cap binds. The target is now a function of
+    // income rather than of the tier clock, and income compounds fast enough
+    // that by 12,000 ticks both ratios have hit the 45-tower ceiling and the
+    // difference is invisible -- the test read 45 > 45 and failed for a reason
+    // that had nothing to do with the behaviour it names.
+    expect(towersAfter(0.1, 3600)).toBeGreaterThan(towersAfter(0.9, 3600))
   })
 
   it('always builds the opening before it sends anything', () => {

@@ -36,44 +36,57 @@ per maze by running probe creeps through the real simulation rather than modelli
 
 ## P0 — the next one
 
-### Matches are long, and the whole contest happens in the last minute
-Bot-vs-bot mirror matches run about 30 minutes, and `decidedFraction` is 98-100% — which sounds
-ideal and is not. It means neither side leaks for the first twenty-odd minutes and then one
-collapses. A long stalemate with a sudden end, not a contest.
+### ~~Matches are long, and the whole contest happens in the last minute~~ — fixed
+Mirror matches ran 31 minutes with both players untouched on all 20 lives until minute 29, then
+collapsed inside 90 seconds. Now 6-10 minutes, with lives leaving the board from minute 3.
 
-Measured cause: **income, not the ladder.** A tier-5 tank can break a maxed 45-tower maze by
-minute 2.5, but at the income a bot has then it takes about eleven minutes to afford one.
-Meanwhile the maze keeps upgrading. The crossover is set by how fast gold arrives.
+**The cause was not the balance.** It was the bot, and the measurement that pointed at the
+balance was itself misleading:
 
-Things that did NOT move it, each measured: cutting the life pool from 20 to 8 changed match
-length by 4% (leaks all happen at the end, so fewer lives just ends the same collapse sooner);
-halving the tier cadence from 60s to 30s changed it by 3%. Raising `growth.income` from 1.25 to
-1.7 took it from 35 to 30 minutes and is the only lever that has bitten so far. Pushing it to
-2.0 reaches 26 minutes but equals `growth.cost`, which flattens income-per-gold across tiers and
-kills the buy-down-for-economy decision the whole economy rests on.
+- `decidedFraction` is measured against the *winner*, so a draw reports ~100% "contested" by
+  construction, whatever happened. Every mirror match is a draw. The metric said the match was
+  a nail-biter for the same reason it would have said so about thirty minutes of nothing —
+  which is exactly what it was describing. It is still reported, with that caveat written next
+  to it; `measureShape` in the harness is what to read instead.
 
-Worth separating before tuning further: the bot builds 45 towers and then pours every surplus
-coin into upgrades forever, which is more defensive than a person would play. Some of the 30
-minutes is the opponent, not the balance.
+- The bot's maze target was tied to the tier clock, so it aimed at 45 towers from minute two
+  and bought them one at a time on starting income — because income only grows by sending, and
+  it was not sending, because it was still building. Twenty minutes of nothing, by
+  construction. The target follows income now, which self-corrects: a poor bot wants a small
+  maze, sends to get richer, then affords a bigger one.
 
-**Trigger:** next tuning session. **Effort:** M → M.
+- A second branch below the saving logic spent the savings on upgrades whenever the target
+  creep was out of reach, which was most of the time. Same class of bug as the build branch
+  before it, so the rule is now stated rather than the fix: **only one phase may spend.**
+
+- The bot banked toward the heaviest creep the ladder offered, which by minute seven cost 2.3
+  million gold. It now aims at what a couple of income periods will actually buy.
+
+Data changed too, but far less than expected: cost growth 2.0 → 1.45 (the strongest single
+lever on length), HP growth 2.4 → 2.0, and base income doubled. Bounty growth had to follow
+cost growth — leaving it at 2.0 made each tier refund a larger share than the last, caught at
+load by the wave-bounty invariant rather than by anyone noticing bad balance.
+
+Pinned by a harness test that asserts a first life is lost inside the first three quarters of
+every mirror match.
+
+---
+
+### ~~The difficulty ladder is not robust to balance changes~~ — better, not solved
+Difficulty is the **spend ratio** now, not the reaction delay. A sweep comes out perfectly
+monotone — 0.8 beats 0.65 beats 0.5 beats 0.4 beats 0.3 beats 0.2, no exceptions — where in the
+old economy a higher ratio measurably played *worse*, which is why difficulty had been reduced
+to latency.
+
+That is both a stronger ladder and an explicable one: the hard bot sends more, which is what a
+stronger opponent does in a game about sending. Margins are decisive (20-0 in every
+off-diagonal) and every mirror draws.
+
+Still not robust *by construction*: a future balance change could invert the ratio again, and
+the only thing that would tell you is the ladder test going red.
 
 ---
 
-### The difficulty ladder is not robust to balance changes
-Every balance edit this session reshuffled which reaction delay beats which. The presets are
-picked by measurement now — a search over all ordered triples for one that is fully transitive
-(`14/10/3` of the five that qualified) — but that search has to be re-run after any tuning
-change, and there is no test that tells you the presets have gone stale beyond the ladder test
-going red.
-
-Margins are not ordered either, and the harness test says so out loud rather than asserting a
-wish: hard finishes against easy with 8 lives and against normal with 15.
-
-**Trigger:** the ladder test going red after a tuning change.
-**Effort:** S → S to re-run the search; M → M to make difficulty robust by construction.
-
----
 
 ### ~~Local prediction is not built~~ — built at step 11
 The ghost renders on click, the path preview updates as if the tower existed, a burst of

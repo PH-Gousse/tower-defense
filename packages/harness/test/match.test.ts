@@ -151,3 +151,43 @@ describe('bot-vs-bot matches', () => {
     }
   })
 })
+
+describe('the match is a contest, not a wait', () => {
+  /**
+   * The shape regression, pinned.
+   *
+   * Before this was fixed, a mirror match ran 31 minutes with both players
+   * untouched on all 20 lives until minute 29, then collapsed inside 90
+   * seconds. It looked balanced by every metric being watched at the time --
+   * including `decidedFraction`, which is measured against the winner and so
+   * reports ~100% "contested" for any draw, by construction, whatever happened.
+   *
+   * The cause was not the creep ladder. The bot's maze target was tied to the
+   * tier clock, so it aimed at 45 towers from minute two and then bought them
+   * one at a time on starting income -- because income only grows by sending,
+   * and it was not sending, because it was still building. Twenty minutes of
+   * nothing, by construction.
+   */
+  it('starts taking lives early and keeps taking them', async () => {
+    const results = await robin()
+    for (const [name] of LADDER) {
+      const m = results.get(`${name} vs ${name}`)!
+      const minutes = m.ticks / 1200
+      expect(minutes, `${name} mirror length`).toBeLessThan(20)
+      expect(minutes, `${name} mirror length`).toBeGreaterThan(2)
+
+      // Lives must be leaving the board before the last quarter of the match.
+      const samples = m.livesOverTime
+      const start = samples[0]![0]!
+      let firstLoss = samples.length
+      for (let i = 1; i < samples.length; i++) {
+        if (samples[i]![0]! < start || samples[i]![1]! < start) {
+          firstLoss = i
+          break
+        }
+      }
+      expect(firstLoss / samples.length, `${name}: first life lost, as a fraction of the match`)
+        .toBeLessThan(0.75)
+    }
+  })
+})

@@ -45,8 +45,15 @@ export interface MatchResultSummary {
    * The tick after which the eventual loser was never again level with the
    * winner on lives.
    *
-   * This is the Open Q4 metric. Lives only fall, so "never regains a life" is
-   * trivially true and useless; what matters is when the gap stopped closing.
+   * This is the Open Q4 metric, and it has one flaw worth knowing before
+   * trusting it: it is measured against the WINNER, so a draw has no loser to
+   * track and reports ~100% "contested" by construction. Every mirror match is
+   * a draw. It once reported 98-100% for matches in which nothing whatsoever
+   * happened for twenty-nine of thirty-one minutes. Read `measureShape` for the
+   * question this was meant to answer -- when lives actually leave the board.
+   *
+   * Lives only fall, so "never regains a life" is trivially true and useless;
+   * what matters is when the gap stopped closing.
    * A low `decidedFraction` means most of the match was a formality, which is
    * the exact failure mode an uncapped-HP-versus-capped-DPS race produces.
    */

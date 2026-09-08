@@ -4,11 +4,11 @@
   "unlockEveryTicks": 600,
   "maxTier": 20,
   "growth": {
-    "_comment": "Per tier. hp ABOVE cost is the load-bearing choice: it makes HP per gold RISE as you buy up, which is what lets a creep ever beat a maze. Towers are permanent and creeps die once, so a tower fires on every lap for the rest of the match while a creep pays once -- measured at tick 24,000, a 7,900g maze dealt 128,861 damage per lap, about 16x the HP an equal pile of gold buys in creeps. A flat or falling HP-per-gold curve therefore loses to any maze, forever, which is exactly the stalemate step 8 started from. income stays well below cost so buying up still earns less per gold: buy down for economy, buy up for threat.",
-    "cost": 2.0,
-    "hp": 2.4,
+    "_comment": "Per tier. hp ABOVE cost is the load-bearing choice: it makes HP per gold RISE as you buy up, which is what lets a creep ever beat a maze -- towers are permanent and creeps die once, so a tower fires on every lap for the rest of the match while a creep pays once. income stays well below cost so buying up still earns less per gold: buy down for economy, buy up for threat. cost was 2.0 and is the single strongest lever on match length: at 2.0 the higher tiers were unaffordable for twenty minutes and the whole contest landed in the last ninety seconds.",
+    "cost": 1.45,
+    "hp": 2.0,
     "income": 1.7,
-    "bounty": 2.0
+    "bounty": 1.45
   },
   "archetypes": [
     {
@@ -19,7 +19,7 @@
       "count": 6,
       "hp": 30,
       "speed": 0.075,
-      "incomeBonus": 3,
+      "incomeBonus": 6,
       "bounty": 1
     },
     {
@@ -30,7 +30,7 @@
       "count": 1,
       "hp": 217,
       "speed": 0.145,
-      "incomeBonus": 4,
+      "incomeBonus": 8,
       "bounty": 9
     },
     {
@@ -41,7 +41,7 @@
       "count": 1,
       "hp": 900,
       "speed": 0.055,
-      "incomeBonus": 7,
+      "incomeBonus": 14,
       "bounty": 28
     }
   ]

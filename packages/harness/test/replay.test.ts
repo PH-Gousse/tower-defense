@@ -85,20 +85,35 @@ describe('replaying a dump', () => {
     // A dump that only names a data version cannot be replayed after the next
     // tuning pass, which is exactly how the golden fixture spent six steps
     // claiming to pin data it was not pinning.
-    const { dump } = playAndDump(600)
-    const weakened = {
+    //
+    // Asserted on the resulting hash rather than on the divergence label. An
+    // earlier version perturbed HP and expected `diverged`, which quietly stops
+    // being true whenever tuning changes how long creeps survive: if nothing
+    // dies inside the window, doubling HP changes no observable state and the
+    // test fails for a reason unrelated to what it is checking.
+    const { dump } = playAndDump(1800)
+    const original = replayDump(dump)
+    expect(original.vsLocal.reason).toBe('agree')
+
+    const retuned = {
       ...dump,
       balance: {
         ...dump.balance,
-        creeps: dump.balance.creeps.map((c) => ({ ...c, hp: c.hp * 2 })),
+          // `incomeBonus`, because a single send changes the sender's income on
+        // the tick it lands and income is hashed. Perturbing HP or speed only
+        // shows up once a creep has been alive long enough to matter, which
+        // makes the test hostage to whatever the current tuning does in the
+        // first thirty seconds -- it went green, then red, then green again
+        // across two tuning passes without the behaviour it names ever
+        // changing.
+        creeps: dump.balance.creeps.map((c) => ({ ...c, incomeBonus: c.incomeBonus + 100 })),
       },
     }
-    const r = replayDump(weakened)
-    // Different numbers, so a different match: the point is it ran at all and
-    // disagreed, rather than silently using today's creeps.json.
-    expect(r.vsLocal.reason).toBe('diverged')
+    const other = replayDump(retuned)
+    expect(other.hashes.at(-1)!.hash).not.toBe(original.hashes.at(-1)!.hash)
+
     // And the live data is restored afterwards, or every later test is retuned.
-    expect(replayDump(dump).vsLocal.reason).toBe('agree')
+    expect(replayDump(dump).hashes.at(-1)!.hash).toBe(original.hashes.at(-1)!.hash)
   })
 
   it('round-trips through JSON, which is how it actually travels', () => {

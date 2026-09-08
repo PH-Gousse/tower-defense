@@ -214,9 +214,9 @@
 
   <!-- Difficulty is picked before the first tick, not mid-match: it changes how
        fast the bot compounds its economy, so switching halfway would compare two
-       different games. The labels quote the reaction delay because that is
-       literally all that differs — a sweep in the harness showed the other two
-       knobs pointing the wrong way, so they are held constant. -->
+       different games. The labels describe how the bot splits its gold, because
+       that is what differs — a sweep in the harness shows a higher share spent
+       attacking wins monotonically, so it is the honest difficulty axis. -->
   <div id="start">
     <div class="box">
       <h1>Line Tower Wars</h1>
@@ -226,13 +226,13 @@
       <div class="label">Play the computer</div>
       <div class="row">
         <button data-bot="easy">
-          <span class="n">Easy</span><span class="c">acts every 0.7s</span>
+          <span class="n">Easy</span><span class="c">builds more than it sends</span>
         </button>
         <button data-bot="normal">
-          <span class="n">Normal</span><span class="c">acts every 0.5s</span>
+          <span class="n">Normal</span><span class="c">splits its gold evenly</span>
         </button>
         <button data-bot="hard">
-          <span class="n">Hard</span><span class="c">acts every 0.15s</span>
+          <span class="n">Hard</span><span class="c">spends most of it attacking</span>
         </button>
       </div>
 

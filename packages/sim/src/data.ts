@@ -140,7 +140,7 @@ export interface CreepSpec {
 }
 
 /** The tier-0 stats of one archetype. Every higher tier is derived from these. */
-interface CreepArchetype {
+export interface CreepArchetype {
   readonly key: string
   readonly name: string
   readonly cost: number
@@ -151,14 +151,14 @@ interface CreepArchetype {
   readonly bounty: number
 }
 
-interface CreepGrowth {
+export interface CreepGrowth {
   readonly cost: number
   readonly hp: number
   readonly income: number
   readonly bounty: number
 }
 
-interface CreepsFile {
+export interface CreepsFile {
   readonly version: number
   readonly unlockEveryTicks: number
   readonly maxTier: number
@@ -181,7 +181,7 @@ const TIER_SUFFIX = ['', ' II', ' III', ' IV', ' V', ' VI', ' VII', ' VIII', ' I
  * exact IEEE everywhere. That is not pedantry — these numbers reach the
  * simulation, and two players whose creeps have different HP have desynced.
  */
-function expandCreeps(f: CreepsFile): CreepSpec[] {
+export function expandCreeps(f: CreepsFile): CreepSpec[] {
   const out: CreepSpec[] = []
   for (let tier = 0; tier <= f.maxTier; tier++) {
     for (const a of f.archetypes) {
@@ -213,6 +213,13 @@ function expandCreeps(f: CreepsFile): CreepSpec[] {
 }
 
 export let CREEPS: readonly CreepSpec[] = expandCreeps(creepFile)
+
+/**
+ * The loaded creep file, so a tuning tool can vary the growth rule in memory
+ * rather than by rewriting JSON and reloading the module. Tuning is a search,
+ * and a search that costs a process restart per sample is a search nobody runs.
+ */
+export const CREEP_FILE: CreepsFile = creepFile
 export let UNLOCK_EVERY_TICKS = creepFile.unlockEveryTicks
 export const CREEP_DATA_VERSION = creepFile.version
 /** Highest tier the roster reaches. Tier N unlocks N minutes in. */
