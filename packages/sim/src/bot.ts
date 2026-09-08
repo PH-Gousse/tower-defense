@@ -1,6 +1,6 @@
 import { GRID_W, tileIndex, tileX, tileY, SPAWN_INDICES, type Tile } from './grid'
 import { pathFrom } from './path'
-import { TowerKind, CREEPS, creepSpec, levelOf, MAX_LEVEL, tierUnlockTick } from './data'
+import { TowerKind, CREEPS, creepSpec, levelOf, MAX_LEVEL, MAX_TIER, tierUnlockTick } from './data'
 import { opponentOf, type GameState, type Lane, type Player } from './state'
 import { Kind, Refusal, checkBuild, checkUpgrade, checkSend, type Command } from './step'
 import { templateAt } from './maze'
@@ -65,6 +65,44 @@ export interface BotConfig {
 const OPENING_TOWERS = 6
 
 /**
+ * Towers the bot adds per tier that has unlocked, past the opening.
+ *
+ * A cap on building is what lets the bot SAVE. Without one it found an
+ * affordable tile on nearly every decision, so its gold never rose above its
+ * income, so it could never afford a creep big enough to threaten anything --
+ * and a harness measuring an opponent that cannot execute the winning strategy
+ * measures nothing. Two bots ran 33 minutes and 1,891 sends without a single
+ * leak because of this, which reads exactly like a balance problem and is not.
+ */
+const TOWERS_PER_TIER = 7
+
+/**
+ * Ceiling on the maze the bot will build before it starts banking.
+ *
+ * Without it a defensive bot's build phase never ends: the target grows with
+ * every tier, so it keeps finding a tile worth filling, never banks, never
+ * sends anything that can get through, and the match runs out the clock with
+ * both sides untouched. The ceiling guarantees the banking phase arrives.
+ */
+const MAX_TOWER_TARGET = 45
+
+/**
+ * Income periods the bot will bank before it gives up and sends what it has.
+ *
+ * Saving is the whole difference between a bot that applies pressure and one
+ * that does not. Spending on every chance to spend keeps its gold pinned near
+ * its income, and a creep bought out of one income period dies in a maze built
+ * out of forty of them — two bots ran 33 minutes and 1,478 sends without a
+ * single leak that way, which reads exactly like a balance problem and is not.
+ *
+ * The ceiling is the other half. An earlier attempt saved for a fixed tier
+ * instead and spiralled: refusing to send cost it the income that sends pay,
+ * so it got poorer, so the tier receded further. Saving has to be bounded by
+ * something the bot already has, and its own income is that thing.
+ */
+const MAX_SAVING_PERIODS = 15
+
+/**
  * Difficulty is the reaction delay. The other two knobs are held constant, and
  * that is a measured decision rather than a design one.
  *
@@ -91,9 +129,9 @@ const OPENING_TOWERS = 6
  * every off-diagonal goes to the faster bot, margins widen with the gap, and
  * every mirror is a draw — which also proves the sim gives player 0 no edge.
  */
-export const BOT_EASY: BotConfig = { sendRatio: 0.25, reactionTicks: 24, template: 0 }
-export const BOT_NORMAL: BotConfig = { sendRatio: 0.25, reactionTicks: 12, template: 0 }
-export const BOT_HARD: BotConfig = { sendRatio: 0.25, reactionTicks: 5, template: 0 }
+export const BOT_EASY: BotConfig = { sendRatio: 0.25, reactionTicks: 14, template: 0 }
+export const BOT_NORMAL: BotConfig = { sendRatio: 0.25, reactionTicks: 10, template: 0 }
+export const BOT_HARD: BotConfig = { sendRatio: 0.25, reactionTicks: 3, template: 0 }
 
 /**
  * One decision. Returns `null` when the bot chooses to do nothing this tick,
@@ -144,32 +182,101 @@ export function botCommand(
   // on nearly every decision and starved its own sends. Splitting the gold
   // instead leaves reaction delay meaning only what it says — the same mix of
   // spending, sooner.
-  const sendBudget = me.gold * config.sendRatio
-  const buildBudget = me.gold - sendBudget
+  const unlocked = unlockedTier(state.tick)
+  const target = strongestAt(unlocked)
 
-  // `tick` drives the alternation rather than a random draw, so the same config
-  // always plays the same match.
-  const decision = (state.tick / config.reactionTicks) % 100
-  const wantsToSend = decision < config.sendRatio * 100
+  // Two phases per tier: build the maze this tier needs, then bank for the
+  // creep this tier offers. It is how a person plays and it is the only shape
+  // that gives both, because saving and building compete for the same gold.
+  //
+  // Splitting the purse instead does not work, and both ways of splitting it
+  // failed here first. A fraction for each let the build half spend the gold
+  // the send half was saving, so the bot held 642 gold against a maze dealing
+  // 128,861 damage a lap. Reserving the creep's price instead reserved more
+  // than the bot owned, so the build budget was zero all match, the maze never
+  // grew past its opening, and every spend ratio played a byte-identical game.
+  //
+  // The ratio now sets how big a maze counts as enough for the tier: a
+  // defensive bot builds more towers per tier and banks later, an aggressive
+  // one settles for a thinner maze and buys a heavier creep.
+  const defensiveness = (1 - config.sendRatio) * 2
+  const towerTarget = Math.min(
+    MAX_TOWER_TARGET,
+    OPENING_TOWERS + Math.round(TOWERS_PER_TIER * unlocked * defensiveness),
+  )
+  const canBuild = towerCount(lane) < towerTarget
+  // In the build phase gold is for towers; in the banking phase it is not.
+  const buildBudget = canBuild ? me.gold : 0
+  const sendBudget = me.gold
 
-  if (wantsToSend && emergency === -1) {
-    const send = bestSend(state, player, sendBudget)
-    if (send !== -1) return { tick: state.tick, player, kind: Kind.Send, creep: send }
+  // There is no send/build alternation any more, and removing it was the fix
+  // for a ladder that kept coming out backwards.
+  //
+  // The old scheme let the ratio decide which decisions were send decisions,
+  // which quietly made the reaction delay a spending knob as well as a latency
+  // one -- the window it carved out of each cycle was a different shape at
+  // every reaction speed, so a bot that reacted faster sent at different
+  // moments rather than simply sooner, and reacted its way into worse
+  // purchases. Each knob now does one thing: the ratio sets how big a maze
+  // counts as enough (above), the delay sets how quickly the bot notices.
+  // Phase order, and it is load-bearing: build first, then bank.
+  //
+  // With the send/build alternation gone, whichever branch is tested first
+  // wins outright, because at every tier there is always some creep the bot can
+  // afford. Testing sends first meant it never built past its opening six
+  // towers in a whole match. Build until the maze meets the target for this
+  // tier, then let everything else go into the next creep.
+  if (canBuild) {
+    const build = nextTemplateTile(state, player, lane, config, buildBudget)
+    if (build) return build
+    const upgrade = bestUpgrade(state, player, lane, buildBudget)
+    if (upgrade) return upgrade
   }
 
-  const build = nextTemplateTile(state, player, lane, config, buildBudget)
-  if (build) return build
+  if (emergency === -1) {
+    // What it is saving for: the heaviest creep the ladder currently offers.
+    if (target !== -1 && me.gold >= creepSpec(target).cost) {
+      return { tick: state.tick, player, kind: Kind.Send, creep: target }
+    }
+    // Not there yet. Keep banking, unless the bank is already deep enough that
+    // waiting longer costs more income than the bigger creep is worth.
+    if (me.gold >= me.income * MAX_SAVING_PERIODS) {
+      const send = bestSend(state, player, sendBudget)
+      if (send !== -1) return { tick: state.tick, player, kind: Kind.Send, creep: send }
+    }
+  }
 
-  const upgrade = bestUpgrade(state, player, lane, buildBudget)
+  // Maze is at its target and the next creep is out of reach. Deepen the maze
+  // rather than idle -- an upgrade is never wasted.
+  const upgrade = bestUpgrade(state, player, lane, me.gold)
   if (upgrade) return upgrade
 
-  // Nothing left worth building. Send rather than bank it — gold sitting idle
-  // is the one thing that is definitely not winning the match. This send
-  // ignores the budget on purpose: it only fires once the defensive half has
-  // nothing to buy, so holding that share back would strand it forever.
+  // Nothing to build and nothing worth saving toward. Send what it can.
   const send = bestSend(state, player, me.gold)
   if (send !== -1) return { tick: state.tick, player, kind: Kind.Send, creep: send }
   return null
+}
+
+/** The most expensive creep at a given tier: the heaviest thing money can buy. */
+function strongestAt(tier: number): number {
+  let best = -1
+  let bestCost = -1
+  for (let i = 0; i < CREEPS.length; i++) {
+    const spec = creepSpec(i)
+    if (spec.tier !== tier) continue
+    if (spec.cost > bestCost) {
+      bestCost = spec.cost
+      best = i
+    }
+  }
+  return best
+}
+
+/** Highest creep tier buyable at this tick. */
+function unlockedTier(tick: number): number {
+  let tier = 0
+  while (tier + 1 <= MAX_TIER && tick >= tierUnlockTick(tier + 1)) tier += 1
+  return tier
 }
 
 /** How many towers stand in a lane. */

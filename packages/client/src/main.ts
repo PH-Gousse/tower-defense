@@ -1,7 +1,7 @@
 import { createScene, WebGLUnavailable, type Selection, type Scene } from './scene'
 import {
   TowerKind, ARCHETYPES, levelOf, MAX_LEVEL, TICK_HZ, MatchResult,
-  CREEPS, tierUnlockTick, INCOME_EVERY_TICKS,
+  CREEPS, tierUnlockTick, INCOME_EVERY_TICKS, MAX_TIER,
   BOT_EASY, BOT_NORMAL, BOT_HARD, type BotConfig,
 } from '@ltw/sim'
 
@@ -50,30 +50,50 @@ const sendRow = el('sendRow')
 // --- send palette ----------------------------------------------------------
 // Build and Send stay separate palettes on purpose: they are opposite-facing
 // economies, and merging them makes a 140g send one misclick from a 110g tower.
+//
+// The palette is a WINDOW on the roster, not the whole roster. Step 8 replaced
+// the fixed six-creep list with a growth rule that keeps producing tiers for as
+// long as a match runs -- sixty-three of them -- because a ladder that stops
+// leaves a maze nothing can break and the match never ends. Sixty-three buttons
+// is not a palette, so this shows the tier you can buy now and the one arriving
+// next, and re-points the same six buttons as the ladder advances.
+const ARCHETYPE_COUNT = 3
+const WINDOW_TIERS = 2
+const SEND_KEYS = ['q', 'w', 'e', 'r', 't', 'y']
+
 const creepButtons: HTMLButtonElement[] = []
 if (sendRow) {
-  CREEPS.forEach((spec, i) => {
+  for (let slot = 0; slot < ARCHETYPE_COUNT * WINDOW_TIERS; slot++) {
     const b = document.createElement('button')
     b.className = 'creep'
-    b.dataset.creep = String(i)
-    b.innerHTML =
-      `<span class="n">${spec.name}</span>` +
-      `<span class="c">${spec.cost}g` +
-      (spec.count > 1 ? ` &times;${spec.count}` : '') +
-      ` &middot; +${spec.incomeBonus} inc</span>`
-    b.addEventListener('click', () => scene.send(i))
+    b.dataset.creep = String(slot)
+    b.innerHTML = '<span class="n"></span><span class="c"></span>'
+    b.addEventListener('click', () => {
+      const i = Number(b.dataset.creep)
+      if (b.hasAttribute('data-locked')) return
+      scene.send(i)
+    })
     sendRow.appendChild(b)
     creepButtons.push(b)
-  })
+  }
 }
 
-// One key per creep, along the top row in palette order. Hard-coding three of
-// them silently stranded the tier-2 creeps on the mouse the moment the roster
-// grew past the original three.
-const SEND_KEYS = ['q', 'w', 'e', 'r', 't', 'y']
+/** Highest tier buyable at this tick. */
+function unlockedTier(tick: number): number {
+  let tier = 0
+  while (tier + 1 <= MAX_TIER && tick >= tierUnlockTick(tier + 1)) tier += 1
+  return tier
+}
+
+// One key per palette slot, along the top row in palette order. Hard-coding
+// three of them silently stranded half the palette on the mouse the moment the
+// roster grew.
 window.addEventListener('keydown', (ev) => {
-  const i = SEND_KEYS.indexOf(ev.key.toLowerCase())
-  if (i !== -1 && i < CREEPS.length) scene.send(i)
+  const slot = SEND_KEYS.indexOf(ev.key.toLowerCase())
+  if (slot === -1) return
+  const b = creepButtons[slot]
+  if (!b || b.hasAttribute('data-locked')) return
+  scene.send(Number(b.dataset.creep))
 })
 
 // --- build palette ---------------------------------------------------------
@@ -135,21 +155,32 @@ scene.onStats((s) => {
   if (income) income.textContent = `${s.income} /15s`
   if (oppLives) oppLives.textContent = String(s.oppLives)
 
-  // Creep cards carry three states, not two: affordable, unaffordable, and
-  // not-yet-unlocked. Locked is first-class because tiers open on a timer and
-  // knowing what is coming changes what you save for.
-  for (const b of creepButtons) {
-    const i = Number(b.dataset.creep)
-    const spec = CREEPS[i]!
+  // Slide the window as tiers unlock, then paint each card. Cards carry three
+  // states, not two: affordable, unaffordable, and not-yet-unlocked. Locked is
+  // first-class because tiers open on a timer and knowing what is coming
+  // changes what you save for.
+  const tier = unlockedTier(s.tick)
+  for (let slot = 0; slot < creepButtons.length; slot++) {
+    const b = creepButtons[slot]!
+    const slotTier = tier + Math.floor(slot / ARCHETYPE_COUNT)
+    const index = slotTier * ARCHETYPE_COUNT + (slot % ARCHETYPE_COUNT)
+    const spec = CREEPS[index]
+    if (!spec) {
+      b.hidden = true
+      continue
+    }
+    b.hidden = false
+    b.dataset.creep = String(index)
+    const name = b.querySelector('.n')
+    if (name) name.textContent = spec.name
+    const c = b.querySelector('.c')
     const locked = s.tick < tierUnlockTick(spec.tier)
     if (locked) {
       b.setAttribute('data-locked', 'true')
       const secs = Math.ceil((tierUnlockTick(spec.tier) - s.tick) / TICK_HZ)
-      const c = b.querySelector('.c')
-      if (c) c.textContent = `unlocks in ${secs}s`
+      if (c) c.textContent = `${spec.cost}g · unlocks in ${secs}s`
     } else {
       b.removeAttribute('data-locked')
-      const c = b.querySelector('.c')
       if (c) {
         c.textContent =
           `${spec.cost}g` + (spec.count > 1 ? ` ×${spec.count}` : '') + ` · +${spec.incomeBonus} inc`

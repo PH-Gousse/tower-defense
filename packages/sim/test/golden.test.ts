@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { createState, MatchResult, type GameState } from '../src/state'
-import { TowerKind } from '../src/data'
+import { TowerKind, installBalanceData, type BalanceData } from '../src/data'
 import { step, Kind, type Command } from '../src/step'
 import { hashHex } from '../src/hash'
 
@@ -20,6 +20,11 @@ import { hashHex } from '../src/hash'
  *      reads live data gets regenerated rather than investigated, which turns
  *      the keystone regression test into a rubber stamp. `match-01.json` owns
  *      its config and never changes.
+ *
+ *      This was claimed here for six steps before it was true. Step 8 changed a
+ *      creep's HP, watched the hash move, and found the fixture reading live
+ *      data the whole time. It installs `fixture.data` now, so a red golden
+ *      test means the arithmetic diverged and nothing else.
  *
  *   2. **CI runs it on two genuinely different engines.** Node and headless
  *      Chrome are both V8 and would test one engine while claiming two, so the
@@ -44,6 +49,8 @@ interface Fixture {
   readonly ticks: number
   readonly commands: readonly FixtureCommand[]
   readonly expectedHash: string
+  /** The balance numbers this hash was recorded under. */
+  readonly data: BalanceData
 }
 
 const fixturePath = fileURLToPath(new URL('./golden/match-01.json', import.meta.url))
@@ -70,14 +77,22 @@ function replayState(f: Fixture): GameState {
     byTick.set(c.at, list)
   }
 
-  let a: GameState = createState()
-  let b: GameState = createState()
-  for (let t = 0; t < f.ticks; t++) {
-    const out = step(a, byTick.get(t) ?? [], b)
-    b = a
-    a = out
+  // Install the frozen balance data for the length of the replay, and put the
+  // live data back whatever happens. Skipping the restore would silently retune
+  // every other test that shares this module.
+  const previous = installBalanceData(f.data)
+  try {
+    let a: GameState = createState()
+    let b: GameState = createState()
+    for (let t = 0; t < f.ticks; t++) {
+      const out = step(a, byTick.get(t) ?? [], b)
+      b = a
+      a = out
+    }
+    return a
+  } finally {
+    installBalanceData(previous)
   }
-  return a
 }
 
 function replay(f: Fixture): string {

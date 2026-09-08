@@ -46,9 +46,25 @@ interface TowersFile {
 const file = towersJson as unknown as TowersFile
 
 export const DATA_VERSION = file.version
-export const SELL_REFUND = file.sellRefund
-export const ARCHETYPES: readonly TowerArchetype[] = file.archetypes
 export const MAX_LEVEL = 3
+
+/**
+ * Balance data is a live binding, not a constant.
+ *
+ * `export let` rather than `export const` for exactly one caller: the golden
+ * fixture, which pins its own frozen copy of these numbers and installs it
+ * before replaying. Its whole value depends on that. The fixture is the
+ * keystone determinism test, and if it read live data then every one of the
+ * hundreds of edits that tuning makes would change its expected hash — so it
+ * would get regenerated rather than investigated, and a regression test you
+ * regenerate on sight is a rubber stamp. Its doc comment claimed this pinning
+ * already happened. It did not; step 8 found that out by changing a number and
+ * watching the hash move.
+ *
+ * Nothing else may write these. See `installBalanceData`.
+ */
+export let SELL_REFUND = file.sellRefund
+export let ARCHETYPES: readonly TowerArchetype[] = file.archetypes
 
 /** Ordered by TowerKind so `ARCHETYPES[kind]` is always the right one. */
 const EXPECTED_KEYS = ['single', 'splash', 'slow']
@@ -123,17 +139,118 @@ export interface CreepSpec {
   readonly bounty: number
 }
 
+/** The tier-0 stats of one archetype. Every higher tier is derived from these. */
+interface CreepArchetype {
+  readonly key: string
+  readonly name: string
+  readonly cost: number
+  readonly count: number
+  readonly hp: number
+  readonly speed: number
+  readonly incomeBonus: number
+  readonly bounty: number
+}
+
+interface CreepGrowth {
+  readonly cost: number
+  readonly hp: number
+  readonly income: number
+  readonly bounty: number
+}
+
 interface CreepsFile {
   readonly version: number
   readonly unlockEveryTicks: number
-  readonly creeps: readonly CreepSpec[]
+  readonly maxTier: number
+  readonly growth: CreepGrowth
+  readonly archetypes: readonly CreepArchetype[]
 }
 
 const creepFile = creepsJson as unknown as CreepsFile
 
-export const CREEPS: readonly CreepSpec[] = creepFile.creeps
-export const UNLOCK_EVERY_TICKS = creepFile.unlockEveryTicks
+/** Tier suffixes. Past this the tier number is spelled out. */
+const TIER_SUFFIX = ['', ' II', ' III', ' IV', ' V', ' VI', ' VII', ' VIII', ' IX', ' X']
+
+/**
+ * Expand the growth rule into a roster.
+ *
+ * Done once at load, so the hot path still reads a plain array and nothing
+ * downstream has to know the roster is generated. Growth is applied by repeated
+ * multiplication rather than by `Math.pow`, which is banned: pow is a libm call
+ * and libm differs between engines in the last bits, while a loop of `*` is
+ * exact IEEE everywhere. That is not pedantry — these numbers reach the
+ * simulation, and two players whose creeps have different HP have desynced.
+ */
+function expandCreeps(f: CreepsFile): CreepSpec[] {
+  const out: CreepSpec[] = []
+  for (let tier = 0; tier <= f.maxTier; tier++) {
+    for (const a of f.archetypes) {
+      let cost = a.cost
+      let hp = a.hp
+      let income = a.incomeBonus
+      let bounty = a.bounty
+      for (let t = 0; t < tier; t++) {
+        cost = cost * f.growth.cost
+        hp = hp * f.growth.hp
+        income = income * f.growth.income
+        bounty = bounty * f.growth.bounty
+      }
+      const suffix = TIER_SUFFIX[tier] ?? ` T${tier + 1}`
+      out.push({
+        key: tier === 0 ? a.key : `${a.key}${tier + 1}`,
+        name: `${a.name}${suffix}`,
+        tier,
+        cost: Math.round(cost),
+        count: a.count,
+        hp: Math.round(hp),
+        speed: a.speed,
+        incomeBonus: Math.max(1, Math.round(income)),
+        bounty: Math.max(1, Math.round(bounty)),
+      })
+    }
+  }
+  return out
+}
+
+export let CREEPS: readonly CreepSpec[] = expandCreeps(creepFile)
+export let UNLOCK_EVERY_TICKS = creepFile.unlockEveryTicks
 export const CREEP_DATA_VERSION = creepFile.version
+/** Highest tier the roster reaches. Tier N unlocks N minutes in. */
+export const MAX_TIER = creepFile.maxTier
+
+/** The balance numbers a replay needs pinned to reproduce a hash. */
+export interface BalanceData {
+  readonly sellRefund: number
+  readonly archetypes: readonly TowerArchetype[]
+  readonly unlockEveryTicks: number
+  readonly creeps: readonly CreepSpec[]
+}
+
+/** Everything currently loaded, for a fixture to freeze. */
+export function liveBalanceData(): BalanceData {
+  return {
+    sellRefund: SELL_REFUND,
+    archetypes: ARCHETYPES,
+    unlockEveryTicks: UNLOCK_EVERY_TICKS,
+    creeps: CREEPS,
+  }
+}
+
+/**
+ * Replace the loaded balance data. **Only the golden fixture may call this.**
+ *
+ * Returns what was installed before, so a caller can put it back — and a caller
+ * that does not put it back has changed the game for every test sharing the
+ * module. Always restore in a `finally`.
+ */
+export function installBalanceData(next: BalanceData): BalanceData {
+  const previous = liveBalanceData()
+  SELL_REFUND = next.sellRefund
+  ARCHETYPES = next.archetypes
+  UNLOCK_EVERY_TICKS = next.unlockEveryTicks
+  CREEPS = next.creeps
+  return previous
+}
 
 /** Tier N becomes buyable at this tick. Tier 0 is available immediately. */
 export function tierUnlockTick(tier: number): number {
@@ -143,6 +260,14 @@ export function tierUnlockTick(tier: number): number {
 export function creepSpec(index: number): CreepSpec {
   return CREEPS[index] as CreepSpec
 }
+
+/**
+ * Most a whole purchase may refund to the defender, as a share of its cost.
+ *
+ * Killing a wave should pay for some of the maze that killed it, not most of
+ * the wave back.
+ */
+const MAX_WAVE_BOUNTY_SHARE = 0.35
 
 function assertCreepData(): void {
   if (CREEPS.length === 0) throw new Error('creeps.json: no creeps')
@@ -190,6 +315,17 @@ function assertCreepData(): void {
       // A bounty at or above the send cost would make sending a gift to the
       // defender, which inverts the whole point of sending.
       throw new Error(`creeps.json: "${c.key}" bounty must be below its cost`)
+    }
+    // The per-creep check above had a hole that step 8 walked straight into: a
+    // purchase releases `count` creeps and the defender is paid for every one.
+    // The old swarm passed it while handing back 60% of its own cost, and the
+    // same shape at a high tier would have handed back 95% -- sending would
+    // have been a way to fund your opponent.
+    if (c.bounty * c.count > c.cost * MAX_WAVE_BOUNTY_SHARE) {
+      throw new Error(
+        `creeps.json: "${c.key}" pays back ${c.bounty * c.count}g of its ${c.cost}g cost ` +
+          `across ${c.count} kills, over the ${MAX_WAVE_BOUNTY_SHARE * 100}% ceiling`,
+      )
     }
   }
 

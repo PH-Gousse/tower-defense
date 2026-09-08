@@ -82,10 +82,12 @@ describe('bot', () => {
 
   it('respects its reaction delay', () => {
     const s = createState()
-    // BOT_HARD reacts every 4 ticks, so ticks 1..3 must produce nothing.
-    for (let t = 1; t < 4; t++) {
+    // Derived from the config rather than written out. This said "BOT_HARD
+    // reacts every 4 ticks" and went red the moment tuning moved it to 3, which
+    // is a test failing for the one reason that tells you nothing.
+    for (let t = 1; t < BOT_HARD.reactionTicks; t++) {
       const probe = run(t)
-      expect(botCommand(probe, 0, BOT_HARD)).toBeNull()
+      expect(botCommand(probe, 0, BOT_HARD), `tick ${t}`).toBeNull()
     }
     expect(botCommand(s, 0, BOT_HARD)).not.toBeNull()
   })
@@ -129,29 +131,41 @@ describe('bot', () => {
     expect(sawTier1).toBe(true)
   })
 
-  it('spends the ratio: a low ratio builds more towers than a high one', () => {
-    // This used to assert "ratio 1 sends more creeps than ratio 0" and that is
-    // no longer true, for a reason worth keeping. The ratio splits GOLD now, so
-    // a ratio of 1 hands the whole purse to `bestSend`, which buys the most
-    // expensive creep it can reach — and expensive creeps are deliberately the
-    // worse deal per gold. It therefore sends FEWER, bigger waves. Send count
-    // was measuring the creep table, not the knob.
+  it('spends the ratio: a low ratio builds a bigger maze than a high one', () => {
+    // This assertion has been rewritten twice as the meaning of the ratio was
+    // corrected, and the history is the point. It first read "ratio 1 sends more
+    // creeps than ratio 0", which stopped being true when the ratio began
+    // splitting gold rather than decisions: a ratio of 1 hands the whole purse
+    // to `bestSend`, which buys the heaviest creep it can reach, so it sends
+    // FEWER and bigger waves. Send count was measuring the creep table.
     //
-    // Towers built is the direct reading: a ratio of 1 leaves nothing for the
-    // build budget, so it never gets past the fixed opening.
-    const run = (ratio: number) => {
+    // The ratio now sets how big a maze counts as enough for the tier, so the
+    // maze is what to measure.
+    const towersAfter = (ratio: number, ticks: number) => {
       let s: GameState = createState()
+      // The undefended opponent has to survive, or the match ends inside the
+      // first minute and the state freezes with the opening maze still on the
+      // board -- which reads as "the ratio does nothing" and is really "nothing
+      // was measured". This cost an hour once.
+      let into: GameState = createState()
+      for (const st of [s, into]) (st.players[1] as { lives: number }).lives = 1_000_000
       const cfg = { sendRatio: ratio, reactionTicks: 12, template: 0 }
-      for (let t = 0; t < 2000; t++) {
+      // Double-buffered rather than a fresh state per tick: at 24,000 ticks the
+      // allocation alone blew the test timeout.
+      for (let t = 0; t < ticks; t++) {
         const c = botCommand(s, 0, cfg)
-        s = step(s, c ? [c] : [], createState())
+        const out = step(s, c ? [c] : [], into)
+        into = s
+        s = out
       }
       let towers = 0
       for (const k of s.lanes[0]!.towers.kind) if (k !== -1) towers += 1
       return towers
     }
-    expect(run(0)).toBeGreaterThan(run(1))
-    expect(run(1)).toBe(6) // the opening, and nothing after it
+    // Long enough for several tiers to pass and the targets to pull apart. The
+    // early game is gold-bound rather than target-bound, so a short horizon
+    // measures the starting purse and not the ratio at all.
+    expect(towersAfter(0.1, 24000)).toBeGreaterThan(towersAfter(0.9, 24000))
   })
 
   it('always builds the opening before it sends anything', () => {

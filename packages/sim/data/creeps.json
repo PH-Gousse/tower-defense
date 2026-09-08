@@ -1,73 +1,48 @@
 {
-  "version": 2,
-  "_comment": "Step 6 values are placeholders with the right SHAPE. Tuning is step 8 and needs the harness. incomeBonus is permanent and paid to the SENDER; cheaper creeps must give more income per gold, which data.ts asserts at load.",
-  "unlockEveryTicks": 1200,
-  "creeps": [
+  "version": 4,
+  "_comment": "Step 8. The roster is a RULE, not a list. A finite list cannot guarantee a match ends: the tower board saturates at a bounded lap damage (~157,000 for 136 level-3 towers, measured by `pnpm --filter @ltw/harness lap`), so a ladder that stops short leaves a maze nothing can break, and two competent players stalemate forever. Growth is geometric and the tiers keep coming, so creep HP passes any bounded maze eventually and somebody always loses. Tier N stats are base * growth^N, generated at load up to maxTier.",
+  "unlockEveryTicks": 600,
+  "maxTier": 20,
+  "growth": {
+    "_comment": "Per tier. hp ABOVE cost is the load-bearing choice: it makes HP per gold RISE as you buy up, which is what lets a creep ever beat a maze. Towers are permanent and creeps die once, so a tower fires on every lap for the rest of the match while a creep pays once -- measured at tick 24,000, a 7,900g maze dealt 128,861 damage per lap, about 16x the HP an equal pile of gold buys in creeps. A flat or falling HP-per-gold curve therefore loses to any maze, forever, which is exactly the stalemate step 8 started from. income stays well below cost so buying up still earns less per gold: buy down for economy, buy up for threat.",
+    "cost": 2.0,
+    "hp": 2.4,
+    "income": 1.7,
+    "bounty": 2.0
+  },
+  "archetypes": [
     {
       "key": "swarm",
       "name": "Swarm",
-      "tier": 0,
+      "answers": "splash",
       "cost": 20,
       "count": 6,
-      "hp": 90,
+      "hp": 30,
       "speed": 0.075,
       "incomeBonus": 3,
-      "bounty": 2
+      "bounty": 1
     },
     {
       "key": "runner",
       "name": "Runner",
-      "tier": 0,
+      "answers": "slow",
       "cost": 45,
       "count": 1,
-      "hp": 220,
+      "hp": 217,
       "speed": 0.145,
       "incomeBonus": 4,
-      "bounty": 5
+      "bounty": 9
     },
     {
       "key": "tank",
       "name": "Tank",
-      "tier": 0,
+      "answers": "single-target",
       "cost": 140,
       "count": 1,
-      "hp": 1400,
+      "hp": 900,
       "speed": 0.055,
       "incomeBonus": 7,
-      "bounty": 16
-    },
-    {
-      "key": "swarm2",
-      "name": "Swarm II",
-      "tier": 1,
-      "cost": 55,
-      "count": 8,
-      "hp": 240,
-      "speed": 0.08,
-      "incomeBonus": 7,
-      "bounty": 5
-    },
-    {
-      "key": "runner2",
-      "name": "Runner II",
-      "tier": 1,
-      "cost": 120,
-      "count": 1,
-      "hp": 620,
-      "speed": 0.16,
-      "incomeBonus": 9,
-      "bounty": 13
-    },
-    {
-      "key": "tank2",
-      "name": "Tank II",
-      "tier": 1,
-      "cost": 360,
-      "count": 1,
-      "hp": 4200,
-      "speed": 0.06,
-      "incomeBonus": 15,
-      "bounty": 40
+      "bounty": 28
     }
   ]
 }

@@ -9,40 +9,69 @@ Each other item names the trigger that should make you pick it up.
 
 ---
 
-## P0 — blocks the game being a game
+## P0 — RESOLVED at step 8
 
-### Defence outscales offence: matches that cannot end
-**What:** Below roughly a 0.2 spend ratio, a bot-vs-bot match never resolves. Not "takes a long
-time" — never. Measured, both sides at 40,000 ticks (33 minutes of game time):
+### ~~Defence outscales offence: matches that cannot end~~ — fixed
+Below a 0.2 spend ratio, matches used to run forever: both sides reached 20,000 income and
+1,800 sends across 33 minutes and stayed on 11 lives. Every spend ratio from 0.1 to 0.8 now
+resolves.
 
-| spend ratio | result | ticks | lives | sends | income reached |
-|---|---|---|---|---|---|
-| 0.10 | no result | 40,000 | 19 / 19 | 1,299 | 12,402 |
-| 0.15 | no result | 40,000 | 19 / 19 | 1,812 | 20,628 |
-| 0.20 | no result | 40,000 | 11 / 11 | 1,862 | 21,105 |
-| 0.25 | draw | **853** | 0 / 0 | 14 | 70 |
-| 0.30 | draw | 2,130 | 0 / 0 | 33 | 130 |
+The cause was structural, not a number being wrong. Creep power was a finite list of six while
+tower power grew with the board, and the board's lap damage is bounded but large — measured at
+~157,000 for 136 level-3 towers. A ladder that stops short leaves a maze nothing can break.
+Two changes fixed it:
 
-Two things are wrong here and they are the same thing. Tower upgrades outscale creeps once
-income compounds, so 1,800 sends take 9 lives; and the transition from that to a 43-second
-match happens between 0.20 and 0.25, which is a cliff, not a curve. A game whose length swings
-from 43 seconds to unbounded across a 5% change in one player's spending habit has no tuning,
-it has a coin flip.
+- **The roster is a growth rule, not a list.** Tier N is base × growth^N, generated to tier 20,
+  so creep HP passes any bounded maze eventually and somebody always loses.
+- **HP per gold rises as you buy up** (`growth.hp` 2.4 > `growth.cost` 2.0). Towers are
+  permanent and creeps die once, so a tower fires on every lap for the rest of the match while
+  a creep pays once. Measured at tick 24,000: a 7,900g maze dealt 128,861 damage per lap,
+  about 16x the HP the same gold buys in creeps. A flat or falling HP-per-gold curve loses to
+  any maze, forever.
 
-**Why it matters beyond bots:** a human who turtles hits the same wall. Two competent players
-who both build well have no way to finish, because the thing that ends a match — creeps
-surviving a maze — gets strictly weaker relative to the maze as the match goes on.
+The instrument that found it is `pnpm --filter @ltw/harness lap`, which measures HP-to-survive
+per maze by running probe creeps through the real simulation rather than modelling damage.
 
-**Where to start:** creep HP has to scale with elapsed time, or income has to stop compounding,
-or leaks have to cost more than one life late. The flow-field and spatial-hash work is not
-implicated; this is entirely in `creeps.json`, `towers.json` and the income rule.
+---
 
-**Trigger:** step 8, "Tune". This is that step's headline item, not a side quest.
-**Effort:** M (human) → M (with CC) — the harness makes the measurement cheap, but choosing
-what *should* happen is a design call.
+## P0 — the next one
 
-**Do not** fix this by capping match length. A timeout hides the fact that the game cannot be
-won on its own terms.
+### Matches are long, and the whole contest happens in the last minute
+Bot-vs-bot mirror matches run about 30 minutes, and `decidedFraction` is 98-100% — which sounds
+ideal and is not. It means neither side leaks for the first twenty-odd minutes and then one
+collapses. A long stalemate with a sudden end, not a contest.
+
+Measured cause: **income, not the ladder.** A tier-5 tank can break a maxed 45-tower maze by
+minute 2.5, but at the income a bot has then it takes about eleven minutes to afford one.
+Meanwhile the maze keeps upgrading. The crossover is set by how fast gold arrives.
+
+Things that did NOT move it, each measured: cutting the life pool from 20 to 8 changed match
+length by 4% (leaks all happen at the end, so fewer lives just ends the same collapse sooner);
+halving the tier cadence from 60s to 30s changed it by 3%. Raising `growth.income` from 1.25 to
+1.7 took it from 35 to 30 minutes and is the only lever that has bitten so far. Pushing it to
+2.0 reaches 26 minutes but equals `growth.cost`, which flattens income-per-gold across tiers and
+kills the buy-down-for-economy decision the whole economy rests on.
+
+Worth separating before tuning further: the bot builds 45 towers and then pours every surplus
+coin into upgrades forever, which is more defensive than a person would play. Some of the 30
+minutes is the opponent, not the balance.
+
+**Trigger:** next tuning session. **Effort:** M → M.
+
+---
+
+### The difficulty ladder is not robust to balance changes
+Every balance edit this session reshuffled which reaction delay beats which. The presets are
+picked by measurement now — a search over all ordered triples for one that is fully transitive
+(`14/10/3` of the five that qualified) — but that search has to be re-run after any tuning
+change, and there is no test that tells you the presets have gone stale beyond the ladder test
+going red.
+
+Margins are not ordered either, and the harness test says so out loud rather than asserting a
+wish: hard finishes against easy with 8 lives and against normal with 15.
+
+**Trigger:** the ladder test going red after a tuning change.
+**Effort:** S → S to re-run the search; M → M to make difficulty robust by construction.
 
 ---
 

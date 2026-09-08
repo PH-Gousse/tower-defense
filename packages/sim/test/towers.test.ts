@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createSpatialHash, rebuildHash } from '../src/towers'
-import { TowerKind, levelOf, ARCHETYPES } from '../src/data'
+import { TowerKind, levelOf, ARCHETYPES, creepSpec } from '../src/data'
 import { hashState } from '../src/hash'
 import { build, send, run, runUntil, SWARM, RUNNER, TANK } from './helpers'
 
@@ -89,7 +89,9 @@ describe('towers', () => {
       1: [send(RUNNER, 0)], // player 0 sends -> creeps land in lane 1
     })
     expect(s.lanes[1]!.creeps.count).toBe(1)
-    expect(s.lanes[1]!.creeps.hp[0] as number).toBe(220)
+    // Read from the data rather than written out: the point is that it took no
+    // damage, and a literal here turns every tuning edit into a red test.
+    expect(s.lanes[1]!.creeps.hp[0] as number).toBe(creepSpec(RUNNER).hp)
     expect(s.players[1]!.kills).toBe(0)
   })
 })

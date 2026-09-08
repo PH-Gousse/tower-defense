@@ -17,7 +17,8 @@
  * desync.
  */
 import { readFileSync } from 'node:fs'
-import { createState, step, Kind, hashHex, MatchResult } from '../packages/sim/src/index'
+import { createState, step, Kind, hashHex, MatchResult, installBalanceData } from '../packages/sim/src/index'
+import type { BalanceData } from '../packages/sim/src/data'
 import type { Command, GameState } from '../packages/sim/src/step'
 import type { TowerKind } from '../packages/sim/src/data'
 
@@ -35,6 +36,8 @@ interface Fixture {
   ticks: number
   commands: FixtureCommand[]
   expectedHash: string
+  /** Frozen balance data. Installed below, so tuning never moves this hash. */
+  data: BalanceData
 }
 
 const fixture = JSON.parse(
@@ -68,6 +71,8 @@ for (const c of fixture.commands) {
   list.push(toCommand(c))
   byTick.set(c.at, list)
 }
+
+installBalanceData(fixture.data)
 
 let a: GameState = createState()
 let b: GameState = createState()

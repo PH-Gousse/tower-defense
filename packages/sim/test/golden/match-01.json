@@ -1,5 +1,5 @@
 {
-  "_comment": "FROZEN. Do not edit to make a red test green \u2014 find out what diverged. The hash moves only when the SIMULATION legitimately changes; the history below records every time it has.",
+  "_comment": "FROZEN. Do not edit to make a red test green \u2014 find out what diverged. The hash moves only when the SIMULATION legitimately changes; the history below records every time it has. As of step 8 this fixture also pins the balance data it was recorded under, in \"data\", and the replay installs it. That is what makes the hash independent of tuning: a red golden test now means the arithmetic diverged, never that someone edited a creep. Regenerating it requires changing \"data\" on purpose.",
   "_hashHistory": [
     "ad3da200 - step 2/3, movement only",
     "ded775ca - step 4, towers began shooting (real behaviour change)",
@@ -149,5 +149,159 @@
       "creep": 1
     }
   ],
-  "expectedHash": "f390d440"
+  "expectedHash": "f390d440",
+  "data": {
+    "sellRefund": 0.6,
+    "archetypes": [
+      {
+        "key": "single",
+        "name": "Single-target",
+        "answers": "tanks",
+        "levels": [
+          {
+            "cost": 60,
+            "damage": 30,
+            "range": 6.0,
+            "cooldownTicks": 25
+          },
+          {
+            "cost": 90,
+            "damage": 55,
+            "range": 6.5,
+            "cooldownTicks": 24
+          },
+          {
+            "cost": 140,
+            "damage": 84,
+            "range": 7.0,
+            "cooldownTicks": 22
+          }
+        ]
+      },
+      {
+        "key": "splash",
+        "name": "Splash",
+        "answers": "swarms",
+        "splashRadius": 1.2,
+        "levels": [
+          {
+            "cost": 110,
+            "damage": 12,
+            "range": 3.0,
+            "cooldownTicks": 12
+          },
+          {
+            "cost": 160,
+            "damage": 20,
+            "range": 3.4,
+            "cooldownTicks": 12
+          },
+          {
+            "cost": 240,
+            "damage": 32,
+            "range": 3.8,
+            "cooldownTicks": 11
+          }
+        ]
+      },
+      {
+        "key": "slow",
+        "name": "Slow",
+        "answers": "runners",
+        "slowTicks": 20,
+        "levels": [
+          {
+            "cost": 80,
+            "damage": 4,
+            "range": 4.5,
+            "cooldownTicks": 10,
+            "slowPercent": 30
+          },
+          {
+            "cost": 120,
+            "damage": 6,
+            "range": 4.8,
+            "cooldownTicks": 10,
+            "slowPercent": 40
+          },
+          {
+            "cost": 180,
+            "damage": 9,
+            "range": 5.2,
+            "cooldownTicks": 10,
+            "slowPercent": 50
+          }
+        ]
+      }
+    ],
+    "unlockEveryTicks": 1200,
+    "creeps": [
+      {
+        "key": "swarm",
+        "name": "Swarm",
+        "tier": 0,
+        "cost": 20,
+        "count": 6,
+        "hp": 90,
+        "speed": 0.075,
+        "incomeBonus": 3,
+        "bounty": 2
+      },
+      {
+        "key": "runner",
+        "name": "Runner",
+        "tier": 0,
+        "cost": 45,
+        "count": 1,
+        "hp": 220,
+        "speed": 0.145,
+        "incomeBonus": 4,
+        "bounty": 5
+      },
+      {
+        "key": "tank",
+        "name": "Tank",
+        "tier": 0,
+        "cost": 140,
+        "count": 1,
+        "hp": 1400,
+        "speed": 0.055,
+        "incomeBonus": 7,
+        "bounty": 16
+      },
+      {
+        "key": "swarm2",
+        "name": "Swarm II",
+        "tier": 1,
+        "cost": 55,
+        "count": 8,
+        "hp": 240,
+        "speed": 0.08,
+        "incomeBonus": 7,
+        "bounty": 5
+      },
+      {
+        "key": "runner2",
+        "name": "Runner II",
+        "tier": 1,
+        "cost": 120,
+        "count": 1,
+        "hp": 620,
+        "speed": 0.16,
+        "incomeBonus": 9,
+        "bounty": 13
+      },
+      {
+        "key": "tank2",
+        "name": "Tank II",
+        "tier": 1,
+        "cost": 360,
+        "count": 1,
+        "hp": 4200,
+        "speed": 0.06,
+        "incomeBonus": 15,
+        "bounty": 40
+      }
+    ]
+  }
 }

@@ -845,6 +845,16 @@ Resequenced so a URL exists on day one and the bot is playable before any netcod
    headless. **Playable end to end, single player, no server — and the first real read on
    whether this is fun.** Deploy it.
 8. **Tune.** Use the harness. Expect this to take a while; it is the longest pole.
+   **Done in part.** The stalemate is fixed: every spend ratio from 0.1 to 0.8 now resolves,
+   where below 0.2 they used to run forever. The fix was structural rather than numerical —
+   the creep roster became a growth rule instead of a six-entry list, and HP per gold now
+   *rises* as you buy up, because towers are permanent and creeps die once (measured: a 7,900g
+   maze deals 128,861 damage a lap, ~16x the HP that gold buys in creeps). Two defects turned up
+   on the way: the golden fixture was not pinning its balance data despite six steps of claiming
+   to, and the bounty invariant checked per creep but not per wave, so a swarm could refund 60%
+   of its cost to the defender. What is left is pacing — mirror matches run ~30 minutes and the
+   whole contest lands in the last minute — and a difficulty ladder that has to be re-derived by
+   search after each balance change. Both are written up in `TODOS.md` with the measurements.
    **Step 7 already found this step's headline item and it is worse than "numbers need
    tweaking": below a 0.2 spend ratio, matches do not end at all.** Both bots reach 20,000
    income and 1,800 sends across 33 minutes of game time and stay on 11 lives, because tower

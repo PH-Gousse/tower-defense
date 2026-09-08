@@ -4,7 +4,10 @@
   "type": "module",
   "scripts": {
     "start": "vite-node src/run.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "gauntlet": "vite-node src/gauntlet-run.ts",
+    "lap": "vite-node src/lap-run.ts",
+    "roster": "vite-node src/roster-run.ts"
   },
   "dependencies": {
     "@ltw/sim": "workspace:*"
