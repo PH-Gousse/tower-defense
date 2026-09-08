@@ -266,12 +266,18 @@ socket closes: the remaining player wins.
 
 Two numbers per player: **gold in hand** and **income**.
 
-- **Income pays into gold every 15 seconds** (300 ticks), starting at **25**.
+- **The match opens with a 20-second build phase** (400 ticks) during which nobody may send.
+  Long enough to spend the starting gold as a maze rather than a reflex, and short of the
+  tier-1 unlock so that unlock stays its own beat.
+- **Income pays into gold every 15 seconds** (300 ticks), starting at **25**. The clock starts
+  when sending opens, not at tick 0 — income only grows by sending, so a payout before anyone
+  may send is a compounding period the attacker can never have. Measured: anchoring it at
+  tick 0 inverted the bot's counter-picking advantage from 12-0 to 4-8.
 - **Every creep you send permanently raises your income.** Cheaper creeps give more income per
   gold spent; stronger tiers give less. Sending is the only way income grows.
 - **Killing a creep in your lane pays a small bounty** to you, the lane owner.
 - **Selling a tower refunds a fraction of what was spent on it** and triggers a field rebuild.
-- **Creep tiers unlock on a tick count** from match start, never a wall clock. There is no
+- **Creep tiers unlock on a tick count** from the end of the build phase, never a wall clock. There is no
   wall clock in the sim (`Date.now` is banned there), and wall-clock time would diverge across
   a lockstep stall.
 - **Starting gold: 60** — enough for exactly one Single-target tower, so the opening move is a

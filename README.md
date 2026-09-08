@@ -31,8 +31,10 @@ drawn at full size side by side, because you cannot counter-pick a maze you cann
 Creeps enter top-left and leave bottom-right, so even a bare lane is a diagonal walk; the
 entrance and exit rows are reserved and never take a tower.
 
-You defend your lane and send creeps into your opponent's. Income arrives in a lump
-every 15 seconds and the only way it grows is by sending, so every lump is a fork: towers to
+You defend your lane and send creeps into your opponent's. The first twenty seconds are a build phase: nobody
+can send yet, so you lay your opening maze without a wave already walking it. Income
+arrives in a lump every 15 seconds from the moment sending opens, and the only way it
+grows is by sending, so every lump is a fork: towers to
 survive what is coming, or creeps to pressure them and compound. Turtling loses the money war;
 over-sending leaves you exposed. Killing a creep in your own lane pays a bounty, and stronger
 creep tiers unlock on a timer so threat and economy escalate together.
