@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { Driver } from '../src/driver'
-import { TICK_MS, TowerKind, MatchResult, tileIndex, creepSpec, STARTING_INCOME } from '@ltw/sim'
+import {
+  TICK_MS, TowerKind, MatchResult, tileIndex, creepSpec, STARTING_INCOME, BOT_HARD,
+} from '@ltw/sim'
 
 /**
  * The driver is the only piece of the client that can be tested without a
@@ -77,8 +79,9 @@ describe('Driver', () => {
 
   it('actually simulates: a sent creep appears and walks', () => {
     // Player 0 sends, so the creeps land in lane 1 — a creep never appears in
-    // its own sender's lane.
-    const d = new Driver(0)
+    // its own sender's lane. `null` for the bot: an idle opponent, so the only
+    // creep on the board is the one this test sent.
+    const d = new Driver(0, null)
     d.advance(0)
     d.queueSend(1)
     let t = 0
@@ -89,7 +92,7 @@ describe('Driver', () => {
   })
 
   it('raises income permanently when you send', () => {
-    const d = new Driver(0)
+    const d = new Driver(0, null)
     d.advance(0)
     d.queueSend(0)
     d.advance(TICK_MS)
@@ -122,11 +125,11 @@ describe('Driver', () => {
   })
 
   it('reaches a decided match when creeps leak unopposed', () => {
-    const d = new Driver(0)
+    const d = new Driver(0, null)
     d.advance(0)
     let t = 0
     for (let f = 0; f < 20000 && d.current.result === MatchResult.Playing; f++) {
-      // Keep feeding the opponent's lane; nothing defends it.
+      // Keep feeding the opponent's lane; with no bot, nothing defends it.
       if (f % 400 === 0) d.queueSend(1)
       t += TICK_MS * 10
       d.advance(t)
@@ -135,5 +138,34 @@ describe('Driver', () => {
     // Player 0 sent, so player 1 is the one who ran out.
     expect(d.current.winner).toBe(0)
     expect(d.current.players[1]!.lives).toBe(0)
+  })
+
+  it('runs the bot as the opponent — it builds and it sends back', () => {
+    // Without this the whole of step 7 could regress to an empty lane and every
+    // other test would still pass: they all use an idle opponent on purpose.
+    const d = new Driver(0, BOT_HARD)
+    d.advance(0)
+    let t = 0
+    for (let f = 1; f <= 300; f++) { t += TICK_MS * 10; d.advance(t) }
+
+    // It defends its own lane...
+    let botTowers = 0
+    const kinds = d.current.lanes[1]!.towers.kind
+    for (let i = 0; i < kinds.length; i++) if (kinds[i] !== -1) botTowers += 1
+    expect(botTowers).toBeGreaterThan(0)
+
+    // ...and attacks mine. Sends land in the receiver's lane, so creeps in
+    // lane 0 can only have come from player 1.
+    expect(d.current.players[1]!.income).toBeGreaterThan(STARTING_INCOME)
+    expect(d.current.lanes[0]!.creeps.count).toBeGreaterThan(0)
+  })
+
+  it('leaves the lane empty when the bot is null', () => {
+    const d = new Driver(0, null)
+    d.advance(0)
+    let t = 0
+    for (let f = 1; f <= 300; f++) { t += TICK_MS * 10; d.advance(t) }
+    expect(d.current.lanes[0]!.creeps.count).toBe(0)
+    expect(d.current.players[1]!.income).toBe(STARTING_INCOME)
   })
 })

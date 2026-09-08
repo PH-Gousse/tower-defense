@@ -26,8 +26,10 @@ import {
   levelOf,
   MAX_LEVEL,
   MatchResult,
+  BOT_NORMAL,
   type Tile,
   type FlowField,
+  type BotConfig,
 } from '@ltw/sim'
 import { Driver } from './driver'
 import { PathLine } from './pathline'
@@ -119,6 +121,7 @@ export interface Scene {
   readonly send: (creep: number) => void
   readonly upgradeSelected: () => void
   readonly sellSelected: () => void
+  readonly setBot: (bot: BotConfig | null) => void
   start: () => void
 }
 
@@ -140,8 +143,11 @@ export class WebGLUnavailable extends Error {
   }
 }
 
-export function createScene(canvasParent: HTMLElement): Scene {
-  const driver = new Driver(0)
+export function createScene(
+  canvasParent: HTMLElement,
+  bot: BotConfig | null = BOT_NORMAL,
+): Scene {
+  const driver = new Driver(0, bot)
   /** This client controls player 0 and defends lane 0. */
   const ME = 0
 
@@ -257,6 +263,47 @@ export function createScene(canvasParent: HTMLElement): Scene {
   const leakTrail = new PathLine(0xd0483c, 0.85, 0.08)
   scene.add(leakTrail.object)
   let leakTrailUntil = 0
+
+  /**
+   * The opponent's lane, drawn small beside yours.
+   *
+   * Counter-picking is premise-level — "you see their maze and send what
+   * exploits it" — so their board cannot be hidden. It sits at 40% scale
+   * because two full 40x24 lanes side by side would be 2080px wide and would
+   * not fit a laptop. Whether 40% is enough to actually read their maze is an
+   * open question in the design doc, and the first thing to check in play.
+   */
+  const OPP_SCALE = 0.4
+  const oppGroup = new THREE.Group()
+  oppGroup.scale.setScalar(OPP_SCALE)
+  oppGroup.position.set(GRID_W + 3, 0, (GRID_H * (1 - OPP_SCALE)) / 2)
+  scene.add(oppGroup)
+
+  const oppGround = new THREE.Mesh(
+    new THREE.PlaneGeometry(GRID_W, GRID_H),
+    new THREE.MeshBasicMaterial({ color: 0x11151a }),
+  )
+  oppGround.rotation.x = -Math.PI / 2
+  oppGround.position.set(GRID_W / 2, 0, GRID_H / 2)
+  oppGroup.add(oppGround)
+
+  const oppTowers = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(TILE * 0.82, TOWER_H, TILE * 0.82),
+    new THREE.MeshLambertMaterial({ color: 0x6a7079 }),
+    TILE_COUNT,
+  )
+  oppTowers.count = 0
+  oppTowers.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+  oppGroup.add(oppTowers)
+
+  const oppCreeps = new THREE.InstancedMesh(
+    new THREE.SphereGeometry(CREEP_R, 8, 6),
+    new THREE.MeshLambertMaterial({ color: 0x9ac06a }),
+    MAX_CREEPS,
+  )
+  oppCreeps.count = 0
+  oppCreeps.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+  oppGroup.add(oppCreeps)
 
   const hoverMaterial = new THREE.MeshBasicMaterial({
     color: 0x4f8cc9,
@@ -501,12 +548,35 @@ export function createScene(canvasParent: HTMLElement): Scene {
     pips.instanceMatrix.needsUpdate = true
   }
 
+  /** Mirror the opponent's lane into its scaled group. */
+  function syncOpponent(): void {
+    const lane = driver.current.lanes[1 - ME]!
+    let n = 0
+    for (let i = 0; i < TILE_COUNT; i++) {
+      if (lane.towers.kind[i] === -1) continue
+      scratch.makeTranslation(tileX(i) + 0.5, TOWER_H / 2, tileY(i) + 0.5)
+      oppTowers.setMatrixAt(n, scratch)
+      n += 1
+    }
+    oppTowers.count = n
+    oppTowers.instanceMatrix.needsUpdate = true
+
+    const c = lane.creeps
+    for (let i = 0; i < c.count; i++) {
+      scratch.makeTranslation(c.x[i] as number, CREEP_R + 0.02, c.y[i] as number)
+      oppCreeps.setMatrixAt(i, scratch)
+    }
+    oppCreeps.count = c.count
+    oppCreeps.instanceMatrix.needsUpdate = true
+  }
+
   function resize(): void {
     const w = window.innerWidth
     const h = window.innerHeight
     renderer.setSize(w, h)
     const margin = 3
-    const halfW = (GRID_W + margin) / 2
+    // Room for your lane plus the scaled opponent lane beside it.
+    const halfW = (GRID_W + margin + (GRID_W + 3) * OPP_SCALE) / 2
     const halfH = (GRID_H + margin) / 2
     const aspect = w / h
     const [x, y] = aspect > halfW / halfH ? [halfH * aspect, halfH] : [halfW, halfW / aspect]
@@ -528,6 +598,7 @@ export function createScene(canvasParent: HTMLElement): Scene {
       if (hovered) previewTile(hovered)
     },
     send: (creep) => driver.queueSend(creep),
+    setBot: (b) => driver.setBot(b),
     upgradeSelected: () => {
       if (selected) driver.queueUpgrade(selected.x, selected.y)
     },
@@ -544,6 +615,7 @@ export function createScene(canvasParent: HTMLElement): Scene {
         const state = driver.current
         if (ran > 0 && state.tick !== lastSyncedTick) {
           const towerCount = syncTowers()
+          syncOpponent()
           lastSyncedTick = state.tick
           currentPath.set(pathFrom(state.lanes[ME]!.field, SPAWN_INDICES[0] as number))
           // Both of these go stale the moment the field or the gold changes.

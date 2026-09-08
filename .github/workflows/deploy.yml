@@ -39,6 +39,11 @@ jobs:
         run: pnpm --filter @ltw/sim test
       - name: Client driver tests (headless — no WebGL needed)
         run: pnpm --filter @ltw/client test
+      - name: Bot ladder and match resolution (harness)
+        # These run whole bot-vs-bot matches. The ladder test is the one that
+        # matters: it has caught the difficulty presets being ordered backwards
+        # twice, and neither time was visible by reading the bot.
+        run: pnpm --filter @ltw/harness test
 
       - uses: oven-sh/setup-bun@v2
         with:

@@ -1,4 +1,15 @@
-import { createState, step, Kind, TICK_MS, type Command, type GameState, TowerKind } from '@ltw/sim'
+import {
+  createState,
+  step,
+  botCommand,
+  Kind,
+  TICK_MS,
+  BOT_NORMAL,
+  type BotConfig,
+  type Command,
+  type GameState,
+  TowerKind,
+} from '@ltw/sim'
 
 /**
  * Fixed-timestep driver.
@@ -30,8 +41,23 @@ export class Driver {
   private pending: Command[] = []
   private started = false
 
-  /** The player this client controls. Lane `me` is the one you defend. */
-  constructor(readonly me: 0 | 1 = 0) {}
+  /**
+   * @param me   the player this client controls; lane `me` is the one you defend
+   * @param bot  config for the opponent, or null for an idle opponent
+   */
+  constructor(
+    readonly me: 0 | 1 = 0,
+    private bot: BotConfig | null = BOT_NORMAL,
+  ) {}
+
+  /**
+   * Swap the opponent. Meant to be called once, before `start()`, from the
+   * difficulty picker — the scene is built at load so a missing WebGL context
+   * fails loudly before the player has chosen anything.
+   */
+  setBot(bot: BotConfig | null): void {
+    this.bot = bot
+  }
 
   /** The state being rendered. */
   get current(): GameState {
@@ -104,6 +130,17 @@ export class Driver {
     while (this.acc >= TICK_MS && ran < MAX_CATCHUP_TICKS) {
       const commands = this.pending
       this.pending = []
+
+      // The bot is just another command source. It runs inside the same tick
+      // loop as the player, gets no extra information and no bent rules, and
+      // its commands land in the same log — so a bot match replays exactly like
+      // a human one.
+      if (this.bot) {
+        const opponent = (1 - this.me) as 0 | 1
+        const cmd = botCommand(this.a, opponent, this.bot)
+        if (cmd) commands.push(cmd)
+      }
+
       const out = step(this.a, commands, this.b)
       this.b = this.a
       this.a = out

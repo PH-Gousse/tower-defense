@@ -29,6 +29,24 @@
       text-align: center; z-index: 10;
     }
     #over h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
+
+    #start {
+      position: fixed; inset: 0; display: grid; place-items: center; z-index: 15;
+      background: rgba(8,10,12,.88); backdrop-filter: blur(4px);
+      font: 13px/1.55 -apple-system, "Segoe UI", system-ui, sans-serif; color: #e6e8ea;
+    }
+    #start .box { max-width: 30em; text-align: center; }
+    #start h1 { margin: 0 0 4px; font-size: 24px; font-weight: 600; }
+    #start p { margin: 0 0 16px; color: #8b939d; }
+    #start .row { display: flex; gap: 8px; justify-content: center; }
+    #start button {
+      cursor: pointer; font: inherit; text-align: left; min-width: 132px;
+      color: #e6e8ea; background: #191d23; border: 1px solid #333a43;
+      border-radius: 3px; padding: 9px 12px;
+    }
+    #start button:hover { border-color: #4f8cc9; background: #1b2330; }
+    #start button .n { display: block; font-size: 13px; }
+    #start button .c { display: block; font-size: 11px; color: #7d858f; }
     #fatal {
       position: fixed; inset: 0; display: grid; place-items: center; z-index: 20;
       background: #0e1013; color: #e6e8ea; text-align: center; padding: 24px;
@@ -138,6 +156,30 @@
     </table>
     <button id="btnUpgrade">Upgrade</button>
     <button id="btnSell" class="sell">Sell</button>
+  </div>
+
+  <!-- Difficulty is picked before the first tick, not mid-match: it changes how
+       fast the bot compounds its economy, so switching halfway would compare two
+       different games. The labels quote the reaction delay because that is
+       literally all that differs — a sweep in the harness showed the other two
+       knobs pointing the wrong way, so they are held constant. -->
+  <div id="start">
+    <div class="box">
+      <h1>Line Tower Wars</h1>
+      <p>Maze your lane. Send creeps down theirs. Both of you keep looping until
+         someone runs out of lives.</p>
+      <div class="row">
+        <button data-bot="easy">
+          <span class="n">Easy</span><span class="c">acts every 1.2s</span>
+        </button>
+        <button data-bot="normal">
+          <span class="n">Normal</span><span class="c">acts every 0.6s</span>
+        </button>
+        <button data-bot="hard">
+          <span class="n">Hard</span><span class="c">acts every 0.25s</span>
+        </button>
+      </div>
+    </div>
   </div>
 
   <div id="over" hidden>

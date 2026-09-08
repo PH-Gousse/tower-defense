@@ -2,6 +2,7 @@ import { createScene, WebGLUnavailable, type Selection, type Scene } from './sce
 import {
   TowerKind, ARCHETYPES, levelOf, MAX_LEVEL, TICK_HZ, MatchResult,
   CREEPS, tierUnlockTick, INCOME_EVERY_TICKS,
+  BOT_EASY, BOT_NORMAL, BOT_HARD, type BotConfig,
 } from '@ltw/sim'
 
 let scene: Scene
@@ -207,4 +208,20 @@ scene.onTileHover((h) => {
     h.mazeDelta === null ? 'click to build' : `+${h.mazeDelta} tiles · click to build`
 })
 
-scene.start()
+// --- start ------------------------------------------------------------------
+// The scene is built above so a missing WebGL context fails before the player
+// invests anything; the clock only starts once they have picked an opponent.
+
+const BOTS: Record<string, BotConfig> = { easy: BOT_EASY, normal: BOT_NORMAL, hard: BOT_HARD }
+const startScreen = el('start')
+
+for (const b of Array.from(document.querySelectorAll<HTMLButtonElement>('#start button'))) {
+  b.addEventListener('click', () => {
+    scene.setBot(BOTS[b.dataset.bot ?? 'normal'] ?? BOT_NORMAL)
+    if (startScreen) startScreen.hidden = true
+    scene.start()
+  })
+}
+
+// No picker in the DOM (a stripped test page) means nothing would ever start.
+if (!startScreen) scene.start()

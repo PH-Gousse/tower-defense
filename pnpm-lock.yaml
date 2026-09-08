@@ -43,6 +43,25 @@ importers:
         specifier: ^3.2.0
         version: 3.2.7(@types/node@24.13.3)
 
+  packages/harness:
+    dependencies:
+      '@ltw/sim':
+        specifier: workspace:*
+        version: link:../sim
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.13.3
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
+      vite-node:
+        specifier: ^3.2.0
+        version: 3.2.4(@types/node@24.13.3)
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.7(@types/node@24.13.3)
+
   packages/sim:
     devDependencies:
       vitest:

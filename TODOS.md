@@ -4,7 +4,45 @@ Deferred work from the CEO review on 2026-09-07. Full reasoning in
 `docs/designs/line-tower-wars-browser-duel.md` and
 `~/.gstack/projects/PH-Gousse-tower-defense/ceo-plans/2026-09-07-line-tower-wars.md`.
 
-Nothing here blocks v1. Each item names the trigger that should make you pick it up.
+Nothing here blocks v1 **except the P0 below**, which the harness found at step 7.
+Each other item names the trigger that should make you pick it up.
+
+---
+
+## P0 — blocks the game being a game
+
+### Defence outscales offence: matches that cannot end
+**What:** Below roughly a 0.2 spend ratio, a bot-vs-bot match never resolves. Not "takes a long
+time" — never. Measured, both sides at 40,000 ticks (33 minutes of game time):
+
+| spend ratio | result | ticks | lives | sends | income reached |
+|---|---|---|---|---|---|
+| 0.10 | no result | 40,000 | 19 / 19 | 1,299 | 12,402 |
+| 0.15 | no result | 40,000 | 19 / 19 | 1,812 | 20,628 |
+| 0.20 | no result | 40,000 | 11 / 11 | 1,862 | 21,105 |
+| 0.25 | draw | **853** | 0 / 0 | 14 | 70 |
+| 0.30 | draw | 2,130 | 0 / 0 | 33 | 130 |
+
+Two things are wrong here and they are the same thing. Tower upgrades outscale creeps once
+income compounds, so 1,800 sends take 9 lives; and the transition from that to a 43-second
+match happens between 0.20 and 0.25, which is a cliff, not a curve. A game whose length swings
+from 43 seconds to unbounded across a 5% change in one player's spending habit has no tuning,
+it has a coin flip.
+
+**Why it matters beyond bots:** a human who turtles hits the same wall. Two competent players
+who both build well have no way to finish, because the thing that ends a match — creeps
+surviving a maze — gets strictly weaker relative to the maze as the match goes on.
+
+**Where to start:** creep HP has to scale with elapsed time, or income has to stop compounding,
+or leaks have to cost more than one life late. The flow-field and spatial-hash work is not
+implicated; this is entirely in `creeps.json`, `towers.json` and the income rule.
+
+**Trigger:** step 8, "Tune". This is that step's headline item, not a side quest.
+**Effort:** M (human) → M (with CC) — the harness makes the measurement cheap, but choosing
+what *should* happen is a design call.
+
+**Do not** fix this by capping match length. A timeout hides the fact that the game cannot be
+won on its own terms.
 
 ---
 

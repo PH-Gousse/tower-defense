@@ -1,0 +1,18 @@
+{
+  "name": "@ltw/harness",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "vite-node src/run.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ltw/sim": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.0",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "vite-node": "^3.2.0"
+  }
+}

@@ -845,6 +845,13 @@ Resequenced so a URL exists on day one and the bot is playable before any netcod
    headless. **Playable end to end, single player, no server — and the first real read on
    whether this is fun.** Deploy it.
 8. **Tune.** Use the harness. Expect this to take a while; it is the longest pole.
+   **Step 7 already found this step's headline item and it is worse than "numbers need
+   tweaking": below a 0.2 spend ratio, matches do not end at all.** Both bots reach 20,000
+   income and 1,800 sends across 33 minutes of game time and stay on 11 lives, because tower
+   upgrades outscale creeps as income compounds. Above 0.25 the same matchup finishes in 43
+   seconds. There is no middle. Full measurements in `TODOS.md` under "Defence outscales
+   offence"; the fix lives in `creeps.json`, `towers.json` and the income rule, and a match
+   timeout is explicitly not the fix.
 9. **Determinism, the rest of it: `hash.ts`, ring buffer, desync dump.** The golden fixture
    already exists from step 2 and has been growing since; this adds the per-tick hash, the
    40-tick ring buffer, the peer exchange and the downloadable dump.
