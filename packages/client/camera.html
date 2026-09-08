@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>Camera rig &middot; Line Tower Wars</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: #11151a; overflow: hidden; }
+    canvas { display: block; touch-action: none; }
+
+    /* `touch-action: none` above is load-bearing, not cosmetic: without it the
+       browser claims one-finger drags for scrolling and two-finger gestures for
+       page zoom, and the rig never sees the pointer events at all. */
+
+    #camhud {
+      position: fixed; left: 12px; top: 12px; z-index: 5;
+      white-space: pre; pointer-events: none;
+      font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: #d6dbe0; background: rgba(14,16,19,.78);
+      border: 1px solid #2a3038; border-radius: 4px;
+      padding: 8px 11px; backdrop-filter: blur(6px);
+      font-variant-numeric: tabular-nums;
+    }
+    #camkeys {
+      position: fixed; left: 12px; bottom: 12px; z-index: 5; pointer-events: none;
+      font: 11.5px/1.6 -apple-system, "Segoe UI", system-ui, sans-serif; color: #8b939d;
+      background: rgba(14,16,19,.72); border: 1px solid #2a3038; border-radius: 4px;
+      padding: 7px 10px;
+    }
+    #camkeys kbd {
+      border: 1px solid #3a424c; border-radius: 2px; padding: 0 4px;
+      font: inherit; font-size: 10.5px; color: #c2c9d0;
+    }
+    #fatal {
+      position: fixed; inset: 0; display: grid; place-items: center; z-index: 20;
+      background: #0e1013; color: #e6e8ea; text-align: center; padding: 24px;
+      font: 13px/1.6 -apple-system, "Segoe UI", system-ui, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div id="camhud">starting&hellip;</div>
+  <div id="camkeys">
+    <kbd>WASD</kbd> / <kbd>&larr;&uarr;&darr;&rarr;</kbd> pan &middot;
+    middle or right drag &middot; wheel zooms toward the cursor &middot;
+    screen edges scroll &middot; one finger drags, two pinch
+  </div>
+  <script type="module" src="/src/demo/cameraDemo.ts"></script>
+</body>
+</html>

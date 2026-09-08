@@ -473,8 +473,43 @@ for (const b of Array.from(
     scene.setBot(BOTS[b.dataset.bot ?? 'normal'] ?? BOT_NORMAL)
     if (startScreen) startScreen.hidden = true
     scene.start()
+    // `start()` frames the board, but the palette is still its pre-match height
+    // at this instant -- the send buttons are built by the first stats callback,
+    // one tick later. Re-measure once the layout has settled, or the board is
+    // framed against a shorter palette than the one that ends up covering it and
+    // the exit row hides behind the bar. Waiting on the ResizeObserver alone is
+    // not enough: if the palette's height happens not to change, it never fires.
+    requestAnimationFrame(() => requestAnimationFrame(syncSafeArea))
   })
 }
+
+/**
+ * Keep the camera framing clear of the fixed HUD and palette.
+ *
+ * The canvas fills the window and both bars sit on top of it, so without this
+ * the board is framed edge to edge and the entrance and exit rows -- the two
+ * the player most needs to see -- hide behind the chrome. Measured rather than
+ * hardcoded because the palette's height is not fixed: it grows a row of send
+ * buttons once a match starts, and grows again as heavier tiers unlock.
+ *
+ * A ResizeObserver rather than a `resize` listener, because the bars change
+ * height without the window changing size.
+ */
+function syncSafeArea(): void {
+  const top = document.getElementById('hud')?.getBoundingClientRect().height ?? 0
+  const bottom = document.getElementById('palette')?.getBoundingClientRect().height ?? 0
+  scene.setSafeArea(top, 0, bottom, 0)
+}
+
+if (typeof ResizeObserver !== 'undefined') {
+  const ro = new ResizeObserver(syncSafeArea)
+  for (const id of ['hud', 'palette']) {
+    const el = document.getElementById(id)
+    if (el) ro.observe(el)
+  }
+}
+window.addEventListener('resize', syncSafeArea)
+syncSafeArea()
 
 // No picker in the DOM (a stripped test page) means nothing would ever start.
 if (!startScreen) scene.start()

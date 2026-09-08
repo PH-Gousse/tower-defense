@@ -36,6 +36,9 @@ import {
 } from '@ltw/sim'
 import { Driver } from './driver'
 import { PathLine } from './pathline'
+import { createRenderer } from './render/renderer'
+import { CameraRig, type GroundBounds } from './render/CameraRig'
+import { groundToTile, screenToGround, type LaneLayout } from './render/picking'
 
 /** One line of plain English per refusal. The rule teaches itself or it does not exist. */
 /**
@@ -144,6 +147,12 @@ export interface Scene {
   /** A predicted command was refused or lost. Tell the player, once. */
   readonly onGhostFailed: (cb: (text: string) => void) => void
   readonly setTool: (tower: TowerKind) => void
+  /**
+   * Tell the camera how much of the viewport the fixed UI covers, in CSS
+   * pixels, so the board is framed into what is actually visible. The DOM
+   * chrome belongs to `main.ts`, so measuring it does too.
+   */
+  readonly setSafeArea: (top: number, right: number, bottom: number, left: number) => void
   readonly send: (creep: number) => void
   readonly upgradeSelected: () => void
   readonly sellSelected: () => void
@@ -164,14 +173,11 @@ export interface Scene {
  * nothing at all responds. A blank game that looks fine is the worst failure
  * mode this project has, and it is the same principle as the placement
  * refusals: say why.
+ *
+ * It lives in `render/renderer.ts` now, alongside the renderer that throws it,
+ * and is re-exported here so `main.ts` keeps its one import.
  */
-export class WebGLUnavailable extends Error {
-  constructor(cause: unknown) {
-    super('WebGL is unavailable in this browser')
-    this.name = 'WebGLUnavailable'
-    this.cause = cause
-  }
-}
+export { WebGLUnavailable } from './render/renderer'
 
 /**
  * Build identity, stamped into every dump.
@@ -196,21 +202,14 @@ export function createScene(
    */
   const me = () => driver.me
 
-  let renderer: THREE.WebGLRenderer
-  try {
-    renderer = new THREE.WebGLRenderer({ antialias: true })
-  } catch (err) {
-    throw new WebGLUnavailable(err)
-  }
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-  canvasParent.appendChild(renderer.domElement)
+  // The shared renderer and resize hub, so the camera demo at /camera and the
+  // game are never two GL contexts fighting over one page.
+  const host = createRenderer(canvasParent)
+  const renderer = host.renderer
 
   const scene = new THREE.Scene()
   scene.background = new THREE.Color(0x0e1013)
 
-  // Orthographic so identical towers at opposite ends of the lane read the same
-  // size. A perspective camera would make the far end of your maze look weaker
-  // than the near end, which is exactly wrong for a game about reading a maze.
   /**
    * Side-by-side layout. Your lane occupies 0..GRID_W; the opponent's sits to
    * the right of it across OPP_GAP, at the same size, and the camera frames
@@ -230,22 +229,60 @@ export function createScene(
    */
   const OPP_GAP = 4
   const CONTENT_W = GRID_W * 2 + OPP_GAP
-  const CONTENT_CX = CONTENT_W / 2
 
   /**
-   * Near top-down, unlike the old horizontal board.
+   * Perspective, on a fixed high-angle rig. See `render/CameraRig.ts`.
    *
-   * The tilt foreshortens whichever axis it leans along, and that axis is now
-   * the 24-tile length of the lane rather than its width. At the old 57 degrees
-   * a vertical lane rendered visibly squashed; 75 degrees costs 3% of the
-   * length and keeps enough angle for tower height to read as height.
+   * This board was orthographic until now, for a reason worth recording rather
+   * than deleting: under perspective a tower at the far end of the lane draws
+   * smaller than an identical one near the camera, and this is a game about
+   * reading a maze at a glance. That cost is real and it has not gone away --
+   * it has been bounded. At the rig's tuned 35 degree field of view the near
+   * row of a lane renders 1.29x the width of the far row, against 1.50x at the
+   * 45 degrees the rig started on; the tilt buys back depth cues (tower sides,
+   * height as height) that flat orthographic never had.
+   *
+   * The pan bounds are the whole content rectangle rather than your own lane,
+   * so a player can always walk the camera over to the opponent's board. That
+   * is premise-level in this game -- you counter-pick what you send by reading
+   * their maze -- and a clamp that fenced you into your own half would quietly
+   * remove it.
    */
-  const CAM_UP = 30
-  const CAM_BACK = 8
+  const CONTENT: GroundBounds = { minX: -1, minZ: -1, maxX: CONTENT_W + 1, maxZ: GRID_H + 1 }
 
-  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200)
-  camera.position.set(CONTENT_CX, CAM_UP, GRID_H / 2 + CAM_BACK)
-  camera.lookAt(CONTENT_CX, 0, GRID_H / 2)
+  const rig = new CameraRig(host.canvas, {
+    bounds: CONTENT,
+    // Arrows only: `q w e r t y` send creeps and `d` saves a match file, so the
+    // rig must not claim WASD. See the `keys` option.
+    keys: 'arrows',
+    /**
+     * Closer than the rig's default 14, which is useless on this board.
+     *
+     * The clamp keeps the view inside the content, and pins the target to the
+     * centre on any axis where the view has grown wider than the content. On a
+     * 2:1 desktop the view is still 22.4 tiles wide at distance 14 against a
+     * 22-tile content rectangle -- just barely too wide -- so every attempt to
+     * zoom into your own maze snapped the camera back to the gap between the
+     * two boards. The horizontal clamp only starts to give below about 13.8;
+     * 8 leaves real room to lean in and read a corner of the maze.
+     */
+    minDistance: 8,
+    // Edge scrolling is off. It is right for an RTS with an opaque UI band at
+    // the bottom, and wrong here: the board already fits on screen at the
+    // default framing, so the only thing edge scroll would reliably do is slide
+    // the lane out from under a cursor that was reaching for the palette.
+    edgeSize: 0,
+  })
+  const camera = rig.camera
+
+  /** Your lane's footprint on the ground, for picking. */
+  const MY_LANE: LaneLayout = {
+    originX: 0,
+    originZ: 0,
+    width: GRID_W,
+    length: GRID_H,
+    tile: TILE,
+  }
 
   scene.add(new THREE.AmbientLight(0xffffff, 1.5))
   const key = new THREE.DirectionalLight(0xffffff, 1.6)
@@ -447,8 +484,17 @@ export function createScene(
   const routeScratch: number[] = []
 
   const scratch = new THREE.Matrix4()
-  const raycaster = new THREE.Raycaster()
-  const pointer = new THREE.Vector2()
+  // Scratch for picking. `screenToGround` writes through these rather than
+  // allocating, which matters because the hover path runs on every pointer move
+  // and again on every frame the camera has moved under a stationary cursor.
+  const pickPoint = new THREE.Vector3()
+  const pickNdc = new THREE.Vector2()
+  const pickTile = { x: 0, y: 0 }
+
+  /** Last known pointer position, so a pan can re-resolve the hovered tile. */
+  let pointerX = 0
+  let pointerY = 0
+  let pointerInside = false
 
   let hovered: Tile | null = null
   let selected: Tile | null = null
@@ -460,15 +506,39 @@ export function createScene(
   let selectCb: (sel: Selection | null) => void = () => {}
   let ghostCb: ((text: string) => void) | null = null
 
-  function tileUnderPointer(ev: PointerEvent): Tile | null {
-    const rect = renderer.domElement.getBoundingClientRect()
-    pointer.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1
-    pointer.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1
-    raycaster.setFromCamera(pointer, camera)
-    const hit = raycaster.intersectObject(ground, false)[0]
+  /**
+   * The tile under a screen point, or null.
+   *
+   * Plane maths rather than a `Raycaster` against the ground mesh. The
+   * raycaster allocated a `Ray` and a hit array per call and walked the mesh's
+   * geometry to intersect a plane it already knew was flat; this is the same
+   * answer without the garbage. `groundToTile` bounds the result to your own
+   * lane, which is what keeps a click on the opponent's board -- now reachable,
+   * since the camera can pan over there -- from being read as a build on yours.
+   */
+  function tileAt(clientX: number, clientY: number): Tile | null {
+    const hit = screenToGround(camera, clientX, clientY, rig.viewportRect, pickPoint, pickNdc)
     if (!hit) return null
-    const t: Tile = { x: Math.floor(hit.point.x), y: Math.floor(hit.point.z) }
-    return inBounds(t.x, t.y) ? t : null
+    const t = groundToTile(hit, MY_LANE, pickTile)
+    if (!t) return null
+    return inBounds(t.x, t.y) ? { x: t.x, y: t.y } : null
+  }
+
+  /**
+   * Re-resolve the hovered tile from the last pointer position.
+   *
+   * Called on pointer movement AND once a frame, because the camera now moves:
+   * panning under a stationary cursor changes which tile is beneath it, and a
+   * highlight that only updated on `pointermove` would sit on the wrong tile
+   * until you jiggled the mouse. The expensive part -- `previewTile`, which
+   * rebuilds a candidate flow field -- still runs only when the tile changes.
+   */
+  function refreshHover(): void {
+    if (!pointerInside) return
+    const t = tileAt(pointerX, pointerY)
+    if (t?.x === hovered?.x && t?.y === hovered?.y) return
+    hovered = t
+    previewTile(t)
   }
 
   /**
@@ -524,27 +594,52 @@ export function createScene(
   }
 
   renderer.domElement.addEventListener('pointermove', (ev) => {
-    const t = tileUnderPointer(ev)
-    const changed = t?.x !== hovered?.x || t?.y !== hovered?.y
-    hovered = t
-    if (changed) previewTile(t)
+    pointerX = ev.clientX
+    pointerY = ev.clientY
+    pointerInside = true
+    refreshHover()
   })
 
   renderer.domElement.addEventListener('pointerleave', () => {
+    pointerInside = false
     hovered = null
     previewTile(null)
   })
 
   /**
-   * Click does one of two things depending on what is under it.
+   * A tap does one of two things depending on what is under it.
    *
    * An occupied tile selects its tower, which opens the upgrade/sell panel —
    * upgrading is the most frequent mid-match action after placing, and putting
    * it on the tile keeps your eyes on the maze rather than on a side bar.
    * An empty tile places the current tool.
+   *
+   * This fires on pointer*up*, and only when the pointer barely moved between
+   * down and up. That distinction did not exist while the camera was fixed, and
+   * it has to now: a one-finger drag pans the camera, and on touch that drag
+   * begins with a `pointerdown` on a tile. Building on the down event would put
+   * a tower down every time a phone player pushed the board around. The slop
+   * threshold is what separates "tapped a tile" from "started dragging".
    */
+  const TAP_SLOP_PX = 6
+  let tapId = -1
+  let tapX = 0
+  let tapY = 0
+
   renderer.domElement.addEventListener('pointerdown', (ev) => {
-    const t = tileUnderPointer(ev)
+    // Middle and right belong to the camera; only a primary press can build.
+    if (ev.button !== 0) return
+    tapId = ev.pointerId
+    tapX = ev.clientX
+    tapY = ev.clientY
+  })
+
+  renderer.domElement.addEventListener('pointerup', (ev) => {
+    if (ev.pointerId !== tapId) return
+    tapId = -1
+    if (Math.hypot(ev.clientX - tapX, ev.clientY - tapY) > TAP_SLOP_PX) return
+
+    const t = tileAt(ev.clientX, ev.clientY)
     if (!t) { select(null); return }
     const state = driver.current
     if (state.lanes[me()]!.towers.kind[tileIndex(t)] !== -1) {
@@ -556,6 +651,8 @@ export function createScene(
       driver.queueBuild(t.x, t.y, tool)
     }
   })
+
+  renderer.domElement.addEventListener('pointercancel', () => { tapId = -1 })
 
   function select(t: Tile | null): void {
     selected = t
@@ -721,24 +818,48 @@ export function createScene(
     oppCreeps.instanceMatrix.needsUpdate = true
   }
 
-  function resize(): void {
-    const w = window.innerWidth
-    const h = window.innerHeight
-    renderer.setSize(w, h)
-    const margin = 3
-    // Both boards, not just yours.
-    const halfW = (CONTENT_W + margin) / 2
-    const halfH = (GRID_H + margin) / 2
-    const aspect = w / h
-    const [x, y] = aspect > halfW / halfH ? [halfH * aspect, halfH] : [halfW, halfW / aspect]
-    camera.left = -x
-    camera.right = x
-    camera.top = y
-    camera.bottom = -y
-    camera.updateProjectionMatrix()
+  /**
+   * Default framing, re-applied on every resize until the player moves the
+   * camera themselves.
+   *
+   * Landscape frames both boards, which is what the orthographic camera did and
+   * what counter-picking needs. Portrait frames your lane alone: fitting the
+   * pair into a phone's aspect needs roughly twice the distance, and at that
+   * range neither maze is readable, so the honest answer is to show one board
+   * well and let the player pan to the other. The pan bounds still span both,
+   * so the opponent is always one drag away.
+   */
+  let cameraMoved = false
+
+  function frame(): void {
+    if (cameraMoved) return
+    if (window.innerWidth >= window.innerHeight) {
+      rig.fitBounds(0, 0, CONTENT_W, GRID_H)
+    } else {
+      rig.fitBounds(0, 0, GRID_W, GRID_H)
+    }
   }
 
-  window.addEventListener('resize', resize)
+  host.onResize((w, h) => {
+    rig.setViewport(w, h)
+    frame()
+  })
+
+  // Size and frame immediately, rather than waiting for `start()`. Until the
+  // rig has been handed a real viewport it assumes a square one, so any framing
+  // computed before this -- `setSafeArea` from `main.ts` runs at module load --
+  // would be against an aspect the page never has.
+  host.resize()
+
+  // Any deliberate camera input retires the automatic framing, so a later
+  // resize does not yank the view back from wherever the player put it.
+  for (const type of ['wheel', 'keydown'] as const) {
+    window.addEventListener(type, () => { cameraMoved = true }, { passive: true })
+  }
+  renderer.domElement.addEventListener('pointerdown', (ev) => {
+    // A left press is a build, not a camera move. Middle, right and touch are.
+    if (ev.button !== 0 || ev.pointerType === 'touch') cameraMoved = true
+  })
 
   return {
     onTileHover: (cb) => { hoverCb = cb },
@@ -748,6 +869,10 @@ export function createScene(
     setTool: (tower) => {
       tool = tower
       if (hovered) previewTile(hovered)
+    },
+    setSafeArea: (top, right, bottom, left) => {
+      rig.setSafeArea(top, right, bottom, left)
+      frame()
     },
     send: (creep) => driver.queueSend(creep),
     setBot: (b) => driver.setBot(b),
@@ -763,7 +888,7 @@ export function createScene(
       }
     },
     start: () => {
-      resize()
+      host.resize()
       renderer.setAnimationLoop((nowMs) => {
         const ran = driver.advance(nowMs)
         const state = driver.current
@@ -809,6 +934,10 @@ export function createScene(
           })
         }
         syncCreeps(driver.alpha)
+        // Keyboard panning is integrated here, then the hover is re-resolved:
+        // the tile under a stationary cursor changes when the camera moves.
+        rig.update()
+        refreshHover()
         renderer.render(scene, camera)
       })
     },
