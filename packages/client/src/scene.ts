@@ -4,6 +4,8 @@ import {
   GRID_H,
   SPAWN_TILES,
   EXIT_TILES,
+  ENTRANCE_ROW,
+  EXIT_ROW,
   SPAWN_INDICES,
   TILE_COUNT,
   MAX_CREEPS,
@@ -37,6 +39,7 @@ import {
 import { Driver } from './driver'
 import { PathLine } from './pathline'
 import { createRenderer } from './render/renderer'
+import { buildBoard, BOARD, BOARD_DIM } from './render/board'
 import { CameraRig, type GroundBounds } from './render/CameraRig'
 import { groundToTile, screenToGround, type LaneLayout } from './render/picking'
 
@@ -100,8 +103,19 @@ const TOWER_COLOUR: Record<TowerKind, number> = {
  */
 
 const TILE = 1
-const TOWER_H = 0.55
-const CREEP_R = 0.22
+/**
+ * Base tower height, in tiles.
+ *
+ * Was 0.55, which at this camera read as a coloured square rather than a block:
+ * the pitch is 56 degrees, so a tower barely half a tile tall shows almost no
+ * side face and the board looked flat. /camera drew its stand-ins at 1.5 and
+ * that is the look this is matched to -- 1.1 here, because the game scales
+ * height by LEVEL on top of this (`0.7 + 0.3 * level`), so a level 3 tower
+ * reaches 1.76 and the difference between levels stays visible without the
+ * tallest towers hiding the creeps walking behind them.
+ */
+const TOWER_H = 1.1
+const CREEP_R = 0.3
 
 export interface Stats {
   readonly towers: number
@@ -209,7 +223,7 @@ export function createScene(
   const renderer = host.renderer
 
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color(0x0e1013)
+  scene.background = new THREE.Color(0x11151a)
 
   /**
    * Side-by-side layout. Your lane occupies 0..GRID_W; the opponent's sits to
@@ -285,22 +299,24 @@ export function createScene(
     tile: TILE,
   }
 
-  scene.add(new THREE.AmbientLight(0xffffff, 1.5))
-  const key = new THREE.DirectionalLight(0xffffff, 1.6)
-  key.position.set(-12, 24, 8)
+  // The /camera lighting, not a second set tuned by eye. A directional key at a
+  // shallower angle than the camera is what gives a tower two visibly different
+  // faces; the flat ambient the board used to sit under made every block read
+  // as a coloured square.
+  scene.add(new THREE.AmbientLight(0xffffff, 1.35))
+  const key = new THREE.DirectionalLight(0xffffff, 1.15)
+  key.position.set(-14, 26, 10)
   scene.add(key)
 
-  const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(GRID_W, GRID_H),
-    new THREE.MeshBasicMaterial({ color: 0x14181d }),
-  )
-  ground.rotation.x = -Math.PI / 2
-  ground.position.set(GRID_W / 2, 0, GRID_H / 2)
-  scene.add(ground)
+  /** Which rows are reserved, and which tiles creeps really use. */
+  const ROWS = {
+    entranceRow: ENTRANCE_ROW,
+    exitRow: EXIT_ROW,
+    spawnTiles: SPAWN_TILES,
+    exitTiles: EXIT_TILES,
+  }
 
-  scene.add(gridLines())
-  for (const t of SPAWN_TILES) scene.add(marker(t, 0x2a7f62))
-  for (const t of EXIT_TILES) scene.add(marker(t, 0xa8443c))
+  scene.add(buildBoard(MY_LANE, BOARD, ROWS))
 
   // One InstancedMesh per archetype. Three draw calls instead of one, in
   // exchange for reading a maze's composition at a glance without clicking.
@@ -417,26 +433,17 @@ export function createScene(
   // continuation of yours across the gap.
   const oppFrame = new THREE.LineSegments(
     new THREE.EdgesGeometry(new THREE.PlaneGeometry(GRID_W + 1, GRID_H + 1)),
-    new THREE.LineBasicMaterial({ color: 0x39424d }),
+    new THREE.LineBasicMaterial({ color: 0x4d5945 }),
   )
   oppFrame.rotation.x = -Math.PI / 2
   oppFrame.position.set(GRID_W / 2, 0.02, GRID_H / 2)
   oppGroup.add(oppFrame)
 
-  const oppGround = new THREE.Mesh(
-    new THREE.PlaneGeometry(GRID_W, GRID_H),
-    new THREE.MeshBasicMaterial({ color: 0x11151a }),
-  )
-  oppGround.rotation.x = -Math.PI / 2
-  oppGround.position.set(GRID_W / 2, 0, GRID_H / 2)
-  oppGroup.add(oppGround)
-
-  // Same grid and the same IN/OUT markers as your own board. At 40% scale these
-  // were noise; at full size they are what lets you count the gap in their maze
-  // and pick the creep that walks it.
-  oppGroup.add(gridLines(0x1e232a))
-  for (const t of SPAWN_TILES) oppGroup.add(marker(t, 0x1f5d48))
-  for (const t of EXIT_TILES) oppGroup.add(marker(t, 0x7d332e))
+  // The same board, one key lower. At 40% scale the markings were noise; at
+  // full size they are what lets you count the gap in their maze and pick the
+  // creep that walks it. Dimmer only so you never mistake whose board you are
+  // clicking -- you build on exactly one of them.
+  oppGroup.add(buildBoard(MY_LANE, BOARD_DIM, ROWS))
 
   const oppTowers = new THREE.InstancedMesh(
     new THREE.BoxGeometry(TILE * 0.82, TOWER_H, TILE * 0.82),
@@ -615,30 +622,31 @@ export function createScene(
    * it on the tile keeps your eyes on the maze rather than on a side bar.
    * An empty tile places the current tool.
    *
-   * This fires on pointer*up*, and only when the pointer barely moved between
-   * down and up. That distinction did not exist while the camera was fixed, and
-   * it has to now: a one-finger drag pans the camera, and on touch that drag
-   * begins with a `pointerdown` on a tile. Building on the down event would put
-   * a tower down every time a phone player pushed the board around. The slop
-   * threshold is what separates "tapped a tile" from "started dragging".
+   * This fires on pointer*up*, and builds unless the camera actually moved.
+   * The distinction did not exist while the camera was fixed and it has to now:
+   * a drag pans, and on touch that drag begins with a `pointerdown` on a tile,
+   * so building on the down event would drop a tower every time a phone player
+   * pushed the board around.
+   *
+   * "Did the camera move" is asked of the RIG rather than re-derived from a
+   * pixel threshold here. Two thresholds that had to agree is exactly what went
+   * wrong: this file called anything past 6px a drag while the rig had not
+   * started panning yet, so a click that drifted -- which a real mouse does --
+   * fell in the gap and did nothing at all. No tower, no pan, no feedback, and
+   * nothing on screen to say why.
    */
-  const TAP_SLOP_PX = 6
   let tapId = -1
-  let tapX = 0
-  let tapY = 0
 
   renderer.domElement.addEventListener('pointerdown', (ev) => {
     // Middle and right belong to the camera; only a primary press can build.
     if (ev.button !== 0) return
     tapId = ev.pointerId
-    tapX = ev.clientX
-    tapY = ev.clientY
   })
 
   renderer.domElement.addEventListener('pointerup', (ev) => {
     if (ev.pointerId !== tapId) return
     tapId = -1
-    if (Math.hypot(ev.clientX - tapX, ev.clientY - tapY) > TAP_SLOP_PX) return
+    if (rig.didPan(ev.pointerId)) return
 
     const t = tileAt(ev.clientX, ev.clientY)
     if (!t) { select(null); return }
@@ -945,21 +953,4 @@ export function createScene(
   }
 }
 
-function gridLines(color = 0x272c33): THREE.LineSegments {
-  const pts: number[] = []
-  for (let x = 0; x <= GRID_W; x++) pts.push(x, 0.01, 0, x, 0.01, GRID_H)
-  for (let y = 0; y <= GRID_H; y++) pts.push(0, 0.01, y, GRID_W, 0.01, y)
-  const geo = new THREE.BufferGeometry()
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3))
-  return new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color }))
-}
 
-function marker(t: Tile, color: number): THREE.Mesh {
-  const m = new THREE.Mesh(
-    new THREE.PlaneGeometry(TILE, TILE),
-    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.55 }),
-  )
-  m.rotation.x = -Math.PI / 2
-  m.position.set(t.x + 0.5, 0.02, t.y + 0.5)
-  return m
-}
