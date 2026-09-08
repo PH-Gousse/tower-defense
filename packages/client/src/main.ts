@@ -1,5 +1,6 @@
 import { createScene, WebGLUnavailable, type Selection, type Scene } from './scene'
 import { Net, relayUrl } from './net'
+import { holdToRepeat } from './hold'
 import { STALL_TICKS } from '@ltw/sim'
 import {
   TowerKind, ARCHETYPES, levelOf, MAX_LEVEL, TICK_HZ, MatchResult,
@@ -65,20 +66,24 @@ const WINDOW_TIERS = 2
 const SEND_KEYS = ['q', 'w', 'e', 'r', 't', 'y']
 
 const creepButtons: HTMLButtonElement[] = []
+const holdStops: Array<() => void> = []
 if (sendRow) {
   for (let slot = 0; slot < ARCHETYPE_COUNT * WINDOW_TIERS; slot++) {
     const b = document.createElement('button')
     b.className = 'creep'
     b.dataset.creep = String(slot)
     b.innerHTML = '<span class="n"></span><span class="c"></span>'
-    b.addEventListener('click', () => {
-      const i = Number(b.dataset.creep)
-      if (b.hasAttribute('data-locked')) return
-      scene.send(i)
-    })
+    holdStops.push(
+      holdToRepeat(b, () => scene.send(Number(b.dataset.creep)), window),
+    )
     sendRow.appendChild(b)
     creepButtons.push(b)
   }
+  // A press held while the tab goes away would otherwise repeat into nothing
+  // and still be repeating on return.
+  window.addEventListener('blur', () => {
+    for (const stop of holdStops) stop()
+  })
 }
 
 /** Highest tier buyable at this tick. */
