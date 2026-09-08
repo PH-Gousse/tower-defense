@@ -865,6 +865,20 @@ Resequenced so a URL exists on day one and the bot is playable before any netcod
 9. **Determinism, the rest of it: `hash.ts`, ring buffer, desync dump.** The golden fixture
    already exists from step 2 and has been growing since; this adds the per-tick hash, the
    40-tick ring buffer, the peer exchange and the downloadable dump.
+   **Done, except the wire.** `desync.ts` has the 40-entry ring and `findDivergence`, which
+   returns the EARLIEST disagreeing tick — every tick after a divergence is also wrong, so the
+   newest mismatch is the least informative one. `dump.ts` writes a match to JSON and
+   `harness replay` runs it back, reporting which peer this machine agrees with; that verdict
+   is the whole point and is covered by a test that perturbs one run and confirms the replay
+   sides with the clean one. The dump carries the balance data itself, not just its version,
+   for the same reason the golden fixture now does.
+   One correctness fix fell out: `Command.tick` was never authoritative — `step()` ignores it
+   and the two producers disagreed, the local queue stamping `tick + 1` and the bot stamping
+   `tick` — so the driver rewrites it to the tick a command is actually applied on. A replay
+   trusting the raw field would have placed half the log a tick late.
+   What is not exercised yet is the peer exchange, because there is no peer until step 10.
+   `Driver.checkPeer()` is the seam: feed it the peer's ring and it freezes on a mismatch and
+   reports `no-overlap` as the stall it is.
 10. **Server and 1v1.** Durable Object per match: lobby, `start`, RTT negotiation, wire
     validation, version handshake, ordered relay with `None` watermarks, room codes,
     join-by-URL, socket close, out-of-band concede, rematch, local prediction with an input

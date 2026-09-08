@@ -75,6 +75,21 @@ wish: hard finishes against easy with 8 lives and against normal with 15.
 
 ---
 
+### A backgrounded tab freezes the simulation completely
+Measured while verifying step 9: a Chrome tab that is not visible gets **zero** animation
+frames, so `renderer.setAnimationLoop` never fires and the driver never advances. Harmless in
+single player — the match simply pauses and resumes — but under lockstep it is a stall the peer
+sees, and the peer cannot tell it apart from a hang.
+
+The design already calls for showing a notice when a peer falls more than 40 ticks behind, so
+the handling exists on paper. What is worth deciding at step 10 is whether a backgrounded tab
+should surface something to its *own* player too, rather than silently pausing their match.
+
+**Trigger:** step 10, when the relay makes stalls visible to someone else.
+**Effort:** S → S.
+
+---
+
 ## P1 — do these first after v1 ships
 
 ### Ghost duels

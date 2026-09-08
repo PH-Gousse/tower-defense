@@ -30,6 +30,8 @@ import {
   type Tile,
   type FlowField,
   type BotConfig,
+  type Divergence,
+  type DesyncDump,
 } from '@ltw/sim'
 import { Driver } from './driver'
 import { PathLine } from './pathline'
@@ -94,6 +96,8 @@ export interface Stats {
   readonly winner: number
   readonly oppLives: number
   readonly oppCreeps: number
+  /** Non-null once a peer's hashes disagreed with ours. The sim is frozen. */
+  readonly desync: Divergence | null
 }
 
 export interface Selection {
@@ -122,6 +126,8 @@ export interface Scene {
   readonly upgradeSelected: () => void
   readonly sellSelected: () => void
   readonly setBot: (bot: BotConfig | null) => void
+  /** The match as a reproducible JSON file. See packages/sim/src/dump.ts. */
+  readonly dump: (trigger: 'desync' | 'manual') => DesyncDump
   start: () => void
 }
 
@@ -142,6 +148,15 @@ export class WebGLUnavailable extends Error {
     this.cause = cause
   }
 }
+
+/**
+ * Build identity, stamped into every dump.
+ *
+ * Two peers running different builds is the most likely cause of a desync that
+ * is not a real bug, and the cheapest to rule out -- but only if the file says
+ * which build produced it. Vite substitutes this at build time.
+ */
+const BUILD = __BUILD__
 
 export function createScene(
   canvasParent: HTMLElement,
@@ -622,6 +637,7 @@ export function createScene(
     },
     send: (creep) => driver.queueSend(creep),
     setBot: (b) => driver.setBot(b),
+    dump: (trigger) => driver.dump(trigger, BUILD),
     upgradeSelected: () => {
       if (selected) driver.queueUpgrade(selected.x, selected.y)
     },
@@ -672,6 +688,7 @@ export function createScene(
             winner: state.winner,
             oppLives: state.players[1 - ME]!.lives,
             oppCreeps: state.lanes[1 - ME]!.creeps.count,
+            desync: driver.desync,
           })
         }
         syncCreeps(driver.alpha)

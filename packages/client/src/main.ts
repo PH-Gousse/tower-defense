@@ -207,6 +207,10 @@ scene.onStats((s) => {
         `${s.leaks} leaks against you, ${s.kills} kills. Reload to try again — rematch arrives with the server at step 10.`
     }
   }
+  if (desyncPanel) {
+    desyncPanel.hidden = s.desync === null
+    if (s.desync && desyncTick) desyncTick.textContent = `tick ${s.desync.tick}`
+  }
   if (towers) towers.textContent = String(s.towers)
   if (creeps) creeps.textContent = String(s.creeps)
   if (kills) kills.textContent = String(s.kills)
@@ -220,6 +224,55 @@ scene.onStats((s) => {
 })
 
 // --- hover -----------------------------------------------------------------
+
+// --- desync and the match file ---------------------------------------------
+
+const desyncPanel = el('desync')
+const desyncTick = el('desyncTick')
+
+/**
+ * Hand the player a file.
+ *
+ * A blob URL and a synthetic click, because there is no server to post to and
+ * deliberately never will be: the dump is the only observability in the project
+ * precisely so that debugging needs no backend, no telemetry and no logging.
+ */
+function saveDump(trigger: 'desync' | 'manual'): void {
+  const dump = scene.dump(trigger)
+  const blob = new Blob([JSON.stringify(dump)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `ltw-${trigger}-${dump.build}-t${dump.ticks}.json`
+  a.click()
+  // Revoking immediately can cancel the download in some browsers; a tick of
+  // slack is enough and the blob is small.
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  toast(`Saved ${a.download} — ${dump.commands.length} commands, ${dump.ticks} ticks`)
+}
+
+let toastTimer = 0
+function toast(text: string): void {
+  let box = el('toast')
+  if (!box) {
+    box = document.createElement('div')
+    box.id = 'toast'
+    document.body.appendChild(box)
+  }
+  box.textContent = text
+  window.clearTimeout(toastTimer)
+  toastTimer = window.setTimeout(() => box?.remove(), 4000)
+}
+
+el('desyncSave')?.addEventListener('click', () => saveDump('desync'))
+
+window.addEventListener('keydown', (ev) => {
+  // A match that merely *felt* wrong is worth capturing too, not just one that
+  // tripped the hash check. Guarded so it cannot fire while typing in a field.
+  if (ev.key.toLowerCase() !== 'd') return
+  if (ev.metaKey || ev.ctrlKey || ev.altKey) return
+  saveDump('manual')
+})
 
 scene.onTileHover((h) => {
   if (tile) tile.textContent = h.tile ? `${h.tile.x}, ${h.tile.y}` : '—'

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { Driver } from '../src/driver'
 import {
-  TICK_MS, TowerKind, MatchResult, tileIndex, creepSpec, STARTING_INCOME, BOT_HARD,
+  TICK_MS, TowerKind, MatchResult, tileIndex, creepSpec, STARTING_INCOME, BOT_HARD, Kind,
 } from '@ltw/sim'
 
 /**
@@ -167,5 +167,85 @@ describe('Driver', () => {
     for (let f = 1; f <= 300; f++) { t += TICK_MS * 10; d.advance(t) }
     expect(d.current.lanes[0]!.creeps.count).toBe(0)
     expect(d.current.players[1]!.income).toBe(STARTING_INCOME)
+  })
+})
+
+describe('desync apparatus', () => {
+  it('records a hash for every tick it runs', () => {
+    const d = new Driver(0, null)
+    d.advance(0)
+    let t = 0
+    for (let f = 1; f <= 5; f++) { t += TICK_MS; d.advance(t) }
+    const e = d.hashes.entries()
+    expect(e.length).toBe(5)
+    // The entry for tick N is the state at the END of tick N. Both peers have
+    // to agree on that convention or every comparison is off by one.
+    expect(e[e.length - 1]!.tick).toBe(d.current.tick)
+  })
+
+  it('logs every command at the tick it was applied on', () => {
+    // `step()` ignores `cmd.tick` and the producers disagree about it -- the
+    // local queue stamps tick+1, the bot stamps tick -- so the driver rewrites
+    // it. A replay trusting the raw field would place half the log a tick late.
+    const d = new Driver(0, null)
+    d.advance(0)
+    d.queueSend(0)
+    let t = 0
+    for (let f = 1; f <= 4; f++) { t += TICK_MS; d.advance(t) }
+    const dump = d.dump('manual', 'test')
+    expect(dump.commands.length).toBe(1)
+    const logged = dump.commands[0]!
+    expect(logged.kind).toBe(Kind.Send)
+    // Applied on the tick the state was at before the step that consumed it.
+    expect(logged.tick).toBe(0)
+  })
+
+  it('freezes on a peer disagreement and never resyncs', () => {
+    const d = new Driver(0, null)
+    d.advance(0)
+    let t = 0
+    for (let f = 1; f <= 6; f++) { t += TICK_MS; d.advance(t) }
+    const tickBefore = d.current.tick
+
+    // A peer that agrees on tick 1 and differs on tick 2.
+    const mine = d.hashes.entries()
+    const peer = mine.map((e, i) => (i < 1 ? e : { tick: e.tick, hash: (e.hash ^ 0xffff) >>> 0 }))
+    const found = d.checkPeer(peer)
+    expect(found.reason).toBe('diverged')
+    expect(d.desync).not.toBeNull()
+
+    // Frozen: further time does not advance the simulation. Adopting the peer's
+    // state instead would hide the bug that caused this.
+    t += TICK_MS * 10
+    expect(d.advance(t)).toBe(0)
+    expect(d.current.tick).toBe(tickBefore)
+  })
+
+  it('does not freeze when the peer window has simply fallen behind', () => {
+    // A stall is not a desync, and treating it as one would kill matches over
+    // a slow connection.
+    const d = new Driver(0, null)
+    d.advance(0)
+    let t = 0
+    for (let f = 1; f <= 6; f++) { t += TICK_MS; d.advance(t) }
+    const found = d.checkPeer([{ tick: 9000, hash: 1 }])
+    expect(found.reason).toBe('no-overlap')
+    expect(d.desync).toBeNull()
+    expect(d.advance(t + TICK_MS)).toBeGreaterThan(0)
+  })
+
+  it('builds a dump that carries the balance data and both rings', () => {
+    const d = new Driver(0, null)
+    d.advance(0)
+    let t = 0
+    for (let f = 1; f <= 3; f++) { t += TICK_MS; d.advance(t) }
+    const peer = d.hashes.entries().map((e) => ({ tick: e.tick, hash: (e.hash ^ 1) >>> 0 }))
+    d.checkPeer(peer)
+    const dump = d.dump('desync', 'abc123')
+    expect(dump.build).toBe('abc123')
+    expect(dump.trigger).toBe('desync')
+    expect(dump.balance.creeps.length).toBeGreaterThan(0)
+    expect(dump.peerHashes).not.toBeNull()
+    expect(dump.divergedAtTick).toBeGreaterThanOrEqual(0)
   })
 })

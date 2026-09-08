@@ -54,6 +54,25 @@
     #start button:hover { border-color: #4f8cc9; background: #1b2330; }
     #start button .n { display: block; font-size: 13px; }
     #start button .c { display: block; font-size: 11px; color: #7d858f; }
+    #desync {
+      position: fixed; inset: 0; display: grid; place-items: center; z-index: 18;
+      background: rgba(24,10,10,.92); backdrop-filter: blur(3px); text-align: center;
+      font: 13px/1.6 -apple-system, "Segoe UI", system-ui, sans-serif; color: #e6e8ea;
+      padding: 24px;
+    }
+    #desync h2 { margin: 0 0 8px; font-size: 20px; font-weight: 600; color: #e0655a; }
+    #desync p { margin: 0 0 14px; color: #b9a9a6; max-width: 40em; }
+    #desync code { font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color: #e6e8ea; }
+    #desync button {
+      cursor: pointer; font: inherit; color: #e6e8ea; background: #3a2422;
+      border: 1px solid #6b4038; border-radius: 3px; padding: 7px 14px;
+    }
+    #toast {
+      position: fixed; left: 50%; bottom: 74px; transform: translateX(-50%); z-index: 19;
+      font: 12px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif; color: #e6e8ea;
+      background: rgba(20,24,29,.96); border: 1px solid #3a424c; border-radius: 3px;
+      padding: 7px 13px;
+    }
     #fatal {
       position: fixed; inset: 0; display: grid; place-items: center; z-index: 20;
       background: #0e1013; color: #e6e8ea; text-align: center; padding: 24px;
@@ -149,7 +168,7 @@
     <span class="sep"></span>
     <span class="label">Send &rarr;</span>
     <span id="sendRow"></span>
-    <span class="hint"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> towers &middot; <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd> send &middot; <kbd>R</kbd><kbd>T</kbd><kbd>Y</kbd> next tier &middot; click a tower to upgrade or sell</span>
+    <span class="hint"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> towers &middot; <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd> send &middot; <kbd>R</kbd><kbd>T</kbd><kbd>Y</kbd> next tier &middot; click a tower to upgrade or sell &middot; <kbd>D</kbd> save match file</span>
   </div>
 
   <!-- Inline panel on the field: upgrading is the most frequent mid-match
@@ -173,8 +192,9 @@
   <div id="start">
     <div class="box">
       <h1>Line Tower Wars</h1>
-      <p>Maze your lane. Send creeps down theirs. Both of you keep looping until
-         someone runs out of lives.</p>
+      <p>Maze your lane. Send creeps down theirs. Creeps that get through come back
+         around, taking a life each lap, until a tower kills them. A heavier tier
+         unlocks every 30 seconds.</p>
       <div class="row">
         <button data-bot="easy">
           <span class="n">Easy</span><span class="c">acts every 0.7s</span>
@@ -186,6 +206,22 @@
           <span class="n">Hard</span><span class="c">acts every 0.15s</span>
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- Lockstep's failure mode is silent: two clients quietly start watching
+       different matches. This is what makes it loud, and it never resyncs --
+       adopting the peer's state would hide the bug that caused it. -->
+  <div id="desync" hidden>
+    <div>
+      <h2>The two games stopped matching</h2>
+      <p>Your client and your opponent's disagreed about the state of the match at
+         <code id="desyncTick">tick ?</code>, so both have stopped rather than carry on
+         showing you different games. Nothing you did caused this.</p>
+      <p>Saving the match file below makes it reproducible — it replays headlessly with
+         <code>pnpm --filter @ltw/harness replay &lt;file&gt;</code>, which says which side
+         was wrong.</p>
+      <button id="desyncSave">Save the match file</button>
     </div>
   </div>
 
