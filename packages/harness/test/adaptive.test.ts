@@ -19,45 +19,67 @@ import { runMatch } from '../src/match'
 const mk = (sendRatio: number, adaptive: AdaptiveMode): BotConfig =>
   ({ sendRatio, reactionTicks: 10, template: 0, adaptive })
 
-/** Play a variant against the fixed-template bot, both seats, several ratios. */
-function versusTemplate(mode: AdaptiveMode): { wins: number; losses: number } {
-  let wins = 0
-  let losses = 0
-  for (const ratio of [0.25, 0.35, 0.45, 0.55, 0.65, 0.8]) {
-    // Both seat orders, so a seat advantage cannot be mistaken for skill.
-    for (const first of [true, false]) {
-      const bots: [BotConfig, BotConfig] = first
-        ? [mk(ratio, mode), mk(ratio, 'off')]
-        : [mk(ratio, 'off'), mk(ratio, mode)]
-      const m = runMatch({ bots, maxTicks: 80000 })
-      if (m.result !== MatchResult.Decided) continue
-      if ((m.winner === 0) === first) wins += 1
-      else losses += 1
+interface Record {
+  readonly wins: number
+  readonly losses: number
+}
+
+/**
+ * Play a variant against the fixed-template bot, both seats, several ratios.
+ *
+ * Memoised, and it yields between matches. Each mode is twelve full matches and
+ * three tests want the results, so computing them per test was thirty-six
+ * matches of tight synchronous loop -- long enough that vitest could not
+ * service its own reporter, timed out on `onTaskUpdate`, and failed the run
+ * with every assertion passing.
+ */
+const cache = new Map<AdaptiveMode, Promise<Record>>()
+
+function versusTemplate(mode: AdaptiveMode): Promise<Record> {
+  const existing = cache.get(mode)
+  if (existing) return existing
+  const run = (async (): Promise<Record> => {
+    let wins = 0
+    let losses = 0
+    for (const ratio of [0.25, 0.35, 0.45, 0.55, 0.65, 0.8]) {
+      // Both seat orders, so a seat advantage cannot be mistaken for skill.
+      for (const first of [true, false]) {
+        const bots: [BotConfig, BotConfig] = first
+          ? [mk(ratio, mode), mk(ratio, 'off')]
+          : [mk(ratio, 'off'), mk(ratio, mode)]
+        const m = runMatch({ bots, maxTicks: 80000 })
+        await new Promise((r) => setTimeout(r, 0))
+        if (m.result !== MatchResult.Decided) continue
+        if ((m.winner === 0) === first) wins += 1
+        else losses += 1
+      }
     }
-  }
-  return { wins, losses }
+    return { wins, losses }
+  })()
+  cache.set(mode, run)
+  return run
 }
 
 describe('adaptive play', () => {
-  it('counter-picking what to send beats the fixed template, clearly', () => {
+  it('counter-picking what to send beats the fixed template, clearly', async () => {
     // The whole reason the opponent's board is drawn on your screen.
-    const r = versusTemplate('send')
+    const r = await versusTemplate('send')
     expect(r.wins).toBeGreaterThan(r.losses * 2)
   })
 
-  it('reacting to the wave in your own lane is WORSE than not looking', () => {
+  it('reacting to the wave in your own lane is WORSE than not looking', async () => {
     // Not a neutral change: the fixed 3:1:1 mix answers all three creep shapes
     // adequately, while specialising answers the wave that is already dying --
     // and the bot only ever adds towers, never sells, so every over-commitment
     // is permanent. If this ever starts winning, the maze rules changed and the
     // default in `bot.ts` should be revisited.
-    const r = versusTemplate('defence')
+    const r = await versusTemplate('defence')
     expect(r.wins).toBeLessThan(r.losses)
   })
 
-  it('so the shipped default is send-only, and it beats doing both', () => {
-    const send = versusTemplate('send')
-    const both = versusTemplate('both')
+  it('so the shipped default is send-only, and it beats doing both', async () => {
+    const send = await versusTemplate('send')
+    const both = await versusTemplate('both')
     expect(send.wins).toBeGreaterThanOrEqual(both.wins)
   })
 })
