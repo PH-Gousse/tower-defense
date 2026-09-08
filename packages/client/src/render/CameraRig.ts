@@ -545,12 +545,29 @@ export class CameraRig {
   }
 
   /**
-   * Keep the visible ground inside `bounds`.
+   * Hold the view over `bounds`, with room to move.
    *
-   * Zoomed in, the target is held far enough from each edge that the frustum
-   * stays inside the rectangle. Zoomed out past the rectangle on an axis, the
-   * range inverts and the target is pinned to the centre of that axis -- which
-   * is the honest answer to "pan when everything is already on screen".
+   * Two rules were tried before this one and both are wrong at one end.
+   *
+   * Requiring the whole visible trapezoid to sit inside the rectangle is the
+   * strict reading, and it made the map immovable, because the default framing
+   * already shows the content plus its margin. Measured against the game's own
+   * bounds it left 0.56 tiles of travel up and down and NONE left or right, at
+   * 1920x1080, 1440x900 and 1000x800 alike -- a quarter of a tile per arrow
+   * press before it stopped. The input was wired correctly the whole time.
+   *
+   * Clamping the target into the rectangle instead gives travel everywhere and
+   * gives too much: at the default framing the view is more than twice as wide
+   * as the content, so panning to a corner parks both boards in the corner of
+   * the screen with two thirds of it empty.
+   *
+   * So: the strict range, widened by a fraction of the view. Where the strict
+   * range exists the player can still reach every part of the content and now
+   * push a little past its edge, which is what lets a corner tile sit at the
+   * middle of the screen. Where it does not -- zoomed out, everything already
+   * visible -- it collapses to the centre and the overscroll is the whole of
+   * the travel, bounded so the boards stay near the middle of the view instead
+   * of sliding off it.
    */
   private clampTarget(): void {
     const { near, far, halfW } = groundWindow(
@@ -643,13 +660,6 @@ export class CameraRig {
       } else if (ev.button !== 1 && ev.button !== 2) {
         // Left click belongs to the app: selecting and building. Middle and
         // right drag the camera; on touch, one finger drags.
-        //
-        // Left-drag panning was tried and reverted. In a game where the primary
-        // click PLACES something, the two cannot share the button: any slop
-        // threshold that is loose enough to survive a real click's drift is
-        // also loose enough to make dragging feel dead, and the version that
-        // shipped briefly made a drifting click place nothing at all. A mouse
-        // grabs with the right button; a finger grabs with itself.
         return
       }
 
@@ -802,6 +812,41 @@ export class CameraRig {
 
 const ARROW_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'] as const
 
+/**
+ * How far past the strict limit the camera may be pushed, as a fraction of the
+ * view's own half-size on that axis.
+ *
+ * A quarter. It is the number that decides whether the map feels movable, so it
+ * is stated as a fraction of the view rather than in tiles: a quarter of a
+ * screen of travel reads the same zoomed in as zoomed out, where a fixed tile
+ * count would be a shove at one end and a twitch at the other. At the game's
+ * default desktop framing it buys about 6.4 tiles of travel sideways and 3.2 up
+ * and down, against 0 and 0.56 without it.
+ */
+export const OVERSCROLL = 0.25
+
+/**
+ * Clamp a target coordinate so the view stays over the bounds, plus overscroll.
+ *
+ * `offLo`/`offHi` are the view's extent either side of the target on this axis,
+ * which is asymmetric under a tilted camera -- the far edge is both further
+ * away and wider than the near one. Where the view is larger than the bounds
+ * the strict range inverts; that collapses to the centre rather than being left
+ * inside out, so the two cases meet continuously and a scroll across the
+ * crossover does not lurch.
+ */
+export function clampWindow(v: number, lo: number, hi: number, offLo: number, offHi: number): number {
+  let a = lo - offLo
+  let c = hi - offHi
+  if (a > c) {
+    const mid = (a + c) / 2
+    a = mid
+    c = mid
+  }
+  const slack = OVERSCROLL * ((offHi - offLo) / 2)
+  return clamp(v, a - slack, c + slack)
+}
+
 const PAN_KEY_SETS: Record<'wasd' | 'arrows' | 'none', ReadonlySet<string>> = {
   wasd: new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', ...ARROW_KEYS]),
   arrows: new Set(ARROW_KEYS),
@@ -812,19 +857,3 @@ function clamp(v: number, lo: number, hi: number): number {
   return v < lo ? lo : v > hi ? hi : v
 }
 
-/**
- * Clamp `v` so that `[v + offLo, v + offHi]` stays inside `[lo, hi]`.
- *
- * When the window is wider than the range there is no valid position, and the
- * answer is the one that centres the window on the range. That is not the same
- * as the midpoint of `[lo, hi]` -- the window is asymmetric -- and it matters
- * that it is not: this expression agrees with the clamped value at the exact
- * zoom where the range stops being satisfiable, so the target does not jump as
- * you scroll through it.
- */
-function clampWindow(v: number, lo: number, hi: number, offLo: number, offHi: number): number {
-  const a = lo - offLo
-  const b = hi - offHi
-  if (a >= b) return (a + b) / 2
-  return clamp(v, a, b)
-}
