@@ -306,6 +306,17 @@ them, and the two difficulty knobs make the bot flood *harder*, never maze *smar
 is likely the mode that gets played most, so if it turns out flat, adaptive maze selection is
 the first thing to build after v1.
 
+**Measured after v1, and the prediction was backwards.** Adaptive *mazing* — answering the wave
+in your lane with the tower that counters it — loses 0-12 to the fixed template across six
+spend ratios in both seats. It is not neutral, it is worse than not looking: the fixed 3:1:1
+mix answers all three creep shapes adequately, specialising answers the wave that is already
+dying, and the bot only ever adds towers so every over-commitment is permanent. The half that
+does work is the other one, counter-picking what to **send** at the opponent's maze, which wins
+10-2 and is what shipped. Doing both wins only 8-4, because the bad half drags the good one
+down. Pinned by `packages/harness/test/adaptive.test.ts`, which is written to fail if someone
+later "fixes" this on the reasonable-sounding grounds that a bot reacting to threats must beat
+one that does not.
+
 ### Tick and network
 
 **Tick rate: 20Hz fixed** (50ms). The **driver** — the client's render loop, or the harness —

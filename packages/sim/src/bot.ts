@@ -1,6 +1,16 @@
 import { GRID_W, tileIndex, tileX, tileY, SPAWN_INDICES, type Tile } from './grid'
 import { pathFrom } from './path'
-import { TowerKind, CREEPS, creepSpec, levelOf, MAX_LEVEL, MAX_TIER, tierUnlockTick } from './data'
+import {
+  TowerKind,
+  CREEPS,
+  CreepArchetypeKind,
+  creepSpec,
+  investedIn,
+  levelOf,
+  MAX_LEVEL,
+  MAX_TIER,
+  tierUnlockTick,
+} from './data'
 import { opponentOf, type GameState, type Lane, type Player } from './state'
 import { Kind, Refusal, checkBuild, checkUpgrade, checkSend, type Command } from './step'
 import { templateAt } from './maze'
@@ -35,6 +45,27 @@ import { templateAt } from './maze'
  * selection is the first thing to build after this.
  */
 
+/**
+ * `defence` answers what is in your lane with the tower that counters it.
+ * `send` picks the creep that exploits the opponent's maze.
+ *
+ * **Only `send` is worth having, and that is a measured result rather than a
+ * design.** Against the fixed-template bot over twelve matches -- six spend
+ * ratios, both seats -- `send` wins 10-2, `both` wins 8-4, and `defence` loses
+ * 0-12. Reactive tower choice is not merely neutral; it is worse than not
+ * looking at all, and it drags the combination down below the half that works.
+ *
+ * The design doc predicted the opposite: adaptive *mazing* was named as the
+ * first thing to build after v1. The reason it fails is worth keeping. The
+ * fixed 3:1:1 mix answers all three creep shapes adequately, and specialising
+ * against the wave currently in your lane answers the wave that is already
+ * dying -- while the bot only ever ADDS towers, never sells, so every
+ * over-commitment is permanent. Sending has neither problem: the maze you are
+ * exploiting is standing there, it changes slowly, and each purchase is
+ * independent.
+ */
+export type AdaptiveMode = 'off' | 'defence' | 'send' | 'both'
+
 export interface BotConfig {
   /**
    * Share of decisions spent attacking rather than defending, 0..1.
@@ -52,6 +83,19 @@ export interface BotConfig {
    * the better one.
    */
   readonly savingPeriods?: number
+  /**
+   * How much of the board the bot reads, rather than following a template.
+   *
+   * Four modes rather than a boolean, because the two halves had to be measured
+   * apart and the result was not what it looked like: reactive tower choice on
+   * its own is WORSE than the fixed template, and every bit of the gain comes
+   * from counter-picking what to send. A flag pair keeps that finding runnable
+   * instead of buried in a commit message.
+   *
+   * "Smarter" is an opinion until it wins head to head, and more than one
+   * change to this bot that looked obviously better measured backwards.
+   */
+  readonly adaptive?: AdaptiveMode
   /** Index into MAZE_TEMPLATES. */
   readonly template: number
 }
@@ -116,6 +160,12 @@ const MAX_TOWER_TARGET = 45
  * something the bot already has, and its own income is that thing.
  */
 const MAX_SAVING_PERIODS = 2
+
+/** Creeps that must be in the lane before their mix counts as information. */
+const MIN_THREAT_SAMPLE = 3
+
+/** See AdaptiveMode: reading the board pays off on offence only. */
+const DEFAULT_ADAPTIVE: AdaptiveMode = 'send'
 
 /**
  * Difficulty is how much of its economy the bot commits to attacking.
@@ -198,10 +248,17 @@ export function botCommand(
   // minutes -- which also meant its income never grew, because income only
   // comes from sending. Aiming at what the next few income ticks can actually
   // buy produces the opposite loop: send, earn, afford more, send bigger.
+  // Counter-pick: send into their maze what their maze is worst at. This is
+  // the reason their board is drawn on your screen at all.
+  const adaptive = config.adaptive ?? DEFAULT_ADAPTIVE
+  const wantsCounter = adaptive === 'send' || adaptive === 'both'
+  const theirMaze = wantsCounter ? readMaze(state.lanes[opponentOf(player)]!) : null
+  const prefer = theirMaze === null ? null : (EXPLOITS[theirMaze] as CreepArchetypeKind)
   const target = affordableSoon(
     state,
     me.income * (config.savingPeriods ?? MAX_SAVING_PERIODS),
     unlocked,
+    prefer,
   )
 
   // Two phases per tier: build the maze this tier needs, then bank for the
@@ -290,22 +347,39 @@ export function botCommand(
  * a better use of the same gold than a tier-3 tank, and the ladder is the only
  * thing that ever breaks a maze.
  */
-function affordableSoon(state: GameState, budget: number, maxTier: number): number {
-  let best = -1
-  let bestTier = -1
-  let bestCost = -1
-  for (let i = 0; i < CREEPS.length; i++) {
-    const spec = creepSpec(i)
-    if (spec.tier > maxTier) continue
-    if (spec.cost > budget) continue
-    if (state.tick < tierUnlockTick(spec.tier)) continue
-    if (spec.tier > bestTier || (spec.tier === bestTier && spec.cost > bestCost)) {
-      best = i
-      bestTier = spec.tier
-      bestCost = spec.cost
+function affordableSoon(
+  state: GameState,
+  budget: number,
+  maxTier: number,
+  prefer: CreepArchetypeKind | null,
+): number {
+  // Two passes rather than a weighted score. The preferred archetype wins only
+  // if it can be had at the same tier the budget already reaches -- dropping a
+  // tier to get the right shape is a bad trade, because HP per gold rises with
+  // the ladder and a tier is worth more than a matchup.
+  const pick = (want: CreepArchetypeKind | null): number => {
+    let best = -1
+    let bestTier = -1
+    let bestCost = -1
+    for (let i = 0; i < CREEPS.length; i++) {
+      const spec = creepSpec(i)
+      if (want !== null && spec.archetype !== want) continue
+      if (spec.tier > maxTier) continue
+      if (spec.cost > budget) continue
+      if (state.tick < tierUnlockTick(spec.tier)) continue
+      if (spec.tier > bestTier || (spec.tier === bestTier && spec.cost > bestCost)) {
+        best = i
+        bestTier = spec.tier
+        bestCost = spec.cost
+      }
     }
+    return best
   }
-  return best
+  const any = pick(null)
+  if (prefer === null || any === -1) return any
+  const wanted = pick(prefer)
+  if (wanted === -1) return any
+  return creepSpec(wanted).tier === creepSpec(any).tier ? wanted : any
 }
 
 /** Highest creep tier buyable at this tick. */
@@ -409,10 +483,18 @@ function nextTemplateTile(
   budget: number,
 ): Command | null {
   const template = templateAt(config.template)
+  // Answer what is actually in the lane. With nothing to read -- an empty lane
+  // in the opening -- fall back to the fixed mix, which is at least balanced.
+  const mode = config.adaptive ?? DEFAULT_ADAPTIVE
+  const threat = mode === 'defence' || mode === 'both' ? readThreat(lane) : null
   for (let i = 0; i < template.tiles.length; i++) {
     const t = template.tiles[i] as Tile
     if (lane.blocked[tileIndex(t)] === 1) continue
-    const tower = towerForIndex(i)
+    // Skew toward the answer, do not monopolise. A maze of one tower type has
+    // no answer to the wave after this one, and the bot only ever adds towers
+    // -- it never tears the wrong ones down -- so over-committing is permanent.
+    const tower =
+      threat === null || i % 3 === 2 ? towerForIndex(i) : (ANSWERS[threat] as TowerKind)
     if (levelOf(tower, 1).cost > budget) continue
     if (checkBuild(state, player, t.x, t.y, tower).refusal !== Refusal.None) continue
     return { tick: state.tick, player, kind: Kind.Build, tower, x: t.x, y: t.y }
@@ -420,12 +502,100 @@ function nextTemplateTile(
   return null
 }
 
-/** Roughly 3 single-target to 1 splash to 1 slow, by template position. */
+/**
+ * Roughly 3 single-target to 1 splash to 1 slow, by template position.
+ *
+ * The fallback when the bot has nothing to react to -- an empty lane in the
+ * opening, before anyone has sent anything.
+ */
 function towerForIndex(i: number): TowerKind {
   const m = i % 5
   if (m === 3) return TowerKind.Splash
   if (m === 4) return TowerKind.Slow
   return TowerKind.Single
+}
+
+/**
+ * What is actually coming down my lane, weighted by HP.
+ *
+ * Weighted, not counted: eight swarm creeps and one tank are not the same
+ * problem even when the tank is outnumbered eight to one, and the thing a maze
+ * has to chew through is hit points rather than bodies.
+ *
+ * Returns null when the lane is empty, which the caller must treat as "no
+ * information" rather than "no threat" -- answering an empty lane by building
+ * anti-swarm towers would just be a differently arbitrary template.
+ */
+function readThreat(lane: Lane): CreepArchetypeKind | null {
+  const c = lane.creeps
+  // One creep is not a read. Adapting to a sample of one made the bot skitter
+  // between tower types on whatever happened to be walking past, and it
+  // measurably LOST to the fixed template at low send rates -- where lanes are
+  // usually near-empty and the "threat" was almost always a sample of one.
+  if (c.count < MIN_THREAT_SAMPLE) return null
+
+  const hp = [0, 0, 0]
+  let total = 0
+  for (let i = 0; i < c.count; i++) {
+    const spec = creepSpec(c.spec[i] as number)
+    hp[spec.archetype] = (hp[spec.archetype] as number) + (c.hp[i] as number)
+    total += c.hp[i] as number
+  }
+  let best: CreepArchetypeKind = CreepArchetypeKind.Swarm
+  for (let k = 1; k < hp.length; k++) {
+    if ((hp[k] as number) > (hp[best] as number)) best = k as CreepArchetypeKind
+  }
+  // A plurality is not enough either: answering a mixed wave by specialising
+  // against its largest third is worse than staying balanced.
+  return (hp[best] as number) * 2 > total ? best : null
+}
+
+/**
+ * The tower that answers a threat.
+ *
+ * Straight from the data: each tower archetype declares what it `answers`, and
+ * the three form a cycle -- splash for swarms, slow for runners, single-target
+ * for tanks. Hard-coding the pairing here rather than reading the string keeps
+ * it out of the hot path; `assertData` pins the file order it depends on.
+ */
+const ANSWERS: readonly TowerKind[] = [
+  TowerKind.Splash, // swarms
+  TowerKind.Slow, // runners
+  TowerKind.Single, // tanks
+]
+
+/**
+ * The creep that exploits a maze.
+ *
+ * The inverse of the table above, and the reason the opponent's board is drawn
+ * on your screen at all: counter-picking is premise-level, so a bot that never
+ * looks at the maze it is sending into is not playing the same game as its
+ * opponent. A maze of anti-tank towers kills one target at a time and drowns in
+ * swarm; a maze of splash does little to a single fat creep.
+ */
+const EXPLOITS: readonly CreepArchetypeKind[] = [
+  CreepArchetypeKind.Swarm, // vs single-target
+  CreepArchetypeKind.Tank, // vs splash
+  CreepArchetypeKind.Tank, // vs slow
+]
+
+/** The dominant tower archetype in a lane, weighted by gold sunk into it. */
+function readMaze(lane: Lane): TowerKind | null {
+  const t = lane.towers
+  const worth = [0, 0, 0]
+  let any = false
+  for (let i = 0; i < t.kind.length; i++) {
+    const kind = t.kind[i] as number
+    if (kind === -1) continue
+    any = true
+    worth[kind] = (worth[kind] as number) + investedIn(kind as TowerKind, t.level[i] as number)
+  }
+  if (!any) return null
+  let best = 0
+  for (let k = 1; k < worth.length; k++) {
+    if ((worth[k] as number) > (worth[best] as number)) best = k
+  }
+  return best as TowerKind
 }
 
 /** Cheapest useful upgrade anywhere in the lane, preferring low levels. */

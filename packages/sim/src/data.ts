@@ -123,9 +123,25 @@ export function investedIn(kind: TowerKind, level: number): number {
 
 // --- creeps -----------------------------------------------------------------
 
+/**
+ * Which of the three shapes a creep is, as an index rather than a name.
+ *
+ * The bot needs to reason about what is coming at it -- a wave of swarm wants a
+ * different answer than one tank -- and parsing that out of a key like
+ * "swarm3" would be a string comparison in the hot path and a silent breakage
+ * the first time something is renamed.
+ */
+export enum CreepArchetypeKind {
+  Swarm = 0,
+  Runner = 1,
+  Tank = 2,
+}
+
 export interface CreepSpec {
   readonly key: string
   readonly name: string
+  /** Which shape this is, for counter-picking on both sides of the board. */
+  readonly archetype: CreepArchetypeKind
   /** Tier 0 is available from tick 0; tier N unlocks at N * UNLOCK_EVERY_TICKS. */
   readonly tier: number
   readonly cost: number
@@ -168,6 +184,15 @@ export interface CreepsFile {
 
 const creepFile = creepsJson as unknown as CreepsFile
 
+/** File order is the archetype order, and the loader asserts it below. */
+const CREEP_ARCHETYPE_KEYS = ['swarm', 'runner', 'tank']
+
+function archetypeOf(key: string): CreepArchetypeKind {
+  const i = CREEP_ARCHETYPE_KEYS.indexOf(key)
+  if (i === -1) throw new Error(`creeps.json: unknown archetype "${key}"`)
+  return i as CreepArchetypeKind
+}
+
 /** Tier suffixes. Past this the tier number is spelled out. */
 const TIER_SUFFIX = ['', ' II', ' III', ' IV', ' V', ' VI', ' VII', ' VIII', ' IX', ' X']
 
@@ -199,6 +224,7 @@ export function expandCreeps(f: CreepsFile): CreepSpec[] {
       out.push({
         key: tier === 0 ? a.key : `${a.key}${tier + 1}`,
         name: `${a.name}${suffix}`,
+        archetype: archetypeOf(a.key),
         tier,
         cost: Math.round(cost),
         count: a.count,
@@ -278,6 +304,18 @@ const MAX_WAVE_BOUNTY_SHARE = 0.35
 
 function assertCreepData(): void {
   if (CREEPS.length === 0) throw new Error('creeps.json: no creeps')
+
+  // Archetype order is load-bearing: the counter-pick tables in bot.ts index by
+  // it, so a reordered file would silently make the bot answer swarms with the
+  // anti-tank tower and lose matches for a reason nobody would think to look for.
+  for (let i = 0; i < CREEP_ARCHETYPE_KEYS.length; i++) {
+    const a = creepFile.archetypes[i]
+    if (!a || a.key !== CREEP_ARCHETYPE_KEYS[i]) {
+      throw new Error(
+        `creeps.json: archetype ${i} must be "${CREEP_ARCHETYPE_KEYS[i]}", got "${a?.key}"`,
+      )
+    }
+  }
 
   // Tiers must be non-descending so the roster reads in unlock order, and so a
   // UI listing them in file order never shows a locked creep above an open one.

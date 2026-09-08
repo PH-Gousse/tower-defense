@@ -156,18 +156,26 @@ lands in v1 this is pure UI; if not, it needs the recording path first.
 **Trigger:** the same moment as ghosts; they share all the machinery.
 **Effort:** M → S. **Priority: P1.**
 
-### Adaptive bot maze selection
-**What:** Let the bot choose and adapt its maze in response to what is being sent at it,
-rather than placing from fixed templates.
+### ~~Adaptive bot maze selection~~ — measured, and half of it was wrong
+The bot counter-picks what it **sends** now: it reads the opponent's maze and answers a
+single-target maze with swarm, a splash maze with tanks. Wins 10-2 against the old
+fixed-template bot across six spend ratios in both seats.
 
-**Why:** Priced honestly in the spec: template mazes do not react, and the two difficulty
-knobs (spend ratio, reaction delay) make the bot flood *harder*, never maze *smarter*. The
-bot is likely the mode that gets played most.
+Adaptive *mazing* — the half the design doc actually predicted — **loses 0-12** and is not
+shipped. The fixed 3:1:1 tower mix answers all three creep shapes adequately; specialising
+answers the wave that is already dying; and the bot only ever adds towers, never sells, so
+every over-commitment is permanent. Doing both wins 8-4, worse than sending alone.
 
-**Trigger:** the bot reads flat after a few sessions. You will know quickly.
-**Effort:** M → S. **Priority: P1.**
+The modes survive as a config knob (`adaptive: 'off' | 'defence' | 'send' | 'both'`) so the
+ablation stays runnable rather than being a claim in a commit message.
+
+**Left undone:** the bot still never sells a tower, which is what would make adaptive mazing
+viable — it could then correct an over-commitment instead of living with it. That is the real
+prerequisite, and it is a bigger change than it looks: selling mid-match changes the maze
+under creeps that are already walking it.
 
 ---
+
 
 ## P2 — when the thing they unblock becomes real
 
