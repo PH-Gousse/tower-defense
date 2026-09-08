@@ -1,4 +1,4 @@
-import { GRID_W, GRID_H, type Tile } from './grid'
+import { GRID_W, ENTRANCE_ROW, EXIT_ROW, type Tile } from './grid'
 
 /**
  * Maze templates: an ordered wish-list of tiles.
@@ -7,87 +7,86 @@ import { GRID_W, GRID_H, type Tile } from './grid'
  * Order is the whole design — the early entries have to produce a usable maze
  * on their own, because the bot will often only afford the first handful.
  *
- * A serpentine works by forcing the walk up and down between staggered walls:
+ * The lane is vertical, so a wall is a ROW with one end left open, and a
+ * serpentine alternates which end:
  *
- *      x=6      x=10     x=14
- *   ┌───┬────────┬────────┬───
- *   │   █        █        █      gap at the BOTTOM of wall 1,
- *   │   █        █        █      the TOP of wall 2, and so on,
- *   IN  █   ->   █   ->   █      so the path zigzags instead of
- *   │   █        █        █      running straight through
- *   │            █
- *   └────────────┴────────────
+ *        x=0            x=7
+ *   y=0   IN IN            .     creeps drop in top-left
+ *        ███████████████   .     gap at the RIGHT
+ *         .            ↓
+ *         .  ████████████████    gap at the LEFT
+ *         ↓            .
+ *        ███████████████   .     gap at the RIGHT again
+ *   y=23         .     OUT OUT
  *
  * Templates are generated rather than stored as data because the shape is a
  * rule, not a set of numbers, and a rule stays correct if the grid is resized.
+ *
+ * Every generator stays inside rows ENTRANCE_ROW+1 .. EXIT_ROW-1. The end rows
+ * are reserved and a template tile there would be refused on every attempt,
+ * which the bot reads as "keep trying" rather than "skip".
  */
+
+/** First and last row a tower may occupy. */
+const FIRST_ROW = ENTRANCE_ROW + 1
+const LAST_ROW = EXIT_ROW - 1
 
 /**
  * Build a serpentine template.
  *
- * `gapAtTop` alternates per wall so the route has to climb and drop. Tiles are
- * emitted wall by wall, and within a wall from the lane rows outward, so a bot
- * that can only afford part of a wall still gets the part that matters — the
- * tiles nearest the creeps' path.
+ * `gapAtRight` alternates per wall so the route has to cross the lane and cross
+ * back. Tiles within a wall are emitted from the CLOSED end toward the gap —
+ * that is, starting from the side the previous wall's gap dumped the creeps
+ * onto. A half-built wall then still blocks the tiles the route is actually
+ * using; emitting from the gap end instead would leave the current route wide
+ * open until the very last tower, so the bot would pay for most of a wall and
+ * get nothing for it.
  */
-function serpentine(startX: number, spacing: number, walls: number): Tile[] {
+function serpentine(startY: number, spacing: number, walls: number): Tile[] {
   const out: Tile[] = []
   for (let w = 0; w < walls; w++) {
-    const x = startX + w * spacing
-    if (x >= GRID_W - 2) break
-    const gapAtTop = w % 2 === 0
+    const y = startY + w * spacing
+    if (y > LAST_ROW) break
+    const gapAtRight = w % 2 === 0
 
-    // Emit from the lane rows outward: those tiles are the ones the path
-    // actually has to negotiate, so a half-built wall is still a real detour.
-    const order: number[] = []
-    for (let d = 0; d < GRID_H; d++) {
-      const up = 11 - d
-      const down = 12 + d
-      if (up >= 0) order.push(up)
-      if (down < GRID_H) order.push(down)
-    }
-
-    for (const y of order) {
-      // Leave the gap open, or the placement is refused and the bot stalls
-      // retrying the same tile every decision.
-      if (gapAtTop && y <= 1) continue
-      if (!gapAtTop && y >= GRID_H - 2) continue
-      out.push({ x, y })
+    // Wall spans the full width bar one end tile. Emit from the closed end.
+    if (gapAtRight) {
+      for (let x = 0; x <= GRID_W - 2; x++) out.push({ x, y })
+    } else {
+      for (let x = GRID_W - 1; x >= 1; x--) out.push({ x, y })
     }
   }
   return out
 }
 
 /**
- * Posts: short walls centred on the lane rows, alternating anchor.
+ * Posts: short walls that cross the middle of the lane, alternating anchor.
  *
- * A tooth has to cross BOTH lane rows or it does nothing at all. The first
- * draft anchored teeth at the top and bottom edges and stopped short of the
- * middle, which left rows 11 and 12 clear from spawn to exit — creeps walked
- * straight through and the maze length was identical to an empty lane. The test
- * that measures path length caught it.
+ * A tooth has to cross the CENTRE COLUMNS or it does nothing at all. The
+ * horizontal version of this had teeth anchored at both edges that stopped
+ * short of the middle, which left a clear channel from spawn to exit and made
+ * the maze exactly as long as an empty lane. The test that measures path length
+ * caught it, and the same trap exists rotated: a tooth from the left that stops
+ * at x=2 is decoration.
  *
- *       gap
- *      ┌───┐
- *      │   █  <- post crosses the lane rows
- *   IN ┤   █      leaving one side open
- *      │   █
- *      └───┘
- *       gap
+ *   ████████░░░░    from the left, past centre, right side open
+ *   ░░░░████████    from the right, past centre, left side open
  *
  * Cheaper per tower than a full serpentine wall and it never risks sealing,
  * which suits a bot that spends most of its gold on sending.
  */
-function posts(startX: number, spacing: number, count: number, reach: number): Tile[] {
+function posts(startY: number, spacing: number, count: number, reach: number): Tile[] {
   const out: Tile[] = []
+  // The two central columns. A tooth must cover both to be worth its gold.
+  const midRight = GRID_W >> 1
+  const midLeft = midRight - 1
   for (let p = 0; p < count; p++) {
-    const x = startX + p * spacing
-    if (x >= GRID_W - 2) break
-    const fromTop = p % 2 === 0
-    // Span from one side across the lane rows, leaving the other side open.
-    const from = fromTop ? Math.max(1, 12 - reach) : 11
-    const to = fromTop ? 12 : Math.min(GRID_H - 2, 11 + reach)
-    for (let y = from; y <= to; y++) out.push({ x, y })
+    const y = startY + p * spacing
+    if (y > LAST_ROW) break
+    const fromLeft = p % 2 === 0
+    const from = fromLeft ? Math.max(0, midRight - reach) : midLeft
+    const to = fromLeft ? midRight : Math.min(GRID_W - 1, midLeft + reach)
+    for (let x = from; x <= to; x++) out.push({ x, y })
   }
   return out
 }
@@ -97,10 +96,15 @@ export interface MazeTemplate {
   readonly tiles: readonly Tile[]
 }
 
+/**
+ * Spacings are in rows now, not columns. A wall every 3 rows over 22 buildable
+ * rows is 7 walls of 7 towers — 49 towers, inside the 30-60 a full maze on this
+ * board is meant to cost.
+ */
 export const MAZE_TEMPLATES: readonly MazeTemplate[] = [
-  { name: 'serpentine', tiles: serpentine(6, 5, 6) },
-  { name: 'tight serpentine', tiles: serpentine(5, 4, 8) },
-  { name: 'posts', tiles: posts(6, 4, 8, 8) },
+  { name: 'serpentine', tiles: serpentine(FIRST_ROW + 1, 3, 8) },
+  { name: 'tight serpentine', tiles: serpentine(FIRST_ROW, 2, 12) },
+  { name: 'posts', tiles: posts(FIRST_ROW + 1, 2, 11, 4) },
 ]
 
 export function templateAt(index: number): MazeTemplate {

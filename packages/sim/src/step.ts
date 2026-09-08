@@ -5,7 +5,7 @@ import {
   Dir,
   tileIndex,
   inBounds,
-  isSpawnIndex,
+  isReservedIndex,
   isExitIndex,
 } from './grid'
 import {
@@ -145,7 +145,9 @@ export function checkBuild(
   const lane = state.lanes[player] as Lane
   const i = tileIndex({ x, y })
   if (lane.blocked[i] === 1) return { refusal: Refusal.Occupied, mazeAfter: 0 }
-  if (isSpawnIndex(i) || isExitIndex(i)) return { refusal: Refusal.SpawnOrExit, mazeAfter: 0 }
+  // The whole entrance row and the whole exit row, not just the four tiles that
+  // spawn and drain. See isReservedIndex.
+  if (isReservedIndex(i)) return { refusal: Refusal.SpawnOrExit, mazeAfter: 0 }
   if ((state.players[player] as Player).gold < levelOf(tower, 1).cost) {
     return { refusal: Refusal.NotEnoughGold, mazeAfter: 0 }
   }

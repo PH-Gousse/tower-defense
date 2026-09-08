@@ -36,6 +36,48 @@ per maze by running probe creeps through the real simulation rather than modelli
 
 ## P0 — the next one
 
+### ~~Tower range was still tuned for the 40-wide lane~~ — fixed by halving it
+The lane turned vertical and shrank to **8 × 24**. Geometry only — not one balance number
+changed — but the balance moved anyway, because tower *range* is measured in tiles and the board
+lost 80% of its cells. A range-6 single-target covered three quarters of the lane's width.
+Towers came out roughly twice as gold-efficient, and the step-8 fixes for "defence outscales
+offence" and "the match is too long" both regressed part of the way back.
+
+Every range halved (single 6.0/6.5/7.0 → 3.0/3.25/3.5, splash 3.0/3.4/3.8 → 1.5/1.7/1.9, slow
+4.5/4.8/5.2 → 2.25/2.4/2.6), which restored the old board's shape almost exactly. Mirror
+bot-vs-bot, `pnpm --filter @ltw/harness start`:
+
+|                    | 40 × 24, range 6 | 8 × 24, range 6 | 8 × 24, range 3 |
+|--------------------|------------------|-----------------|-----------------|
+| match length       | 10,478 ticks (8.7 min) | 13,820 (11.5 min) | **10,356 (8.6 min)** |
+| first life lost    | ~minute 4        | ~minute 8       | **~minute 3**   |
+| final income       | 2,731            | 10,017,920      | **2,731**       |
+| sends per player   | 10               | 52              | **10**          |
+| peak creeps        | 24               | 248             | **24**          |
+
+The ten-million income was the tell: neither maze could be broken for eight minutes, so both
+sides climbed the tier ladder until the numbers stopped meaning anything. `pnpm --filter
+@ltw/harness lap` said the same thing in damage — max lap damage went 157,000 for ~39,400g on
+the old board (4.0 per gold), to 113,232 for 14,500g on the new one (7.8 per gold), and now to
+40,824 for 14,500g (2.8 per gold). Lower per gold than the old board, but not comparable
+directly: the lane is shorter, so a creep spends fewer ticks inside any tower's circle.
+
+The ladder stayed monotone (`has a transitive difficulty ladder` is green) and the whole harness
+suite dropped from 57s to 12s, which is itself a measurement: matches resolve instead of
+grinding. `towers.json` version went 1 → 2, because `versionsMatch` gates peers and two clients
+whose towers deal different damage have desynced.
+
+Two smaller things the same pass turned up, both still open:
+
+- `measureLapDamage` and `runGauntlet` fortify from `templateAt(0)`, which is 49 tiles on this
+  board, so their 50x / 80x / 120x rows all report the same number. That is honest — a
+  serpentine on 8 × 24 tops out at 49 towers, which is the intended 30-60 maze size — but the
+  instruments should print "saturated" rather than three identical rows. **Priority: P2.**
+- `gauntlet-run` prints the maze length of the *first* defence in each row (6 towers, which does
+  not lengthen the path yet), so the column reads 29 for every creep and looks broken. It should
+  print per-defence or say which one it means. **Priority: P2.**
+
+
 ### ~~Matches are long, and the whole contest happens in the last minute~~ — fixed
 Mirror matches ran 31 minutes with both players untouched on all 20 lives until minute 29, then
 collapsed inside 90 seconds. Now 6-10 minutes, with lives leaving the board from minute 3.

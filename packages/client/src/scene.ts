@@ -213,20 +213,38 @@ export function createScene(
   // than the near end, which is exactly wrong for a game about reading a maze.
   /**
    * Side-by-side layout. Your lane occupies 0..GRID_W; the opponent's sits to
-   * the right of it at OPP_SCALE, and the camera frames both.
+   * the right of it across OPP_GAP, at the same size, and the camera frames
+   * both.
+   *
+   * Both boards render full size because the lane is 8 wide: two of them plus
+   * the gap is 20 tiles across, against 24 down, so the pair is roughly square
+   * and fits any laptop. That is what the narrow lane bought. The horizontal
+   * 40 x 24 lane could not do this -- two of those was 2080px and forced the
+   * opponent's board down to 40% scale, where reading their maze to counter-pick
+   * was an open question. It is not a question any more.
    *
    * These are module-level rather than inline because the camera framing and
    * the opponent group have to agree on them exactly. They did not on the first
    * pass -- the camera still centred on your lane alone, so the opponent's board
    * hung off the right edge of the screen and only a sliver of it was visible.
    */
-  const OPP_SCALE = 0.4
-  const OPP_GAP = 3
-  const CONTENT_W = GRID_W + OPP_GAP + GRID_W * OPP_SCALE
+  const OPP_GAP = 4
+  const CONTENT_W = GRID_W * 2 + OPP_GAP
   const CONTENT_CX = CONTENT_W / 2
 
+  /**
+   * Near top-down, unlike the old horizontal board.
+   *
+   * The tilt foreshortens whichever axis it leans along, and that axis is now
+   * the 24-tile length of the lane rather than its width. At the old 57 degrees
+   * a vertical lane rendered visibly squashed; 75 degrees costs 3% of the
+   * length and keeps enough angle for tower height to read as height.
+   */
+  const CAM_UP = 30
+  const CAM_BACK = 8
+
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200)
-  camera.position.set(CONTENT_CX, 26, GRID_H / 2 + 17)
+  camera.position.set(CONTENT_CX, CAM_UP, GRID_H / 2 + CAM_BACK)
   camera.lookAt(CONTENT_CX, 0, GRID_H / 2)
 
   scene.add(new THREE.AmbientLight(0xffffff, 1.5))
@@ -346,21 +364,19 @@ export function createScene(
   let leakTrailUntil = 0
 
   /**
-   * The opponent's lane, drawn small beside yours.
+   * The opponent's lane, drawn beside yours at the same size.
    *
    * Counter-picking is premise-level — "you see their maze and send what
-   * exploits it" — so their board cannot be hidden. It sits at 40% scale
-   * because two full 40x24 lanes side by side would be 2080px wide and would
-   * not fit a laptop. Whether 40% is enough to actually read their maze is an
-   * open question in the design doc, and the first thing to check in play.
+   * exploits it" — so their board cannot be hidden, and it cannot be squinted
+   * at either. Same tile size, same tower geometry, different colours: the only
+   * difference between the two boards is that you cannot click theirs.
    */
   const oppGroup = new THREE.Group()
-  oppGroup.scale.setScalar(OPP_SCALE)
-  oppGroup.position.set(GRID_W + OPP_GAP, 0, (GRID_H * (1 - OPP_SCALE)) / 2)
+  oppGroup.position.set(GRID_W + OPP_GAP, 0, 0)
   scene.add(oppGroup)
 
-  // A frame, so the small board reads as a second board rather than as a dark
-  // smudge at the edge of yours.
+  // A frame, so the second board reads as a board of its own rather than as a
+  // continuation of yours across the gap.
   const oppFrame = new THREE.LineSegments(
     new THREE.EdgesGeometry(new THREE.PlaneGeometry(GRID_W + 1, GRID_H + 1)),
     new THREE.LineBasicMaterial({ color: 0x39424d }),
@@ -377,6 +393,13 @@ export function createScene(
   oppGround.position.set(GRID_W / 2, 0, GRID_H / 2)
   oppGroup.add(oppGround)
 
+  // Same grid and the same IN/OUT markers as your own board. At 40% scale these
+  // were noise; at full size they are what lets you count the gap in their maze
+  // and pick the creep that walks it.
+  oppGroup.add(gridLines(0x1e232a))
+  for (const t of SPAWN_TILES) oppGroup.add(marker(t, 0x1f5d48))
+  for (const t of EXIT_TILES) oppGroup.add(marker(t, 0x7d332e))
+
   const oppTowers = new THREE.InstancedMesh(
     new THREE.BoxGeometry(TILE * 0.82, TOWER_H, TILE * 0.82),
     new THREE.MeshLambertMaterial({ color: 0x6a7079 }),
@@ -387,7 +410,7 @@ export function createScene(
   oppGroup.add(oppTowers)
 
   const oppCreeps = new THREE.InstancedMesh(
-    new THREE.SphereGeometry(CREEP_R, 8, 6),
+    new THREE.SphereGeometry(CREEP_R, 10, 8),
     new THREE.MeshLambertMaterial({ color: 0x9ac06a }),
     MAX_CREEPS,
   )
@@ -792,13 +815,13 @@ export function createScene(
   }
 }
 
-function gridLines(): THREE.LineSegments {
+function gridLines(color = 0x272c33): THREE.LineSegments {
   const pts: number[] = []
   for (let x = 0; x <= GRID_W; x++) pts.push(x, 0.01, 0, x, 0.01, GRID_H)
   for (let y = 0; y <= GRID_H; y++) pts.push(0, 0.01, y, GRID_W, 0.01, y)
   const geo = new THREE.BufferGeometry()
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3))
-  return new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0x272c33 }))
+  return new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color }))
 }
 
 function marker(t: Tile, color: number): THREE.Mesh {

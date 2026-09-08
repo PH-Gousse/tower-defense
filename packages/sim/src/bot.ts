@@ -1,4 +1,4 @@
-import { GRID_W, tileIndex, tileX, tileY, SPAWN_INDICES, type Tile } from './grid'
+import { GRID_W, TILE_COUNT, tileIndex, tileX, tileY, SPAWN_INDICES, type Tile } from './grid'
 import { pathFrom } from './path'
 import {
   TowerKind,
@@ -466,7 +466,7 @@ function neighbours(tile: number): number[] {
   if (x < GRID_W - 1) out.push(tile + 1)
   out.push(tile + GRID_W)
   if (x > 0) out.push(tile - 1)
-  return out.filter((t) => t >= 0 && t < GRID_W * 24)
+  return out.filter((t) => t >= 0 && t < TILE_COUNT)
 }
 
 /**

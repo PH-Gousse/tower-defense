@@ -13,18 +13,24 @@ import {
 const empty = () => new Uint8Array(TILE_COUNT)
 const spawn = SPAWN_INDICES[0] as number
 
+/** A wall across the vertical lane. `gap` is the column left open, -1 to seal. */
+function wall(b: Uint8Array, y: number, gap: number): void {
+  for (let x = 0; x < GRID_W; x++) if (x !== gap) b[tileIndex({ x, y })] = 1
+}
+
 describe('pathFrom', () => {
-  it('walks an empty lane straight to the exit', () => {
+  it('walks an empty lane down to the exit', () => {
     const p = pathFrom(buildField(empty()), spawn)
     expect(p[0]).toBe(spawn)
     expect(EXIT_INDICES).toContain(p[p.length - 1])
-    // 39 steps from x=0 to x=39, so 40 tiles inclusive.
-    expect(p.length).toBe(GRID_W)
+    // Entrance (0,0) to exit (GRID_W-2, GRID_H-1): the drop plus the crossing,
+    // and one more because the route counts tiles rather than steps.
+    expect(p.length).toBe(GRID_H - 1 + (GRID_W - 2) + 1)
   })
 
   it('returns an empty route when the lane is sealed', () => {
     const b = empty()
-    for (let y = 0; y < GRID_H; y++) b[tileIndex({ x: 20, y })] = 1
+    wall(b, 12, -1)
     const f = buildField(b)
     expect(f.dist[spawn]).toBe(UNREACHABLE)
     expect(pathFrom(f, spawn)).toEqual([])
@@ -32,8 +38,8 @@ describe('pathFrom', () => {
 
   it('is exactly as long as the maze score claims', () => {
     const b = empty()
-    for (let y = 2; y < GRID_H; y++) b[tileIndex({ x: 12, y })] = 1
-    for (let y = 0; y < GRID_H - 2; y++) b[tileIndex({ x: 24, y })] = 1
+    wall(b, 8, GRID_W - 1)
+    wall(b, 16, 0)
     const f = buildField(b)
     const p = pathFrom(f, spawn)
     // dist counts steps; the route counts tiles, so it is one longer.
@@ -42,7 +48,7 @@ describe('pathFrom', () => {
 
   it('never revisits a tile — dist strictly decreases along the walk', () => {
     const b = empty()
-    for (let y = 4; y < 20; y++) b[tileIndex({ x: 15, y })] = 1
+    wall(b, 12, GRID_W - 1)
     const f = buildField(b)
     const p = pathFrom(f, spawn)
     expect(new Set(p).size).toBe(p.length)
@@ -56,7 +62,7 @@ describe('pathFrom', () => {
     const long = pathFrom(buildField(empty()), spawn, out)
     const lenLong = long.length
     const b = empty()
-    for (let y = 0; y < GRID_H; y++) b[tileIndex({ x: 20, y })] = 1
+    wall(b, 12, -1)
     const sealed = pathFrom(buildField(b), spawn, out)
     expect(lenLong).toBeGreaterThan(0)
     expect(sealed.length).toBe(0)

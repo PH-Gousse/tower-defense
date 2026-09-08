@@ -81,11 +81,26 @@ This section is the spec. Everything above is rationale.
 
 ### World
 
-- **Two lanes**, one per player, mirrored. Each is a **40 × 24 tile** grid.
-- **Spawn:** tiles at `x=0, y=11..12`. **Exit:** tiles at `x=39, y=11..12`.
-- You build only in your own lane. You can see both — your own at full size, the opponent's
-  as a live scaled view (see Interface).
+- **Two lanes**, one per player, mirrored and **vertical**: creeps enter at the top and walk
+  down. Each is an **8 × 24 tile** grid, the AI's lane exactly as large as yours.
+- **Spawn:** tiles at `x=0..1, y=0`. **Exit:** tiles at `x=6..7, y=23`. Opposite sides, so the
+  bare-lane route is diagonal — 29 steps rather than the 23 a straight drop would give.
+- **The entrance row and the exit row are reserved**: no tower may be placed on either, so a
+  creep never appears inside a wall and exit detection never has to reason about one.
+- You build only in your own lane. You see both, **both at full size** (see Interface).
 - **Tower footprint:** 1 × 1. A tile holds at most one tower.
+
+  *Why 8 × 24.* Width controls how rich a maze can be, length controls pace; change one at a
+  time. A bare lane is ~29 tiles, about 15s at 2 tiles/s, so a single untouched runner costs at
+  most one life per income tick — the pace at which a leak is dangerous but answerable. A full
+  serpentine measures 100 tiles, a 3.5x spread, which is enough for mazing to be decisive
+  without a lap taking three minutes. 192 cells means a realistic maze is 30–60 towers: a
+  sensible gold sink, cheap to render, and small enough that the block check (a BFS from the
+  exit) stays negligible on every placement. At 8 wide a range-3 tower covers three passes of
+  the maze at once, which is what makes placement a decision rather than a uniform tiling. And
+  1:3 is the ratio that lets two lanes sit side by side on a laptop and one fill a phone.
+  This replaced a horizontal 40 × 24 lane, which was the same 24-tile pace with 5x the cells,
+  no diagonal, and no room to show the opponent's board at a readable size.
 - **Creeps** do not collide and do not block tiles. Only towers are obstacles.
 - **Creep ownership vs location:** a creep has an `owner` (the sender, for scoring) and a
   `lane` (the defender's field, where it physically exists). A creep never appears in its
@@ -645,11 +660,17 @@ Testing: **Vitest**, running the sim headlessly with no browser at all.
 Reference layout: `docs/designs/duel-screen-wireframe.png`, source in
 `duel-screen-wireframe.html` beside it so it stays regenerable.
 
-**Screen budget.** Two 40 × 24 lanes side by side at 26px would be 2080px wide and does not fit
-a laptop. So: **your lane renders at full size; the opponent's renders as a live scaled view**
-at roughly 40%. Whether a scaled view carries the counter-picking read — premise-level, "you
-see their maze and send what exploits it" — is genuinely open and is the first thing to check
-once it renders (Open Q5).
+**Screen budget.** Two 8 × 24 lanes side by side, with a 4-tile gap, is 20 tiles across against
+24 down: roughly square, and about 520px at 26px per tile. So **both boards render at full
+size**, same tiles, same tower geometry, differing only in colour and in the fact that you
+cannot click theirs. This is the payoff for the narrow lane. The horizontal 40 × 24 board could
+not do it — two of those was 2080px, which forced the opponent's lane down to a 40% scaled view
+and left "does a scaled view carry the counter-picking read" as an open question. The question
+is closed by removing the scaling.
+
+The camera is near top-down (75°) rather than the old 57°. An orthographic tilt foreshortens
+whichever axis it leans along, and that axis is now the 24-tile *length* of the lane instead of
+its width, so the old angle visibly squashed the board.
 
 Load-bearing decisions, recorded so they survive the picture:
 
@@ -784,8 +805,9 @@ v1 so tuning is measured rather than felt, but expect tuning to take as long aga
    creep tier, or a cap on creep HP growth.
 5. **Reconnect.** v1 ends the match on socket close, and a deploy kills live matches. The main
    reason to adopt Colyseus at v2.
-6. **Does a scaled opponent view carry counter-picking?** Premise-level read on a 40%-scale
-   lane. Check as soon as it renders.
+6. ~~**Does a scaled opponent view carry counter-picking?**~~ **Closed.** Narrowing the lane to
+   8 wide made two full-size boards fit, so there is no scaled view to read. The premise-level
+   read is now literal: their maze is drawn exactly as yours is.
 7. **Background-tab throttling.** Alt-tabbing stalls both players under lockstep. Visible overlay
    in v1; the strongest argument for an authoritative server at v2 — which the monorepo and the
    shared sim package make cheap when the time comes.
@@ -835,7 +857,7 @@ reconnect, teams.
 
 Resequenced so a URL exists on day one and the bot is playable before any netcode.
 
-1. **Skeleton, deployed.** pnpm workspace, Vite client, three.js scene with a 40 × 24 grid,
+1. **Skeleton, deployed.** pnpm workspace, Vite client, three.js scene with an 8 × 24 grid,
    click to place a box. Push to GitHub, wire Actions, deploy static. The project has a URL.
 2. **`packages/sim` with one creep walking a flow field.** `state.ts`, pure `step.ts` at 20Hz
    on a fixed accumulator, `field.ts` Dijkstra. Add the ESLint arithmetic and ordering bans now,

@@ -26,7 +26,12 @@ keeping its damage and its lap count. Nothing but tower damage removes it. Lap c
 pips on the creep, the route that produced a leak flashes red, and at zero lives the match
 ends. One creep your maze cannot kill is enough to lose.
 
-**Two lanes.** You defend yours and send creeps into your opponent's. Income arrives in a lump
+**Two lanes**, vertical, **8 × 24 tiles each** — the bot's exactly as large as yours, and both
+drawn at full size side by side, because you cannot counter-pick a maze you cannot read.
+Creeps enter top-left and leave bottom-right, so even a bare lane is a diagonal walk; the
+entrance and exit rows are reserved and never take a tower.
+
+You defend your lane and send creeps into your opponent's. Income arrives in a lump
 every 15 seconds and the only way it grows is by sending, so every lump is a fork: towers to
 survive what is coming, or creeps to pressure them and compound. Turtling loses the money war;
 over-sending leaves you exposed. Killing a creep in your own lane pays a bounty, and stronger
