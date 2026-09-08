@@ -273,13 +273,13 @@ export function createScene(
     /**
      * Closer than the rig's default 14, which is useless on this board.
      *
-     * The clamp keeps the view inside the content, and pins the target to the
-     * centre on any axis where the view has grown wider than the content. On a
-     * 2:1 desktop the view is still 22.4 tiles wide at distance 14 against a
-     * 22-tile content rectangle -- just barely too wide -- so every attempt to
-     * zoom into your own maze snapped the camera back to the gap between the
-     * two boards. The horizontal clamp only starts to give below about 13.8;
-     * 8 leaves real room to lean in and read a corner of the maze.
+     * Originally a workaround: the clamp used to require the whole view to fit
+     * inside the content, and on a 2:1 desktop the view is still 22.4 tiles
+     * wide at distance 14 against a 22-tile rectangle, so every attempt to zoom
+     * into your own maze snapped the camera back to the gap between the boards.
+     * The clamp holds the target now instead of the view, so that trap is gone
+     * -- but 8 stays, because leaning in far enough to read a single corner of
+     * a maze is worth having on its own.
      */
     minDistance: 8,
     // Edge scrolling is off. It is right for an RTS with an opaque UI band at
@@ -646,7 +646,13 @@ export function createScene(
   renderer.domElement.addEventListener('pointerup', (ev) => {
     if (ev.pointerId !== tapId) return
     tapId = -1
-    if (rig.didPan(ev.pointerId)) return
+    // The gesture dragged the map, so it was not a build. It is also a
+    // deliberate camera move, which retires the automatic framing -- otherwise
+    // the next resize would yank the view back from wherever it was put.
+    if (rig.didPan(ev.pointerId)) {
+      cameraMoved = true
+      return
+    }
 
     const t = tileAt(ev.clientX, ev.clientY)
     if (!t) { select(null); return }
@@ -866,7 +872,9 @@ export function createScene(
     window.addEventListener(type, () => { cameraMoved = true }, { passive: true })
   }
   renderer.domElement.addEventListener('pointerdown', (ev) => {
-    // A left press is a build, not a camera move. Middle, right and touch are.
+    // A left PRESS may still turn out to be a build, so it does not retire the
+    // framing here; the pointerup above does that once the rig confirms it
+    // dragged. Middle, right and touch have no other meaning.
     if (ev.button !== 0 || ev.pointerType === 'touch') cameraMoved = true
   })
 
