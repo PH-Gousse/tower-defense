@@ -27,6 +27,7 @@ import {
   MAX_LEVEL,
   MatchResult,
   BOT_NORMAL,
+  Kind,
   type Tile,
   type FlowField,
   type BotConfig,
@@ -37,6 +38,23 @@ import { Driver } from './driver'
 import { PathLine } from './pathline'
 
 /** One line of plain English per refusal. The rule teaches itself or it does not exist. */
+/**
+ * Wire-level refusals, in the player's language.
+ *
+ * These come from the relay's shape check rather than from `step()`, so they
+ * are things the game's own rules have no words for -- a tick already used, a
+ * frame outside the window. A player should still be told something true.
+ */
+const REFUSAL_WIRE: Record<string, string> = {
+  'tick-taken': 'two commands landed on the same instant',
+  'tick-out-of-window': 'that arrived too late to be applied',
+  'wrong-seat': 'that command was for the other player',
+  'off-grid': 'that tile is off the board',
+  'bad-creep': 'that creep does not exist in this version',
+  'bad-tower': 'that tower does not exist in this version',
+  'not-playing': 'the match is not running',
+}
+
 const REFUSAL_TEXT: Record<Refusal, string> = {
   [Refusal.None]: '',
   [Refusal.OutOfBounds]: 'Outside the lane',
@@ -123,6 +141,8 @@ export interface Scene {
   readonly onTileHover: (cb: (h: HoverInfo) => void) => void
   readonly onStats: (cb: (s: Stats) => void) => void
   readonly onSelect: (cb: (sel: Selection | null) => void) => void
+  /** A predicted command was refused or lost. Tell the player, once. */
+  readonly onGhostFailed: (cb: (text: string) => void) => void
   readonly setTool: (tower: TowerKind) => void
   readonly send: (creep: number) => void
   readonly upgradeSelected: () => void
@@ -168,7 +188,13 @@ export function createScene(
 ): Scene {
   const driver = new Driver(0, bot)
   /** This client controls player 0 and defends lane 0. */
-  const ME = 0
+  /**
+   * The seat this client plays. Read through the driver rather than captured,
+   * because it is not known when the scene is built: it arrives from the relay
+   * in `welcome`, after the canvas exists. A captured constant meant seat 1
+   * rendered seat 0's lane and sent commands the relay refused.
+   */
+  const me = () => driver.me
 
   let renderer: THREE.WebGLRenderer
   try {
@@ -234,6 +260,28 @@ export function createScene(
     scene.add(mesh)
     towerMeshes.push(mesh)
   }
+
+  /**
+   * Pending towers, drawn translucent.
+   *
+   * A predicted tower must never look like a placed one. It is a promise the
+   * relay has not kept yet, and drawing it solid would mean the player cannot
+   * tell what their opponent can already see. Prediction is client-only and
+   * never enters the state hash.
+   */
+  const ghostMesh = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(TILE * 0.82, TOWER_H, TILE * 0.82),
+    new THREE.MeshLambertMaterial({
+      color: 0x9fd8ff,
+      transparent: true,
+      opacity: 0.34,
+      depthWrite: false,
+    }),
+    64,
+  )
+  ghostMesh.count = 0
+  ghostMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+  scene.add(ghostMesh)
 
   // Selection ring, and the range circle it implies.
   const selectRing = new THREE.Mesh(
@@ -387,6 +435,7 @@ export function createScene(
   let hoverCb: (h: HoverInfo) => void = () => {}
   let statsCb: (s: Stats) => void = () => {}
   let selectCb: (sel: Selection | null) => void = () => {}
+  let ghostCb: ((text: string) => void) | null = null
 
   function tileUnderPointer(ev: PointerEvent): Tile | null {
     const rect = renderer.domElement.getBoundingClientRect()
@@ -418,7 +467,7 @@ export function createScene(
     }
 
     const state = driver.current
-    const check = checkBuild(state, ME, t.x, t.y, tool, probeField)
+    const check = checkBuild(state, me(), t.x, t.y, tool, probeField)
     const allowed = check.refusal === Refusal.None
 
     hover.position.set(t.x + 0.5, 0.03, t.y + 0.5)
@@ -429,15 +478,15 @@ export function createScene(
       // checkBuild already rebuilt the field into probeField with this tile
       // blocked, so the route is there for the taking — no second rebuild.
       const i = tileIndex(t)
-      state.lanes[ME]!.blocked[i] = 1
-      buildField(state.lanes[ME]!.blocked, probeField)
-      state.lanes[ME]!.blocked[i] = 0
+      state.lanes[me()]!.blocked[i] = 1
+      buildField(state.lanes[me()]!.blocked, probeField)
+      state.lanes[me()]!.blocked[i] = 0
       candidatePath.set(pathFrom(probeField, SPAWN_INDICES[0] as number, routeScratch))
     } else {
       candidatePath.hide()
     }
 
-    const before = mazeLength(state.lanes[ME]!.field)
+    const before = mazeLength(state.lanes[me()]!.field)
     const delta =
       allowed && before !== UNREACHABLE && check.mazeAfter !== UNREACHABLE
         ? check.mazeAfter - before
@@ -475,12 +524,12 @@ export function createScene(
     const t = tileUnderPointer(ev)
     if (!t) { select(null); return }
     const state = driver.current
-    if (state.lanes[ME]!.towers.kind[tileIndex(t)] !== -1) {
+    if (state.lanes[me()]!.towers.kind[tileIndex(t)] !== -1) {
       select(t)
       return
     }
     select(null)
-    if (checkBuild(state, ME, t.x, t.y, tool, probeField).refusal === Refusal.None) {
+    if (checkBuild(state, me(), t.x, t.y, tool, probeField).refusal === Refusal.None) {
       driver.queueBuild(t.x, t.y, tool)
     }
   })
@@ -495,8 +544,8 @@ export function createScene(
     }
     const state = driver.current
     const i = tileIndex(t)
-    const kind = state.lanes[ME]!.towers.kind[i] as TowerKind
-    const level = state.lanes[ME]!.towers.level[i] as number
+    const kind = state.lanes[me()]!.towers.kind[i] as TowerKind
+    const level = state.lanes[me()]!.towers.level[i] as number
     const spec = levelOf(kind, level)
 
     selectRing.position.set(t.x + 0.5, 0.05, t.y + 0.5)
@@ -505,13 +554,13 @@ export function createScene(
     rangeRing.scale.set(spec.range, spec.range, 1)
     rangeRing.visible = true
 
-    const canUpgrade = checkUpgrade(state, ME, t.x, t.y) === Refusal.None
+    const canUpgrade = checkUpgrade(state, me(), t.x, t.y) === Refusal.None
     selectCb({
       tile: t,
       tower: kind,
       level,
       upgradeCost: level < MAX_LEVEL ? levelOf(kind, level + 1).cost : null,
-      sellValue: sellValue(state, ME, t.x, t.y),
+      sellValue: sellValue(state, me(), t.x, t.y),
       canUpgrade,
     })
   }
@@ -522,8 +571,45 @@ export function createScene(
    * Level is drawn as height so maze strength is readable without clicking:
    * a level 3 tower stands visibly taller than a level 1.
    */
+  /**
+   * Draw what is in flight, and retire what has resolved.
+   *
+   * Three outcomes, not two. A confirmed ghost simply disappears -- the real
+   * tower is already underneath it. A refused or lost one is reported once and
+   * removed, because a translucent tower left on screen forever is exactly how
+   * a game looks when it is ignoring your clicks, in the mechanic the player
+   * uses most.
+   */
+  function syncGhosts(): void {
+    let n = 0
+    for (const g of [...driver.ghosts]) {
+      if (g.state === 'confirmed') {
+        driver.clearGhost(g)
+        continue
+      }
+      if (g.state === 'refused' || g.state === 'lost') {
+        if (ghostCb) {
+          ghostCb(
+            g.state === 'lost'
+              ? 'Command lost on the way to your opponent — try again.'
+              : `Refused: ${REFUSAL_WIRE[g.reason ?? ''] ?? g.reason ?? 'unknown'}`,
+          )
+        }
+        driver.clearGhost(g)
+        continue
+      }
+      const cmd = g.cmd
+      if (cmd.kind !== Kind.Build || n >= 64) continue
+      scratch.makeTranslation(cmd.x + 0.5, TOWER_H / 2, cmd.y + 0.5)
+      ghostMesh.setMatrixAt(n, scratch)
+      n += 1
+    }
+    ghostMesh.count = n
+    ghostMesh.instanceMatrix.needsUpdate = true
+  }
+
   function syncTowers(): number {
-    const t = driver.current.lanes[ME]!.towers
+    const t = driver.current.lanes[me()]!.towers
     const counts = [0, 0, 0]
     for (let i = 0; i < TILE_COUNT; i++) {
       const kind = t.kind[i] as number
@@ -548,8 +634,8 @@ export function createScene(
 
   /** Draw creeps between the previous and current tick. */
   function syncCreeps(alpha: number): void {
-    const curr = driver.current.lanes[ME]!.creeps
-    const prev = driver.previous.lanes[ME]!.creeps
+    const curr = driver.current.lanes[me()]!.creeps
+    const prev = driver.previous.lanes[me()]!.creeps
     let pipCount = 0
     for (let i = 0; i < curr.count; i++) {
       const cx = curr.x[i] as number
@@ -592,7 +678,7 @@ export function createScene(
 
   /** Mirror the opponent's lane into its scaled group. */
   function syncOpponent(): void {
-    const lane = driver.current.lanes[1 - ME]!
+    const lane = driver.current.lanes[1 - me()]!
     let n = 0
     for (let i = 0; i < TILE_COUNT; i++) {
       if (lane.towers.kind[i] === -1) continue
@@ -635,6 +721,7 @@ export function createScene(
     onTileHover: (cb) => { hoverCb = cb },
     onStats: (cb) => { statsCb = cb },
     onSelect: (cb) => { selectCb = cb },
+    onGhostFailed: (cb) => { ghostCb = cb },
     setTool: (tower) => {
       tool = tower
       if (hovered) previewTile(hovered)
@@ -659,42 +746,43 @@ export function createScene(
         const state = driver.current
         if (ran > 0 && state.tick !== lastSyncedTick) {
           const towerCount = syncTowers()
+          syncGhosts()
           syncOpponent()
           lastSyncedTick = state.tick
-          currentPath.set(pathFrom(state.lanes[ME]!.field, SPAWN_INDICES[0] as number))
+          currentPath.set(pathFrom(state.lanes[me()]!.field, SPAWN_INDICES[0] as number))
           // Both of these go stale the moment the field or the gold changes.
           if (hovered) previewTile(hovered)
           if (selected) {
-            if (state.lanes[ME]!.towers.kind[tileIndex(selected)] === -1) select(null)
+            if (state.lanes[me()]!.towers.kind[tileIndex(selected)] === -1) select(null)
             else select(selected)
           }
           // A leak just happened: show the route that produced it. Comparing
           // leak counts is cheaper and more reliable than watching lap numbers
           // on individual creeps, which move between array slots as creeps die.
-          if (state.players[ME]!.leaks > lastLeaks) {
-            leakTrail.set(pathFrom(state.lanes[ME]!.field, SPAWN_INDICES[0] as number))
+          if (state.players[me()]!.leaks > lastLeaks) {
+            leakTrail.set(pathFrom(state.lanes[me()]!.field, SPAWN_INDICES[0] as number))
             leakTrailUntil = state.tick + 60
           }
-          lastLeaks = state.players[ME]!.leaks
+          lastLeaks = state.players[me()]!.leaks
           if (state.tick > leakTrailUntil) leakTrail.hide()
 
-          const maze = mazeLength(state.lanes[ME]!.field)
+          const maze = mazeLength(state.lanes[me()]!.field)
           statsCb({
             towers: towerCount,
-            creeps: state.lanes[ME]!.creeps.count,
+            creeps: state.lanes[me()]!.creeps.count,
             maze: maze === UNREACHABLE ? -1 : maze,
             tick: state.tick,
-            gold: state.players[ME]!.gold,
-            kills: state.players[ME]!.kills,
-            lives: state.players[ME]!.lives,
-            leaks: state.players[ME]!.leaks,
-            income: state.players[ME]!.income,
+            gold: state.players[me()]!.gold,
+            kills: state.players[me()]!.kills,
+            lives: state.players[me()]!.lives,
+            leaks: state.players[me()]!.leaks,
+            income: state.players[me()]!.income,
             result: state.result,
             winner: state.winner,
-            oppLives: state.players[1 - ME]!.lives,
-            oppCreeps: state.lanes[1 - ME]!.creeps.count,
+            oppLives: state.players[1 - me()]!.lives,
+            oppCreeps: state.lanes[1 - me()]!.creeps.count,
             desync: driver.desync,
-            peerLag: driver.lockstep ? driver.peerLag(ME) : 0,
+            peerLag: driver.lockstep ? driver.peerLag(me()) : 0,
           })
         }
         syncCreeps(driver.alpha)

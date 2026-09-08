@@ -41,6 +41,23 @@ import {
 /** Catch-up ceiling. Without it, a long stall tries to replay every missed tick at once. */
 const MAX_CATCHUP_TICKS = 10
 
+export type GhostState = 'pending' | 'confirmed' | 'refused' | 'lost'
+
+export interface Ghost {
+  readonly cmd: Command
+  readonly stampedFor: number
+  state: GhostState
+  reason: string | null
+}
+
+/** Same seat, same tick, same action. Enough to match a frame we sent. */
+function sameCommand(a: Command, b: Command): boolean {
+  if (a.player !== b.player || a.kind !== b.kind || a.tick !== b.tick) return false
+  if (a.kind === Kind.Send && b.kind === Kind.Send) return a.creep === b.creep
+  if ('x' in a && 'x' in b) return a.x === b.x && a.y === b.y
+  return true
+}
+
 export class Driver {
   private a: GameState = createState()
   private b: GameState = createState()
@@ -76,9 +93,33 @@ export class Driver {
    * @param bot  config for the opponent, or null for an idle opponent
    */
   constructor(
-    readonly me: 0 | 1 = 0,
+    private meSeat: 0 | 1 = 0,
     private bot: BotConfig | null = BOT_NORMAL,
   ) {}
+
+  /** The player this client controls. Lane `me` is the one you defend. */
+  get me(): 0 | 1 {
+    return this.meSeat
+  }
+
+  /**
+   * Adopt the seat the relay assigned.
+   *
+   * The scene is built before anyone knows which seat they will get -- it has
+   * to be, so that a missing WebGL context fails before the player invests
+   * anything -- so the seat arrives later, in `welcome`. Defaulting to 0 and
+   * never updating it meant the second player to join sent every command
+   * stamped `player: 0`, and the relay refused all of them as speaking for the
+   * other seat. On screen that was a ghost tower that appeared and then faded
+   * with a refusal, every single time.
+   *
+   * Only legal before the first tick: changing seats mid-match would mean the
+   * two clients disagree about who owns which lane.
+   */
+  setSeat(seat: 0 | 1): void {
+    if (this.a.tick > 0) throw new Error('the seat cannot change once a match has started')
+    this.meSeat = seat
+  }
 
   /**
    * Swap the opponent. Meant to be called once, before `start()`, from the
@@ -115,7 +156,7 @@ export class Driver {
   }
 
   queueBuild(x: number, y: number, tower: TowerKind): void {
-    this.queue({ tick: 0, player: this.me, kind: Kind.Build, tower, x, y })
+    this.queue({ tick: 0, player: this.meSeat, kind: Kind.Build, tower, x, y })
   }
 
   /**
@@ -131,25 +172,80 @@ export class Driver {
   private queue(cmd: Command): void {
     if (this.buffer && this.emit) {
       // Stamp for a tick this client has not simulated and cannot have promised
-      // to be empty.
-      const at = this.a.tick + this.delay
-      this.emit({ ...cmd, tick: at })
+      // to be empty -- and one the relay will accept, which means one this seat
+      // has not already claimed. The relay takes exactly one input per player
+      // per tick, so two clicks inside the same 50ms would silently lose the
+      // second. Drag-placing a run of towers is the core verb of the game, so
+      // the extra clicks move to the next free tick rather than vanishing.
+      let at = this.a.tick + this.delay
+      while (this.claimed.has(at)) at += 1
+      this.claimed.add(at)
+      const stamped = { ...cmd, tick: at }
+      this.pendingGhosts.push({ cmd: stamped, stampedFor: at, state: 'pending', reason: null })
+      this.emit(stamped)
       return
     }
     this.pending.push({ ...cmd, tick: this.a.tick + 1 })
   }
 
+  /** Predicted commands still in flight, for the renderer to draw as ghosts. */
+  get ghosts(): readonly Ghost[] {
+    return this.pendingGhosts
+  }
+
+  /**
+   * The relay refused one of our frames. Fade that ghost with the reason.
+   *
+   * Matched by tick because a seat may only have one command per tick, so the
+   * tick identifies the frame uniquely without the relay having to echo it back.
+   */
+  refuseGhost(tick: number, reason: string): void {
+    for (const g of this.pendingGhosts) {
+      if (g.stampedFor === tick && g.state === 'pending') {
+        g.state = 'refused'
+        g.reason = reason
+      }
+    }
+  }
+
+  /** Drop a ghost the UI has finished animating out. */
+  clearGhost(g: Ghost): void {
+    const i = this.pendingGhosts.indexOf(g)
+    if (i >= 0) this.pendingGhosts.splice(i, 1)
+  }
+
+  /**
+   * Resolve ghosts against a tick that has just been simulated.
+   *
+   * Three outcomes, not two, and the third is the one worth not skipping. Once
+   * the sim has passed the tick a ghost was stamped for with no matching
+   * command applied, that command is provably gone — the relay dropped it or
+   * the socket ate it — and saying so beats leaving a translucent tower on
+   * screen forever, which looks exactly like a game ignoring your clicks.
+   *
+   * No timer is needed: the client knows the delay and the tick, so expiry is
+   * a comparison.
+   */
+  private resolveGhosts(tick: number, applied: readonly Command[]): void {
+    for (const g of this.pendingGhosts) {
+      if (g.stampedFor !== tick || g.state !== 'pending') continue
+      const landed = applied.some((c) => sameCommand(c, g.cmd))
+      g.state = landed ? 'confirmed' : 'lost'
+    }
+    this.claimed.delete(tick)
+  }
+
   queueUpgrade(x: number, y: number): void {
-    this.queue({ tick: 0, player: this.me, kind: Kind.Upgrade, x, y })
+    this.queue({ tick: 0, player: this.meSeat, kind: Kind.Upgrade, x, y })
   }
 
   queueSell(x: number, y: number): void {
-    this.queue({ tick: 0, player: this.me, kind: Kind.Sell, x, y })
+    this.queue({ tick: 0, player: this.meSeat, kind: Kind.Sell, x, y })
   }
 
   /** Send a creep into the opponent's lane. Raises your income permanently. */
   queueSend(creep: number): void {
-    this.queue({ tick: 0, player: this.me, kind: Kind.Send, creep })
+    this.queue({ tick: 0, player: this.meSeat, kind: Kind.Send, creep })
   }
 
   /** The lane you defend. */
@@ -201,7 +297,19 @@ export class Driver {
   private lastWatermarkSent = -1
   private emit: ((cmd: Command) => void) | null = null
   private emitWatermark: ((tick: number) => void) | null = null
-  private peerStalledSince = -1
+  /**
+   * Commands sent to the relay that have not come back yet.
+   *
+   * Inputs apply `delay` ticks late — 200ms on a good connection, up to a
+   * second on a bad one — and `step()` is the only authority on whether they
+   * were legal. Without prediction the game ignores your click for a fifth of a
+   * second in the mechanic you use most, which does not read as latency; it
+   * reads as broken.
+   */
+  private readonly pendingGhosts: Ghost[] = []
+
+  /** Ticks this client has already stamped a command for, in lockstep. */
+  private readonly claimed = new Set<number>()
 
   /**
    * Switch into lockstep. Called on `start` from the relay, before tick 0.
@@ -301,7 +409,8 @@ export class Driver {
         if (!this.buffer.ready(this.a.tick)) break
       }
 
-      const commands = this.buffer ? this.buffer.take(this.a.tick) : this.pending
+      const atTick = this.a.tick
+      const commands = this.buffer ? this.buffer.take(atTick) : this.pending
       if (!this.buffer) this.pending = []
 
       // The bot is just another command source. It runs inside the same tick
@@ -332,6 +441,10 @@ export class Driver {
       // tick N -- the same convention on both peers, which is the only thing
       // that matters and the easiest thing to get subtly wrong.
       this.hashes.record(this.a)
+
+      // Prediction is client-only and never enters the state hash, so this runs
+      // strictly after the hash is taken.
+      if (this.buffer) this.resolveGhosts(atTick, commands)
 
       this.promise()
     }

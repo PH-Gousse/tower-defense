@@ -75,35 +75,27 @@ wish: hard finishes against easy with 8 lives and against normal with 15.
 
 ---
 
-### Local prediction is not built
-Step 10 shipped everything else in the networking design, but a placed tower currently appears
-only when the relay returns the command — `delay` ticks later, which is 200ms on a good
-connection and up to a second on a bad one. The design calls for a translucent pending ghost
-drawn immediately, using the same legality predicate `step()` uses, resolving three ways: solid
-on confirmation, faded with a reason on refusal, and faded with "command lost" once the sim
-passes the tick it was stamped for with nothing applied.
-
-That third outcome is the one worth not skipping. Without it a dropped frame leaves a
-translucent tower on screen forever and the game looks like it is ignoring clicks, in the
-mechanic the player uses most.
-
-**Trigger:** the first time you play a real opponent and placing feels laggy.
-**Effort:** M → M.
+### ~~Local prediction is not built~~ — built at step 11
+The ghost renders on click, the path preview updates as if the tower existed, a burst of
+clicks re-stamps onto free ticks rather than losing all but the first, and all three outcomes
+resolve: confirmed, refused with the reason, and lost once the sim passes the stamped tick with
+nothing applied. Prediction never enters the state hash, which is asserted.
 
 ---
 
-### The relay is built but not deployed
-`pnpm --filter @ltw/server deploy` needs a Cloudflare account. Until it runs, "Create a room"
-in the client reports that it cannot reach the relay. Verified working locally against
-`wrangler dev`: two clients, 900 ticks, identical hashes, concede ending both sides.
+### The relay is deployed by hand, and a deploy kills live matches
+Two things to know before inviting anyone:
 
-Set `VITE_RELAY` at build time to point the client somewhere other than the default
-`wss://ltw-relay.workers.dev`.
+- `wrangler login` then `pnpm --filter @ltw/server deploy`. Build the client with
+  `VITE_RELAY=wss://<your-worker>` so it points at the deploy.
+- There is no reconnect in v1 and the version handshake refuses mismatched builds, so
+  **deploying mid-session ends every live match**. Deploy when nobody is playing.
 
-**Trigger:** before playing anyone who is not on your machine.
+**Trigger:** now, before step 11 can actually happen.
 **Effort:** S → S.
 
 ---
+
 
 ### A backgrounded tab freezes the simulation completely
 Measured while verifying step 9: a Chrome tab that is not visible gets **zero** animation

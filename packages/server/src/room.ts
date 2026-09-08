@@ -56,20 +56,36 @@ export interface Outbound {
   readonly msg: ServerMsg
 }
 
-type Phase = 'lobby' | 'pinging' | 'playing' | 'ended'
+export type Phase = 'lobby' | 'pinging' | 'playing' | 'ended'
 
-interface Seat {
+export interface Seat {
   readonly seat: 0 | 1
   versions: Versions | null
   /** Round-trip samples in ms. */
-  readonly rtt: number[]
+  rtt: number[]
   pingsSent: number
   pendingPingAt: number
-  /** Highest tick this seat has spoken for, command or watermark. */
+  /**
+   * Highest tick this seat has spoken for, command or watermark.
+   *
+   * This single number also enforces one input per player per tick: a command
+   * is accepted only if its tick is strictly above the mark, and accepting it
+   * moves the mark. An earlier version kept a Set of claimed ticks, which was
+   * equivalent but grew without bound for the length of a match -- and, worse,
+   * could not be carried across a hibernation cheaply. Ticks only ever move
+   * forward, so one integer says the same thing.
+   */
   watermark: number
-  /** Ticks this seat has already used, so one input per player per tick holds. */
-  readonly claimed: Set<number>
   wantsRematch: boolean
+}
+
+/** Everything about a room that has to outlive a hibernation. */
+export interface RoomSnapshot {
+  readonly phase: Phase
+  readonly delay: number
+  readonly matchId: number
+  readonly startedAt: number
+  readonly seats: readonly Seat[]
 }
 
 export interface RoomDeps {
@@ -89,7 +105,40 @@ export class Room {
   constructor(
     readonly code: string,
     private readonly deps: RoomDeps,
-  ) {}
+    snapshot?: RoomSnapshot,
+  ) {
+    if (snapshot) this.restore(snapshot)
+  }
+
+  /**
+   * Everything that has to survive the object being evicted from memory.
+   *
+   * The Hibernation API is the reason an idle room costs nothing, and it means
+   * this object can be destroyed between any two messages and rebuilt when the
+   * next one arrives. Holding the seating in a field alone looked fine and was
+   * not: connect one player, wait, connect the second, and the second is seated
+   * as player 0 in a fresh room while the first waits forever for an opponent
+   * who is already there. It reproduced only with a human-length pause between
+   * the two joins, which is every real match and no fast test.
+   */
+  snapshot(): RoomSnapshot {
+    return {
+      phase: this.phase,
+      delay: this.delay,
+      matchId: this.matchId,
+      startedAt: this.startedAt,
+      seats: [...this.seats.values()],
+    }
+  }
+
+  private restore(s: RoomSnapshot): void {
+    this.phase = s.phase
+    this.delay = s.delay
+    this.matchId = s.matchId
+    this.startedAt = s.startedAt
+    this.seats.clear()
+    for (const seat of s.seats) this.seats.set(seat.seat, { ...seat, rtt: [...seat.rtt] })
+  }
 
   get seated(): number {
     return this.seats.size
@@ -128,7 +177,6 @@ export class Room {
       pingsSent: 0,
       pendingPingAt: 0,
       watermark: -1,
-      claimed: new Set(),
       wantsRematch: false,
     })
     const out: Outbound[] = [
@@ -258,7 +306,6 @@ export class Room {
     this.startedAt = this.deps.now()
     for (const s of this.seats.values()) {
       s.watermark = -1
-      s.claimed.clear()
       s.wantsRematch = false
     }
     return [
@@ -285,18 +332,25 @@ export class Room {
       maxTick: elapsedTicks + this.delay + TICK_SLACK,
     })
     if (!result.ok || !result.command) {
-      return [{ to: me.seat, msg: { t: 'dropped', reason: result.error ?? 'invalid' } }]
+      // Name the frame when we can read its tick, so the sender can fade the
+      // right ghost with a reason instead of waiting for it to expire.
+      const tick =
+        typeof raw === 'object' && raw !== null && Number.isInteger((raw as { tick?: unknown }).tick)
+          ? ((raw as { tick: number }).tick)
+          : undefined
+      return [{ to: me.seat, msg: { t: 'dropped', reason: result.error ?? 'invalid', tick } }]
     }
     const cmd = result.command
 
-    // Exactly one input per player per tick. Without this a client could stack
-    // two builds on one tick, and the peer -- which applies commands in the
-    // order they arrive within a tick -- could order them differently.
-    if (me.claimed.has(cmd.tick)) {
-      return [{ to: me.seat, msg: { t: 'dropped', reason: 'tick-taken' } }]
+    // Exactly one input per player per tick, and nothing stale. Without this a
+    // client could stack two builds on one tick, and the peer -- which applies
+    // commands in the order they arrive within a tick -- could order them
+    // differently. The watermark carries the rule: ticks only move forward, so
+    // "above the mark" is the same statement as "not already used".
+    if (cmd.tick <= me.watermark) {
+      return [{ to: me.seat, msg: { t: 'dropped', reason: 'tick-taken', tick: cmd.tick } }]
     }
-    me.claimed.add(cmd.tick)
-    if (cmd.tick > me.watermark) me.watermark = cmd.tick
+    me.watermark = cmd.tick
 
     // A real command carries its own watermark: everything below its tick is
     // now known to be empty for this seat.

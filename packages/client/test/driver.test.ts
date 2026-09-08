@@ -320,3 +320,125 @@ describe('lockstep mode', () => {
     expect(d.peerLag(1)).toBe(0)
   })
 })
+
+describe('local prediction', () => {
+  const lockstepDriver = (delay = 6) => {
+    const d = new Driver(0, null)
+    const sent: Command[] = []
+    d.advance(0)
+    d.goLockstep(delay, (c) => sent.push(c), () => {})
+    // Both seats promise far ahead, so ticks are never held up by strict wait
+    // and these tests measure prediction rather than the buffer.
+    d.receiveWatermark(0, 10_000)
+    d.receiveWatermark(1, 10_000)
+    return { d, sent }
+  }
+  const run = (d: Driver, frames: number, from = 0) => {
+    let t = from
+    for (let f = 0; f < frames; f++) { t += TICK_MS; d.advance(t) }
+    return t
+  }
+
+  it('shows a ghost the instant you click, not when the relay answers', () => {
+    const { d } = lockstepDriver()
+    d.queueBuild(6, 11, TowerKind.Single)
+    expect(d.ghosts).toHaveLength(1)
+    expect(d.ghosts[0]!.state).toBe('pending')
+    // And nothing is on the board yet: the relay has not returned it.
+    expect(d.current.lanes[0]!.towers.kind[tileIndex({ x: 6, y: 11 })]).toBe(-1)
+  })
+
+  it('retires the ghost once the real command lands', () => {
+    const { d, sent } = lockstepDriver()
+    d.queueBuild(6, 11, TowerKind.Single)
+    // The relay returns it to both clients, including this one.
+    d.receive(sent[0]!)
+    run(d, 30)
+    expect(d.ghosts.filter((g) => g.state === 'pending')).toHaveLength(0)
+    expect(d.current.lanes[0]!.towers.kind[tileIndex({ x: 6, y: 11 })]).not.toBe(-1)
+  })
+
+  it('marks a ghost LOST once its tick passes with nothing applied', () => {
+    // The third outcome, and the one worth not skipping. Without it a dropped
+    // frame leaves a translucent tower on screen forever and the game looks
+    // like it is ignoring clicks.
+    const { d } = lockstepDriver()
+    d.queueBuild(6, 11, TowerKind.Single)
+    const stamped = d.ghosts[0]!.stampedFor
+    run(d, stamped + 5)
+    expect(d.current.tick).toBeGreaterThan(stamped)
+    expect(d.ghosts[0]!.state).toBe('lost')
+  })
+
+  it('fades a ghost the relay explicitly refused, with the reason', () => {
+    const { d } = lockstepDriver()
+    d.queueBuild(6, 11, TowerKind.Single)
+    d.refuseGhost(d.ghosts[0]!.stampedFor, 'tick-taken')
+    expect(d.ghosts[0]!.state).toBe('refused')
+    expect(d.ghosts[0]!.reason).toBe('tick-taken')
+  })
+
+  it('re-stamps a burst of clicks onto free ticks instead of losing them', () => {
+    // The relay takes one input per player per tick, so two clicks inside the
+    // same 50ms would silently lose the second. Drag-placing a run of towers is
+    // the core verb of the game.
+    const { d, sent } = lockstepDriver()
+    d.queueBuild(6, 11, TowerKind.Single)
+    d.queueBuild(7, 11, TowerKind.Single)
+    d.queueBuild(8, 11, TowerKind.Single)
+    expect(sent).toHaveLength(3)
+    const ticks = sent.map((c) => c.tick)
+    expect(new Set(ticks).size).toBe(3)
+    for (let i = 1; i < ticks.length; i++) expect(ticks[i]!).toBeGreaterThan(ticks[i - 1]!)
+    expect(d.ghosts).toHaveLength(3)
+  })
+
+  it('does not predict against a bot, where there is nothing to predict', () => {
+    const d = new Driver(0, null)
+    d.advance(0)
+    d.queueBuild(6, 11, TowerKind.Single)
+    expect(d.ghosts).toHaveLength(0)
+  })
+
+  it('keeps prediction out of the state hash', () => {
+    // A pending tower is a promise, not a fact. If it reached the hash the two
+    // clients would disagree about the state of the match by design.
+    const { d } = lockstepDriver()
+    run(d, 5)
+    const before = d.hashes.entries().at(-1)!.hash
+    d.queueBuild(6, 11, TowerKind.Single)
+    expect(d.ghosts).toHaveLength(1)
+    expect(d.hashes.entries().at(-1)!.hash).toBe(before)
+  })
+})
+
+describe('seating', () => {
+  it('adopts the seat the relay assigns', () => {
+    // The scene is built before anyone knows which seat they get, so the seat
+    // arrives later. Defaulting to 0 and never updating meant the second player
+    // sent every command as player 0 and the relay refused all of them.
+    const d = new Driver(0, null)
+    d.setSeat(1)
+    expect(d.me).toBe(1)
+    const sent: Command[] = []
+    d.advance(0)
+    d.goLockstep(4, (c) => sent.push(c), () => {})
+    d.queueSend(0)
+    expect(sent[0]!.player).toBe(1)
+  })
+
+  it('defends the lane it was seated in', () => {
+    const d = new Driver(0, null)
+    d.setSeat(1)
+    expect(d.myLane).toBe(d.current.lanes[1])
+    expect(d.mySide).toBe(d.current.players[1])
+  })
+
+  it('refuses to change seats once a match is running', () => {
+    // Two clients disagreeing about who owns which lane is a desync by design.
+    const d = new Driver(0, null)
+    d.advance(0)
+    d.advance(TICK_MS)
+    expect(() => d.setSeat(1)).toThrow(/cannot change/)
+  })
+})

@@ -18,7 +18,7 @@ export interface NetEvents {
   onWatermark(player: 0 | 1, tick: number): void
   onEnded(reason: 'concede' | 'left', winner: 0 | 1): void
   onRefused(reason: string, detail?: string): void
-  onDropped(reason: string): void
+  onDropped(reason: string, tick?: number): void
   onPeer(present: boolean): void
   onRematch(seated: number): void
   onClosed(): void
@@ -89,7 +89,7 @@ export class Net {
         e.onRefused(msg.reason as string, msg.detail as string | undefined)
         break
       case 'dropped':
-        e.onDropped(msg.reason as string)
+        e.onDropped(msg.reason as string, msg.tick as number | undefined)
         break
       case 'peer':
         e.onPeer(msg.present as boolean)

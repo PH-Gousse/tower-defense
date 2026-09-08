@@ -281,6 +281,10 @@ window.addEventListener('keydown', (ev) => {
   saveDump('manual')
 })
 
+// A prediction that failed is worth a word: the tower the player thought they
+// placed is not there, and silence reads as the game ignoring them.
+scene.onGhostFailed((text) => toast(text))
+
 scene.onTileHover((h) => {
   if (tile) tile.textContent = h.tile ? `${h.tile.x}, ${h.tile.y}` : '—'
   if (!note) return
@@ -330,6 +334,10 @@ function connect(code: string): void {
   net = new Net(relayUrl(code), {
     onWelcome: (seat, roomCodeGiven) => {
       mySeat = seat
+      // Adopt the seat before a single tick runs. Without this the second
+      // player to join sends every command stamped for player 0 and the relay
+      // refuses all of them.
+      scene.driver.setSeat(seat)
       if (roomCode) roomCode.textContent = roomCodeGiven
       // A link is easier to send than six letters read down a phone.
       const url = new URL(window.location.href)
@@ -372,7 +380,10 @@ function connect(code: string): void {
       net?.close()
       net = null
     },
-    onDropped: (reason) => toast(`One input was dropped by the relay: ${reason}`),
+    onDropped: (reason, tick) => {
+      if (tick !== undefined) scene.driver.refuseGhost(tick, reason)
+      toast(`One input was dropped by the relay: ${reason}`)
+    },
     onPeer: (present) => netSay(present ? 'Opponent connected.' : 'Opponent left.'),
     onRematch: (seated) => netSay(seated < 2 ? 'Waiting for them to accept…' : 'Rematch starting…'),
     onClosed: () => {
@@ -450,7 +461,14 @@ function showEnding(): void {
 const BOTS: Record<string, BotConfig> = { easy: BOT_EASY, normal: BOT_NORMAL, hard: BOT_HARD }
 const startScreen = el('start')
 
-for (const b of Array.from(document.querySelectorAll<HTMLButtonElement>('#start button'))) {
+// `[data-bot]`, not every button on the start screen. Step 11 added "Create a
+// room" and "Join" inside the same panel, and a selector of `#start button`
+// silently bound the bot-match handler to those too -- so creating a room
+// started a single-player game against Normal at the same moment, behind the
+// lobby. It looked like the room had opened and the match had begun.
+for (const b of Array.from(
+  document.querySelectorAll<HTMLButtonElement>('#start button[data-bot]'),
+)) {
   b.addEventListener('click', () => {
     scene.setBot(BOTS[b.dataset.bot ?? 'normal'] ?? BOT_NORMAL)
     if (startScreen) startScreen.hidden = true

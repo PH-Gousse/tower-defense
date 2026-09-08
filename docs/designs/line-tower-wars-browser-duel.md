@@ -896,7 +896,23 @@ Resequenced so a URL exists on day one and the bot is playable before any netcod
     validation, version handshake, ordered relay with `None` watermarks, room codes,
     join-by-URL, socket close, out-of-band concede, rematch, local prediction with an input
     queue.
-11. **Play it with a friend.**
+11. **Play it with a friend.** **Ready, pending one command you have to run.** Local
+    prediction is built — the ghost tower, the client-side re-stamping of a burst of clicks
+    onto free ticks, and all three outcomes including "command lost", which is the one worth
+    not skipping. The lobby, join-by-URL, concede and rematch are wired and were exercised
+    against a real Worker.
+    Three bugs came out of actually opening it, and none of them could have been found any
+    other way. **The client never adopted its seat**: the scene is built before anyone knows
+    which seat they get, so player 1 sent every command stamped `player: 0` and the relay
+    refused all of them — on screen, a ghost tower that appeared and faded with a refusal,
+    every time. **The Durable Object forgot the room whenever it hibernated**, because the
+    seating lived in a field and hibernation is the whole reason the hosting is free; connect
+    one player, wait, connect the second, and the second was seated as player 0 in a fresh room
+    while the first waited for an opponent already present. It reproduced only with a
+    human-length pause between joins, which is every real match and no fast test. And
+    **"Create a room" also started a bot match**, because a selector of `#start button` had
+    quietly grown to include the new lobby buttons.
+    What is left is `wrangler login` and `pnpm --filter @ltw/server deploy`.
 
 Steps 1-7 need no server at all. The relay only appears at step 10, by which point you already
 know whether the game is worth networking.

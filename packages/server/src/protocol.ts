@@ -30,8 +30,15 @@ export type ServerMsg =
   | { readonly t: 'start'; readonly delay: number; readonly seed: number; readonly matchId: number }
   | { readonly t: 'cmd'; readonly cmd: Command }
   | { readonly t: 'wm'; readonly player: 0 | 1; readonly tick: number }
-  /** Your frame was refused. The match continues; you lost that one input. */
-  | { readonly t: 'dropped'; readonly reason: string }
+  /**
+   * Your frame was refused. The match continues; you lost that one input.
+   *
+   * `tick` identifies which frame, so the sender can fade the right pending
+   * ghost with a reason rather than leaving it on screen until it expires. A
+   * seat may only have one command per tick, so the tick is enough to name it.
+   * Absent when the frame was too malformed to have a readable tick.
+   */
+  | { readonly t: 'dropped'; readonly reason: string; readonly tick?: number }
   | { readonly t: 'ended'; readonly reason: EndReason; readonly winner: 0 | 1 }
   | { readonly t: 'peer'; readonly present: boolean }
   | { readonly t: 'rematch'; readonly seated: number }

@@ -207,3 +207,69 @@ describe('endings', () => {
     expect((start!.msg as { matchId: number }).matchId).toBe(2)
   })
 })
+
+describe('surviving hibernation', () => {
+  /**
+   * The Hibernation API is the whole reason an idle room costs nothing, and it
+   * means the object can be evicted between any two messages and rebuilt when
+   * the next arrives. Everything the room knows has to come back with it.
+   *
+   * This is not hypothetical. It shipped: one player created a room, the second
+   * joined forty seconds later, the object had been evicted in between, and the
+   * second was seated as player 0 in a brand new room while the first waited
+   * forever for an opponent who was already there. It reproduced only with a
+   * human-length pause between the joins — which is every real match, and no
+   * fast test.
+   */
+  const wake = (before: Room) =>
+    new Room(before.code, { now: () => Date.now(), seed: () => 0x1234 }, before.snapshot())
+
+  it('remembers who is seated', () => {
+    const a = new Room('ABCDEF', { now: () => 1000, seed: () => 1 })
+    expect(a.join().seat).toBe(0)
+    const b = wake(a)
+    expect(b.seated).toBe(1)
+    // The crucial one: the second player must get the OTHER seat.
+    expect(b.join().seat).toBe(1)
+  })
+
+  it('remembers the version handshake, so pinging is not restarted', () => {
+    const a = new Room('ABCDEF', { now: () => 1000, seed: () => 1 })
+    a.join(); a.join()
+    a.receive(0, { t: 'hello', versions: localVersions() })
+    const b = wake(a)
+    // Seat 0 already said hello; seat 1's hello alone should begin pinging.
+    expect(msgs(b.receive(1, { t: 'hello', versions: localVersions() }), 'ping').length)
+      .toBeGreaterThan(0)
+  })
+
+  it('remembers the negotiated delay and the phase', () => {
+    const h = playing(200, 200)
+    const b = wake(h.room)
+    expect(b.state).toBe('playing')
+    expect(b.agreedDelay).toBe(h.room.agreedDelay)
+  })
+
+  it('remembers each seat’s watermark, so a stale tick is still refused', () => {
+    const h = playing(0, 0)
+    h.room.receive(0, { t: 'wm', tick: 60 })
+    const b = wake(h.room)
+    // A command at or below the mark was already accounted for.
+    const stale = b.receive(0, { t: 'cmd', cmd: { tick: 60, player: 0, kind: Kind.Send, creep: 0 } })
+    expect(stale[0]!.msg).toMatchObject({ t: 'dropped', reason: 'tick-taken' })
+    // And one above it still goes through.
+    const fresh = b.receive(0, { t: 'cmd', cmd: { tick: 61, player: 0, kind: Kind.Send, creep: 0 } })
+    expect(fresh[0]!.msg.t).toBe('cmd')
+  })
+
+  it('refuses a second command on a tick already used', () => {
+    // The rule that replaced a per-match Set of claimed ticks: ticks only move
+    // forward, so one integer says the same thing and survives hibernation.
+    const h = playing(0, 0)
+    const cmd = { tick: 12, player: 0, kind: Kind.Build, tower: 0, x: 4, y: 11 }
+    expect(h.room.receive(0, { t: 'cmd', cmd })[0]!.msg.t).toBe('cmd')
+    expect(h.room.receive(0, { t: 'cmd', cmd: { ...cmd, x: 5 } })[0]!.msg).toMatchObject({
+      reason: 'tick-taken',
+    })
+  })
+})
