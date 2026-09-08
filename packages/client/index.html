@@ -7,6 +7,13 @@
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
+    /* The `hidden` attribute is a UA rule, so any author `display` beats it.
+       Both full-screen overlays set `display: grid` and both are toggled by
+       `hidden` from main.ts, which meant neither ever went away: the deployed
+       build ran a live match behind an opaque start screen and looked, from the
+       outside, like a menu whose buttons did nothing. This one line is the fix,
+       and `!important` is deliberate -- it has to outrank every rule below. */
+    [hidden] { display: none !important; }
     html, body { margin: 0; height: 100%; background: #0e1013; overflow: hidden; }
     canvas { display: block; }
     #hud {
@@ -142,7 +149,7 @@
     <span class="sep"></span>
     <span class="label">Send &rarr;</span>
     <span id="sendRow"></span>
-    <span class="hint"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> towers &middot; <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd> send &middot; click a tower to upgrade or sell</span>
+    <span class="hint"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> towers &middot; <kbd>Q</kbd>&hellip;<kbd>Y</kbd> send &middot; click a tower to upgrade or sell</span>
   </div>
 
   <!-- Inline panel on the field: upgrading is the most frequent mid-match

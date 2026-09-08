@@ -67,11 +67,13 @@ if (sendRow) {
   })
 }
 
+// One key per creep, along the top row in palette order. Hard-coding three of
+// them silently stranded the tier-2 creeps on the mouse the moment the roster
+// grew past the original three.
+const SEND_KEYS = ['q', 'w', 'e', 'r', 't', 'y']
 window.addEventListener('keydown', (ev) => {
-  const k = ev.key.toLowerCase()
-  if (k === 'q') scene.send(0)
-  if (k === 'w') scene.send(1)
-  if (k === 'e') scene.send(2)
+  const i = SEND_KEYS.indexOf(ev.key.toLowerCase())
+  if (i !== -1 && i < CREEPS.length) scene.send(i)
 })
 
 // --- build palette ---------------------------------------------------------

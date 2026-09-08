@@ -166,9 +166,23 @@ export function createScene(
   // Orthographic so identical towers at opposite ends of the lane read the same
   // size. A perspective camera would make the far end of your maze look weaker
   // than the near end, which is exactly wrong for a game about reading a maze.
+  /**
+   * Side-by-side layout. Your lane occupies 0..GRID_W; the opponent's sits to
+   * the right of it at OPP_SCALE, and the camera frames both.
+   *
+   * These are module-level rather than inline because the camera framing and
+   * the opponent group have to agree on them exactly. They did not on the first
+   * pass -- the camera still centred on your lane alone, so the opponent's board
+   * hung off the right edge of the screen and only a sliver of it was visible.
+   */
+  const OPP_SCALE = 0.4
+  const OPP_GAP = 3
+  const CONTENT_W = GRID_W + OPP_GAP + GRID_W * OPP_SCALE
+  const CONTENT_CX = CONTENT_W / 2
+
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200)
-  camera.position.set(GRID_W / 2, 26, GRID_H / 2 + 17)
-  camera.lookAt(GRID_W / 2, 0, GRID_H / 2)
+  camera.position.set(CONTENT_CX, 26, GRID_H / 2 + 17)
+  camera.lookAt(CONTENT_CX, 0, GRID_H / 2)
 
   scene.add(new THREE.AmbientLight(0xffffff, 1.5))
   const key = new THREE.DirectionalLight(0xffffff, 1.6)
@@ -273,11 +287,20 @@ export function createScene(
    * not fit a laptop. Whether 40% is enough to actually read their maze is an
    * open question in the design doc, and the first thing to check in play.
    */
-  const OPP_SCALE = 0.4
   const oppGroup = new THREE.Group()
   oppGroup.scale.setScalar(OPP_SCALE)
-  oppGroup.position.set(GRID_W + 3, 0, (GRID_H * (1 - OPP_SCALE)) / 2)
+  oppGroup.position.set(GRID_W + OPP_GAP, 0, (GRID_H * (1 - OPP_SCALE)) / 2)
   scene.add(oppGroup)
+
+  // A frame, so the small board reads as a second board rather than as a dark
+  // smudge at the edge of yours.
+  const oppFrame = new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.PlaneGeometry(GRID_W + 1, GRID_H + 1)),
+    new THREE.LineBasicMaterial({ color: 0x39424d }),
+  )
+  oppFrame.rotation.x = -Math.PI / 2
+  oppFrame.position.set(GRID_W / 2, 0.02, GRID_H / 2)
+  oppGroup.add(oppFrame)
 
   const oppGround = new THREE.Mesh(
     new THREE.PlaneGeometry(GRID_W, GRID_H),
@@ -575,8 +598,8 @@ export function createScene(
     const h = window.innerHeight
     renderer.setSize(w, h)
     const margin = 3
-    // Room for your lane plus the scaled opponent lane beside it.
-    const halfW = (GRID_W + margin + (GRID_W + 3) * OPP_SCALE) / 2
+    // Both boards, not just yours.
+    const halfW = (CONTENT_W + margin) / 2
     const halfH = (GRID_H + margin) / 2
     const aspect = w / h
     const [x, y] = aspect > halfW / halfH ? [halfH * aspect, halfH] : [halfW, halfW / aspect]
