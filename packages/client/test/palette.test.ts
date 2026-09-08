@@ -54,3 +54,44 @@ describe('the build-phase palette', () => {
     expect(SEND_UNLOCK_TICKS / TICK_HZ).toBe(20)
   })
 })
+
+/**
+ * The chrome's height must not depend on its text.
+ *
+ * `main.ts` measures `#hud` and `#palette` and hands their heights to the
+ * camera as a safe area, so anything that changes a bar's height re-frames the
+ * board mid-match. Two things did:
+ *
+ *   - a tier-locked send card reads "29g · unlocks in 30s", longer than
+ *     "29g ×6 · +10 inc". It wrapped, flex stretch grew EVERY card 47->62px,
+ *     the palette went 68->83px and the camera pulled back 37.6->39.2 the
+ *     instant the build phase ended. It looked like the board zooming out as
+ *     the creeps arrived.
+ *   - the placement message is a sentence that changes on every hover. At 900px
+ *     wide it took the HUD 49->70px; at 560px, to 217px.
+ *
+ * Structural reflow on a real resize SHOULD re-frame the board -- otherwise it
+ * hides behind the bars. Transient text must not. These pin the CSS that keeps
+ * the two apart. Asserted on source text because the height only exists in a
+ * browser; the suite runs in node.
+ */
+describe('the chrome cannot resize itself', () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8')
+
+  it('stops the send and tower captions wrapping', () => {
+    expect(html).toMatch(/\.tool \.n,[^{]*\.creep \.c[^{]*\{[^}]*white-space:\s*nowrap/)
+  })
+
+  it('pins the placement message to one line', () => {
+    const rule = /#hud div:last-child\s*\{([^}]*)\}/.exec(html)?.[1] ?? ''
+    expect(rule).toMatch(/white-space:\s*nowrap/)
+    expect(rule).toMatch(/text-overflow:\s*ellipsis/)
+    // Without min-width:0 a flex item refuses to shrink below its content and
+    // forces the whole row to wrap instead, which is the 560px case.
+    expect(rule).toMatch(/min-width:\s*0/)
+  })
+
+  it('keeps the hint from wrapping the bar', () => {
+    expect(html).toMatch(/#palette \.hint\s*\{[^}]*overflow:\s*hidden/)
+  })
+})
