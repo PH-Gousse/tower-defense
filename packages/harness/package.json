@@ -9,7 +9,8 @@
     "lap": "vite-node src/lap-run.ts",
     "roster": "vite-node src/roster-run.ts",
     "replay": "vite-node src/replay-run.ts",
-    "live": "vite-node scripts/live-duel.mts"
+    "live": "vite-node scripts/live-duel.mts",
+    "opening": "vite-node src/opening-run.ts"
   },
   "dependencies": {
     "@ltw/sim": "workspace:*",
