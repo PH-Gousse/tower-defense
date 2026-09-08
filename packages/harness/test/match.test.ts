@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { BOT_EASY, BOT_NORMAL, BOT_HARD, MatchResult, type BotConfig } from '@ltw/sim'
-import { runMatch } from '../src/match'
+import { runMatch, type MatchResultSummary } from '../src/match'
 
 const LADDER: readonly [string, BotConfig][] = [
   ['easy', BOT_EASY],
@@ -8,8 +8,35 @@ const LADDER: readonly [string, BotConfig][] = [
   ['hard', BOT_HARD],
 ]
 
+/**
+ * The round robin, run once and shared.
+ *
+ * Two things here are about CI rather than about the game. It is memoised
+ * because the ladder and the decisiveness check want the same nine matches, and
+ * running them twice doubled a job that already takes minutes. And it yields to
+ * the event loop between matches because a match is a tight synchronous loop
+ * over tens of thousands of ticks: without the yield, vitest's reporter cannot
+ * be serviced, its worker RPC times out, and the run fails with every single
+ * test passing -- which is a confusing way to find out your tests are too slow.
+ */
+let roundRobin: Promise<Map<string, MatchResultSummary>> | null = null
+
+function robin(): Promise<Map<string, MatchResultSummary>> {
+  roundRobin ??= (async () => {
+    const out = new Map<string, MatchResultSummary>()
+    for (const [an, a] of LADDER) {
+      for (const [bn, b] of LADDER) {
+        out.set(`${an} vs ${bn}`, runMatch({ bots: [a, b], maxTicks: 60000 }))
+        await new Promise((r) => setTimeout(r, 0))
+      }
+    }
+    return out
+  })()
+  return roundRobin
+}
+
 describe('bot-vs-bot matches', () => {
-  it('resolves rather than stalling', () => {
+  it('resolves rather than stalling', async () => {
     // An earlier bot hoarded gold "for emergencies" and produced matches that
     // ran forever, both sides parked on 3 lives. A bot that cannot finish is
     // not an opponent.
@@ -21,54 +48,58 @@ describe('bot-vs-bot matches', () => {
     // problem in the game, not a defect in the bot, and asserting the current
     // behaviour here would freeze it. It is written up for the tuning step
     // instead: see TODOS.md, "defence outscales offence".
-    for (const [name, cfg] of LADDER) {
-      const m = runMatch({ bots: [cfg, cfg], maxTicks: 60000 })
-      expect(m.result, `${name} mirror`).not.toBe(MatchResult.Playing)
+    const results = await robin()
+    for (const [name] of LADDER) {
+      expect(results.get(`${name} vs ${name}`)!.result, `${name} mirror`).not.toBe(
+        MatchResult.Playing,
+      )
     }
   })
 
   it('is deterministic — the same bots produce the same hash', () => {
-    const a = runMatch({ bots: [BOT_NORMAL, BOT_HARD] })
-    const b = runMatch({ bots: [BOT_NORMAL, BOT_HARD] })
+    // Short on purpose. Determinism either holds from the first tick or it does
+    // not, so this does not need a full match, and two full matches here were
+    // costing a minute of CI to prove something 3,000 ticks proves.
+    const a = runMatch({ bots: [BOT_NORMAL, BOT_HARD], maxTicks: 3000 })
+    const b = runMatch({ bots: [BOT_NORMAL, BOT_HARD], maxTicks: 3000 })
     expect(a.hash).toBe(b.hash)
     expect(a.ticks).toBe(b.ticks)
   })
 
-  it('gives player 0 no advantage — a mirror match is a draw', () => {
+  it('gives player 0 no advantage — a mirror match is a draw', async () => {
     // Both sides play identically from an identical position, so anything other
     // than a draw would mean the sim favours a seat. Worth asserting directly:
     // it is the cheapest possible check on lane-ordering bugs.
-    for (const [name, cfg] of LADDER) {
-      const m = runMatch({ bots: [cfg, cfg], maxTicks: 60000 })
-      expect(m.result, `${name} mirror`).toBe(MatchResult.Draw)
+    const results = await robin()
+    for (const [name] of LADDER) {
+      expect(results.get(`${name} vs ${name}`)!.result, `${name} mirror`).toBe(MatchResult.Draw)
     }
   })
 
-  it('has a transitive difficulty ladder', () => {
+  it('has a transitive difficulty ladder', async () => {
     // The single most important test in the harness, because the ladder has now
-    // been wrong twice. First a gold reserve inverted it outright. Then, more
-    // subtly, difficulty varied the spend ratio and the maze template as well as
-    // the reaction delay — and a sweep showed both of those pointing the wrong
-    // way: a higher spend ratio plays WORSE in the current tuning, and the
-    // `posts` template is weak enough to sink any config using it. The labels
-    // said easy/normal/hard; the measurements said otherwise.
+    // been wrong three times. First a gold reserve inverted it outright. Then
+    // difficulty varied the spend ratio and the maze template as well as the
+    // reaction delay, and a sweep showed both of those pointing the wrong way.
+    // Then step 8's tuning reshuffled it again -- every balance edit does, which
+    // is why the presets are now picked by searching all ordered triples for one
+    // that is fully transitive rather than by assuming faster is better.
     //
-    // If this ever fails, do not adjust the expectation. Re-run the sweep and
-    // find out which knob turned around.
+    // If this fails, do not adjust the expectation. Re-run the search.
+    const results = await robin()
     for (let i = 0; i < LADDER.length; i++) {
       for (let j = 0; j < LADDER.length; j++) {
         if (i === j) continue
-        const [an, a] = LADDER[i]!
-        const [bn, b] = LADDER[j]!
-        const m = runMatch({ bots: [a, b], maxTicks: 60000 })
-        const strongerIsP0 = i > j
+        const [an] = LADDER[i]!
+        const [bn] = LADDER[j]!
+        const m = results.get(`${an} vs ${bn}`)!
         expect(m.result, `${an} vs ${bn}`).toBe(MatchResult.Decided)
-        expect(m.winner, `${an} vs ${bn} — the harder bot should win`).toBe(strongerIsP0 ? 0 : 1)
+        expect(m.winner, `${an} vs ${bn} — the harder bot should win`).toBe(i > j ? 0 : 1)
       }
     }
   })
 
-  it('wins its rungs decisively rather than by a life', () => {
+  it('wins its rungs decisively rather than by a life', async () => {
     // Transitivity alone allows a ladder decided by one life every time, which
     // would read as three identical bots. The gap has to be felt.
     //
@@ -76,36 +107,43 @@ describe('bot-vs-bot matches', () => {
     // wider margin, which is the obvious next claim and is not true here: hard
     // finishes against easy with 8 lives and against normal with 15. Margin
     // ordering is not something the current tuning delivers, and asserting it
-    // would be asserting a wish. What it does deliver is that every rung is a
-    // clear win, so that is what gets pinned.
-    for (const [an, a] of LADDER) {
-      for (const [bn, b] of LADDER) {
+    // would be asserting a wish.
+    const results = await robin()
+    for (const [an] of LADDER) {
+      for (const [bn] of LADDER) {
         if (an === bn) continue
-        const m = runMatch({ bots: [a, b], maxTicks: 60000 })
-        const winnerLives = m.players[m.winner]!.lives
-        expect(winnerLives, `${an} vs ${bn}: winner's remaining lives`).toBeGreaterThanOrEqual(5)
+        const m = results.get(`${an} vs ${bn}`)!
+        expect(m.players[m.winner]!.lives, `${an} vs ${bn}: winner's lives`).toBeGreaterThanOrEqual(5)
       }
     }
   })
 
-  it('keeps creep population inside the render budget', () => {
+  it('keeps creep population inside the render budget', async () => {
     // Open Q2: population is bounded only by gold, and the renderer has to draw
-    // whatever the sim produces.
-    const m = runMatch({ bots: [BOT_HARD, BOT_HARD], maxTicks: 60000 })
-    expect(m.peakCreeps).toBeLessThan(500)
+    // whatever the sim produces. Every matchup counts, not just the busiest one.
+    const results = await robin()
+    for (const [key, m] of results) {
+      expect(m.peakCreeps, `${key} peak creeps`).toBeLessThan(500)
+    }
   })
 
-  it('reports how much of the match was actually contested', () => {
+  it('reports how much of the match was actually contested', async () => {
     // Open Q4. Lives only fall, so "the loser never regains a life" is trivially
     // true; what matters is when the gap stopped closing.
-    const m = runMatch({ bots: [BOT_EASY, BOT_HARD], maxTicks: 60000 })
+    //
+    // The number currently comes back at 98-100%, and that is not the good news
+    // it looks like: it means neither side leaks for twenty-odd minutes and then
+    // one collapses. A long stalemate with a sudden end reads identically to a
+    // nail-biter on this metric, which is worth knowing before trusting it. See
+    // TODOS.md, "matches are long".
+    const m = (await robin()).get('easy vs hard')!
     expect(m.result).toBe(MatchResult.Decided)
     expect(m.decidedFraction).toBeGreaterThan(0)
     expect(m.decidedFraction).toBeLessThanOrEqual(1)
   })
 
-  it('both bots build, kill and send — none of them idles', () => {
-    const m = runMatch({ bots: [BOT_NORMAL, BOT_NORMAL], maxTicks: 60000 })
+  it('both bots build, kill and send — none of them idles', async () => {
+    const m = (await robin()).get('normal vs normal')!
     for (let p = 0; p < 2; p++) {
       expect(m.sends[p], `player ${p} sends`).toBeGreaterThan(0)
       expect(m.players[p]!.income, `player ${p} income`).toBeGreaterThan(25)
