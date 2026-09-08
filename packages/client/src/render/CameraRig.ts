@@ -211,6 +211,8 @@ export class CameraRig {
   private safeH = 0
 
   /** Keys currently held, as a direction accumulator. No allocation per frame. */
+  private dragStartX = 0
+  private dragStartY = 0
   private keyX = 0
   private keyZ = 0
   private readonly held = new Set<string>()
@@ -657,15 +659,15 @@ export class CameraRig {
           return
         }
         if (this.pointers.size > 2) return
-      } else if (ev.button !== 1 && ev.button !== 2) {
-        // Left click belongs to the app: selecting and building. Middle and
-        // right drag the camera; on touch, one finger drags.
+      } else if (ev.button !== 0 && ev.button !== 1 && ev.button !== 2) {
         return
       }
 
       if (this.groundAt(ev.clientX, ev.clientY, this.dragGrab) === null) return
       this.dragging = true
       this.dragPointer = ev.pointerId
+      this.dragStartX = ev.clientX
+      this.dragStartY = ev.clientY
       // Throws NotFoundError if the pointer is no longer active -- which a
       // synthetic event always is, and a real one can be if the button came up
       // between the event being queued and this handler running. Losing capture
@@ -702,13 +704,33 @@ export class CameraRig {
 
       if (!this.dragging || ev.pointerId !== this.dragPointer) return
 
+      // Nothing moves until the pointer has travelled DRAG_SLOP pixels.
+      //
+      // This is what lets the left button both place a tower and drag the map,
+      // which an earlier version could not: it had one threshold here and a
+      // different one deciding whether a release was a build, and a press that
+      // drifted between the two placed nothing and panned nothing. There is one
+      // threshold now and one answer, `didPan`, and the app asks it rather than
+      // measuring the gesture a second time. Middle and right have no click
+      // action to protect, but they cross four pixels in the first moved frame
+      // of any real drag, so they pay nothing for sharing the path.
+      if (!this.panned) {
+        const moved = Math.hypot(ev.clientX - this.dragStartX, ev.clientY - this.dragStartY)
+        if (moved < DRAG_SLOP) return
+        // Re-grab here rather than from the press point, or the view would jump
+        // by the slop the instant the drag starts.
+        if (this.groundAt(ev.clientX, ev.clientY, this.dragGrab) === null) return
+        this.panned = true
+        this.pannedPointer = ev.pointerId
+        ev.preventDefault()
+        return
+      }
+
       // Grab-and-drag: keep the ground point the gesture started on under the
       // pointer. Deriving the delta from screen pixels instead would drift,
       // because a pixel is worth more world units at the top of a tilted view
       // than at the bottom.
       if (this.groundAt(ev.clientX, ev.clientY, _ground) === null) return
-      this.panned = true
-      this.pannedPointer = ev.pointerId
       this.pan(this.dragGrab.x - _ground.x, this.dragGrab.z - _ground.z)
       // Re-sample: the clamp may have refused part of that move, and carrying
       // the original grab point forward would make the camera lurch when the
@@ -846,6 +868,17 @@ export function clampWindow(v: number, lo: number, hi: number, offLo: number, of
   const slack = OVERSCROLL * ((offHi - offLo) / 2)
   return clamp(v, a - slack, c + slack)
 }
+
+/**
+ * How far a press may drift and still count as a click, in CSS pixels.
+ *
+ * Four, not the ten or twelve a pure map would use: the left button places a
+ * tower on a one-tile target, so a threshold generous enough to swallow real
+ * hand tremor is also generous enough to swallow a deliberate short drag. Four
+ * survives the shake of a click on every mouse tested and starts dragging
+ * before the pointer has crossed half a tile.
+ */
+const DRAG_SLOP = 4
 
 const PAN_KEY_SETS: Record<'wasd' | 'arrows' | 'none', ReadonlySet<string>> = {
   wasd: new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', ...ARROW_KEYS]),
