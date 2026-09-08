@@ -4,6 +4,7 @@ import { createRenderer, WebGLUnavailable } from '../render/renderer'
 import { CameraRig } from '../render/CameraRig'
 import { groundToTile, groundUnderNdc, ndcFromClient, type LaneLayout } from '../render/picking'
 import { attachCameraGui, type FitMode } from '../render/cameraGui'
+import { buildBoard, BOARD } from '../render/board'
 
 /**
  * The camera's test rig, served at /camera.
@@ -38,11 +39,6 @@ const CONTENT = {
 
 const COLOUR = {
   background: 0x11151a,
-  tileLight: 0x3f4a3a,
-  tileDark: 0x36402f,
-  border: 0x6b7a5e,
-  entrance: 0x2f7f5f,
-  exit: 0xa8493c,
   tower: 0x8d949c,
   creep: 0xd8613f,
   hover: 0x9fd8ff,
@@ -58,7 +54,10 @@ export function startCameraDemo(): void {
   key.position.set(-14, 26, 10)
   scene.add(key)
 
-  for (const lane of LANES) scene.add(buildLane(lane))
+  for (const lane of LANES) {
+    scene.add(buildBoard(lane, BOARD, { entranceRow: ENTRANCE_ROW, exitRow: EXIT_ROW }))
+    scene.add(placeholders(lane))
+  }
 
   // Pitch, fov and the zoom clamps are the rig's tuned defaults; see the note
   // on the `PerspectiveCamera` in CameraRig for how 35 was arrived at. Only the
@@ -246,81 +245,6 @@ export function startCameraDemo(): void {
 }
 
 /**
- * One lane: a checkerboard, a border, and the two reserved rows.
- *
- * Four instanced meshes rather than 192 individual ones. The checkerboard is
- * split into two instanced meshes by parity because that is how you get two
- * colours out of flat unlit materials without a texture or per-instance colour
- * -- and a texture is the wrong tool for a board whose whole job is to make
- * integer tile boundaries legible.
- */
-function buildLane(lane: LaneLayout): THREE.Group {
-  const group = new THREE.Group()
-  group.position.set(lane.originX, 0, lane.originZ)
-
-  // Baked into the geometry so instances only ever carry a translation.
-  const quad = new THREE.PlaneGeometry(lane.tile, lane.tile)
-  quad.rotateX(-Math.PI / 2)
-
-  const counts = { light: 0, dark: 0, entrance: 0, exit: 0 }
-  for (let y = 0; y < lane.length; y++) {
-    for (let x = 0; x < lane.width; x++) {
-      if (y === ENTRANCE_ROW) counts.entrance += 1
-      else if (y === EXIT_ROW) counts.exit += 1
-      else if ((x + y) % 2 === 0) counts.light += 1
-      else counts.dark += 1
-    }
-  }
-
-  const make = (colour: number, n: number, y: number): THREE.InstancedMesh => {
-    const mesh = new THREE.InstancedMesh(
-      quad,
-      new THREE.MeshBasicMaterial({ color: colour }),
-      Math.max(n, 1),
-    )
-    mesh.count = n
-    mesh.position.y = y
-    group.add(mesh)
-    return mesh
-  }
-
-  const light = make(COLOUR.tileLight, counts.light, 0)
-  const dark = make(COLOUR.tileDark, counts.dark, 0)
-  // The reserved rows sit a hair proud of the board so they win the depth test
-  // against the checkerboard rather than z-fighting with it.
-  const entrance = make(COLOUR.entrance, counts.entrance, 0.004)
-  const exit = make(COLOUR.exit, counts.exit, 0.004)
-
-  const m = new THREE.Matrix4()
-  const n = { light: 0, dark: 0, entrance: 0, exit: 0 }
-  for (let y = 0; y < lane.length; y++) {
-    for (let x = 0; x < lane.width; x++) {
-      m.makeTranslation((x + 0.5) * lane.tile, 0, (y + 0.5) * lane.tile)
-      if (y === ENTRANCE_ROW) entrance.setMatrixAt(n.entrance++, m)
-      else if (y === EXIT_ROW) exit.setMatrixAt(n.exit++, m)
-      else if ((x + y) % 2 === 0) light.setMatrixAt(n.light++, m)
-      else dark.setMatrixAt(n.dark++, m)
-    }
-  }
-
-  group.add(borderLines(lane))
-  group.add(placeholders(lane))
-  return group
-}
-
-/** Tile grid plus a heavier outline, in the border colour. */
-function borderLines(lane: LaneLayout): THREE.LineSegments {
-  const pts: number[] = []
-  const w = lane.width * lane.tile
-  const l = lane.length * lane.tile
-  for (let x = 0; x <= lane.width; x++) pts.push(x * lane.tile, 0.01, 0, x * lane.tile, 0.01, l)
-  for (let y = 0; y <= lane.length; y++) pts.push(0, 0.01, y * lane.tile, w, 0.01, y * lane.tile)
-  const geo = new THREE.BufferGeometry()
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3))
-  return new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: COLOUR.border }))
-}
-
-/**
  * A handful of stand-in towers and creeps.
  *
  * Fixed positions, not random: the demo is a reference for judging framing and
@@ -329,6 +253,7 @@ function borderLines(lane: LaneLayout): THREE.LineSegments {
  */
 function placeholders(lane: LaneLayout): THREE.Group {
   const group = new THREE.Group()
+  group.position.set(lane.originX, 0, lane.originZ)
 
   const towerTiles = [
     [2, 4], [5, 6], [3, 9], [6, 12], [1, 15], [4, 18], [6, 20], [2, 21],
