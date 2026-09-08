@@ -3,7 +3,7 @@ import { Net, relayUrl } from './net'
 import { STALL_TICKS } from '@ltw/sim'
 import {
   TowerKind, ARCHETYPES, levelOf, MAX_LEVEL, TICK_HZ, MatchResult,
-  CREEPS, tierUnlockTick, INCOME_EVERY_TICKS, MAX_TIER,
+  CREEPS, tierUnlockTick, SEND_UNLOCK_TICKS, INCOME_EVERY_TICKS, MAX_TIER,
   BOT_EASY, BOT_NORMAL, BOT_HARD, type BotConfig,
 } from '@ltw/sim'
 
@@ -48,6 +48,7 @@ const btnSell = el('btnSell') as HTMLButtonElement | null
 
 const tools = Array.from(document.querySelectorAll<HTMLButtonElement>('.tool'))
 const sendRow = el('sendRow')
+const sendLabel = el('sendLabel')
 
 // --- send palette ----------------------------------------------------------
 // Build and Send stay separate palettes on purpose: they are opposite-facing
@@ -161,6 +162,15 @@ scene.onStats((s) => {
   // states, not two: affordable, unaffordable, and not-yet-unlocked. Locked is
   // first-class because tiers open on a timer and knowing what is coming
   // changes what you save for.
+  // The palette label carries the countdown, because six cards all reading
+  // "build phase, 12s" states the rule six times and explains it none. One
+  // clock, where the eye already goes to decide what to send.
+  if (sendLabel) {
+    const left = SEND_UNLOCK_TICKS - s.tick
+    sendLabel.textContent = left > 0 ? `Build · ${Math.ceil(left / TICK_HZ)}s` : 'Send →'
+    sendLabel.classList.toggle('counting', left > 0)
+  }
+
   const tier = unlockedTier(s.tick)
   for (let slot = 0; slot < creepButtons.length; slot++) {
     const b = creepButtons[slot]!
@@ -176,20 +186,29 @@ scene.onStats((s) => {
     const name = b.querySelector('.n')
     if (name) name.textContent = spec.name
     const c = b.querySelector('.c')
-    const locked = s.tick < tierUnlockTick(spec.tier)
-    if (locked) {
-      b.setAttribute('data-locked', 'true')
-      const secs = Math.ceil((tierUnlockTick(spec.tier) - s.tick) / TICK_HZ)
-      if (c) c.textContent = `${spec.cost}g · unlocks in ${secs}s`
-    } else {
-      b.removeAttribute('data-locked')
-      if (c) {
-        c.textContent =
-          `${spec.cost}g` + (spec.count > 1 ? ` ×${spec.count}` : '') + ` · +${spec.incomeBonus} inc`
-      }
-      if (s.gold < spec.cost) b.setAttribute('data-broke', 'true')
-      else b.removeAttribute('data-broke')
+    // Two reasons a card can be locked, and only one of them belongs on the
+    // card. A tier lock is about THIS card, so it says so. The build phase is
+    // about all six at once and already has the countdown in the label beside
+    // them; repeating it here said the same thing six times, and said it in
+    // enough characters to wrap every card to two lines and grow the whole
+    // palette -- which then pushed the camera's safe area and re-framed the
+    // board. During the opening the cards keep their normal description, dimmed:
+    // what you will be able to send is worth reading while you wait for it.
+    const opening = s.tick < SEND_UNLOCK_TICKS
+    const tierLocked = s.tick < tierUnlockTick(spec.tier)
+    if (opening || tierLocked) b.setAttribute('data-locked', 'true')
+    else b.removeAttribute('data-locked')
+
+    if (c) {
+      c.textContent =
+        tierLocked && !opening
+          ? `${spec.cost}g · unlocks in ${Math.ceil((tierUnlockTick(spec.tier) - s.tick) / TICK_HZ)}s`
+          : `${spec.cost}g` +
+            (spec.count > 1 ? ` ×${spec.count}` : '') +
+            ` · +${spec.incomeBonus} inc`
     }
+    if (!opening && !tierLocked && s.gold < spec.cost) b.setAttribute('data-broke', 'true')
+    else b.removeAttribute('data-broke')
   }
   if (leaks) leaks.textContent = String(s.leaks)
   if (lives) {

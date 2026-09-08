@@ -130,6 +130,14 @@
     #palette .hint { margin-left: auto; font-size: 11px; color: #6b727b; }
     #palette .sep { width: 1px; align-self: stretch; background: #2a2f36; margin: 0 5px; }
     #palette .label { font-size: 10px; letter-spacing: .07em; text-transform: uppercase; color: #7d858f; }
+    /* The opening build-phase clock. Warm rather than grey, because it is the
+       one thing on the bar that is counting down to something.
+       `min-width` pins the label so the send cards do not jump sideways when
+       "Build · 3s" becomes "Send →" — that swap lands at the exact moment the
+       player is reaching for a card. tabular-nums holds the digits still while
+       it counts. */
+    #sendLabel { display: inline-block; min-width: 6.2em; }
+    #sendLabel.counting { color: #e8b84b; font-variant-numeric: tabular-nums; }
     #sendRow { display: flex; gap: 6px; }
     .creep {
       display: block; text-align: left; cursor: pointer; font: inherit;
@@ -194,7 +202,7 @@
       <span class="n">Slow</span><span class="c"><em id="cost2">80</em>g &middot; anti-runner</span>
     </button>
     <span class="sep"></span>
-    <span class="label">Send &rarr;</span>
+    <span class="label" id="sendLabel">Send &rarr;</span>
     <span id="sendRow"></span>
     <span class="hint"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> towers &middot; <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd> send &middot; <kbd>R</kbd><kbd>T</kbd><kbd>Y</kbd> next tier &middot; click a tower to upgrade or sell &middot; <kbd>D</kbd> save match file</span>
   </div>
