@@ -75,6 +75,36 @@ wish: hard finishes against easy with 8 lives and against normal with 15.
 
 ---
 
+### Local prediction is not built
+Step 10 shipped everything else in the networking design, but a placed tower currently appears
+only when the relay returns the command — `delay` ticks later, which is 200ms on a good
+connection and up to a second on a bad one. The design calls for a translucent pending ghost
+drawn immediately, using the same legality predicate `step()` uses, resolving three ways: solid
+on confirmation, faded with a reason on refusal, and faded with "command lost" once the sim
+passes the tick it was stamped for with nothing applied.
+
+That third outcome is the one worth not skipping. Without it a dropped frame leaves a
+translucent tower on screen forever and the game looks like it is ignoring clicks, in the
+mechanic the player uses most.
+
+**Trigger:** the first time you play a real opponent and placing feels laggy.
+**Effort:** M → M.
+
+---
+
+### The relay is built but not deployed
+`pnpm --filter @ltw/server deploy` needs a Cloudflare account. Until it runs, "Create a room"
+in the client reports that it cannot reach the relay. Verified working locally against
+`wrangler dev`: two clients, 900 ticks, identical hashes, concede ending both sides.
+
+Set `VITE_RELAY` at build time to point the client somewhere other than the default
+`wss://ltw-relay.workers.dev`.
+
+**Trigger:** before playing anyone who is not on your machine.
+**Effort:** S → S.
+
+---
+
 ### A backgrounded tab freezes the simulation completely
 Measured while verifying step 9: a Chrome tab that is not visible gets **zero** animation
 frames, so `renderer.setAnimationLoop` never fires and the driver never advances. Harmless in
@@ -85,7 +115,11 @@ The design already calls for showing a notice when a peer falls more than 40 tic
 the handling exists on paper. What is worth deciding at step 10 is whether a backgrounded tab
 should surface something to its *own* player too, rather than silently pausing their match.
 
-**Trigger:** step 10, when the relay makes stalls visible to someone else.
+Step 10 added the `peer-stalled` overlay, so the *other* player is now told. The open question
+is whether the backgrounded player should be told something too when they return, rather than
+finding their match silently paused or already lost.
+
+**Trigger:** the first time a real opponent alt-tabs mid-match.
 **Effort:** S → S.
 
 ---

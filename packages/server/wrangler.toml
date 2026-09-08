@@ -1,0 +1,13 @@
+name = "ltw-relay"
+main = "src/index.ts"
+compatibility_date = "2026-01-01"
+
+# One Durable Object per match, addressed by room code. The Hibernation API
+# means an idle room costs nothing, which is the entire hosting story.
+[[durable_objects.bindings]]
+name = "MATCH"
+class_name = "MatchRoom"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["MatchRoom"]

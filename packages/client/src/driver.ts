@@ -6,6 +6,8 @@ import {
   TICK_MS,
   BOT_NORMAL,
   HashRing,
+  InputBuffer,
+  watermarkCadence,
   findDivergence,
   buildDump,
   type BotConfig,
@@ -113,20 +115,41 @@ export class Driver {
   }
 
   queueBuild(x: number, y: number, tower: TowerKind): void {
-    this.pending.push({ tick: this.a.tick + 1, player: this.me, kind: Kind.Build, tower, x, y })
+    this.queue({ tick: 0, player: this.me, kind: Kind.Build, tower, x, y })
+  }
+
+  /**
+   * Stamp a local command and route it.
+   *
+   * Against a bot it goes straight into the next tick. In lockstep it is
+   * stamped `delay` ticks ahead and handed to the relay, which returns it to
+   * both clients -- including this one. The local client does NOT apply its own
+   * command early: doing so would mean the two clients applied the same command
+   * at different ticks, which is the desync this whole design exists to avoid.
+   * The lag that creates is what prediction covers over.
+   */
+  private queue(cmd: Command): void {
+    if (this.buffer && this.emit) {
+      // Stamp for a tick this client has not simulated and cannot have promised
+      // to be empty.
+      const at = this.a.tick + this.delay
+      this.emit({ ...cmd, tick: at })
+      return
+    }
+    this.pending.push({ ...cmd, tick: this.a.tick + 1 })
   }
 
   queueUpgrade(x: number, y: number): void {
-    this.pending.push({ tick: this.a.tick + 1, player: this.me, kind: Kind.Upgrade, x, y })
+    this.queue({ tick: 0, player: this.me, kind: Kind.Upgrade, x, y })
   }
 
   queueSell(x: number, y: number): void {
-    this.pending.push({ tick: this.a.tick + 1, player: this.me, kind: Kind.Sell, x, y })
+    this.queue({ tick: 0, player: this.me, kind: Kind.Sell, x, y })
   }
 
   /** Send a creep into the opponent's lane. Raises your income permanently. */
   queueSend(creep: number): void {
-    this.pending.push({ tick: this.a.tick + 1, player: this.me, kind: Kind.Send, creep })
+    this.queue({ tick: 0, player: this.me, kind: Kind.Send, creep })
   }
 
   /** The lane you defend. */
@@ -161,6 +184,79 @@ export class Driver {
   }
 
   private peerHashes: HashEntry[] | null = null
+
+  // --- lockstep -------------------------------------------------------------
+
+  /**
+   * Set when this driver is playing a real opponent instead of a local bot.
+   *
+   * The two modes differ in one thing only, and it is the thing that matters:
+   * against a bot the driver decides when to advance, and in lockstep the
+   * inputs decide. Everything else -- the fixed timestep, the hashing, the
+   * command log -- is identical, which is what makes a bot match a genuine
+   * rehearsal for a networked one rather than a different program.
+   */
+  private buffer: InputBuffer | null = null
+  private delay = 0
+  private lastWatermarkSent = -1
+  private emit: ((cmd: Command) => void) | null = null
+  private emitWatermark: ((tick: number) => void) | null = null
+  private peerStalledSince = -1
+
+  /**
+   * Switch into lockstep. Called on `start` from the relay, before tick 0.
+   *
+   * `delay` is negotiated per match and never changes during one: a delay that
+   * moved would change how far ahead each client stamps its inputs, and the two
+   * would disagree about which tick a command belongs to. That is a desync
+   * wearing a network feature's clothes.
+   */
+  goLockstep(
+    delay: number,
+    send: (cmd: Command) => void,
+    sendWatermark: (tick: number) => void,
+  ): void {
+    this.buffer = new InputBuffer(delay)
+    this.delay = delay
+    this.emit = send
+    this.emitWatermark = sendWatermark
+    this.lastWatermarkSent = -1
+    this.bot = null
+  }
+
+  get lockstep(): boolean {
+    return this.buffer !== null
+  }
+
+  /** A command from the relay, ours or the peer's. */
+  receive(cmd: Command): void {
+    this.buffer?.add(cmd)
+  }
+
+  /** "Nothing through tick N from that seat." */
+  receiveWatermark(player: 0 | 1, tick: number): void {
+    this.buffer?.mark(player, tick)
+  }
+
+  /**
+   * Ticks the peer is behind us, or 0 when it is keeping up.
+   *
+   * Under strict wait a slow peer stops both simulations, so this is what the
+   * `peer-stalled` overlay reads. It is a number of ticks rather than a clock
+   * because the client already knows the tick and reading a clock here would be
+   * a second source of truth about time.
+   */
+  peerLag(me: 0 | 1): number {
+    if (!this.buffer) return 0
+    const peer = (1 - me) as 0 | 1
+    // Their promise against ours, NOT against our current tick. Measuring
+    // against the tick cannot work and quietly always returned zero: strict
+    // wait means the tick never exceeds either seat's mark, so the difference
+    // was never positive and the stall overlay could never appear -- the exact
+    // situation it exists for would have shown nothing at all.
+    const behind = this.buffer.markOf(me) - this.buffer.markOf(peer)
+    return behind > 0 ? behind : 0
+  }
 
   /** The match as a reproducible file. */
   dump(trigger: 'desync' | 'manual', build: string): DesyncDump {
@@ -197,8 +293,16 @@ export class Driver {
 
     let ran = 0
     while (this.acc >= TICK_MS && ran < MAX_CATCHUP_TICKS) {
-      const commands = this.pending
-      this.pending = []
+      // Strict wait. A client simulates tick T only once it holds both
+      // players' inputs for T, so an input can never arrive for a tick already
+      // simulated: the failure mode is a stall, which is visible and
+      // recoverable, rather than a desync, which is neither.
+      if (this.buffer) {
+        if (!this.buffer.ready(this.a.tick)) break
+      }
+
+      const commands = this.buffer ? this.buffer.take(this.a.tick) : this.pending
+      if (!this.buffer) this.pending = []
 
       // The bot is just another command source. It runs inside the same tick
       // loop as the player, gets no extra information and no bent rules, and
@@ -228,7 +332,26 @@ export class Driver {
       // tick N -- the same convention on both peers, which is the only thing
       // that matters and the easiest thing to get subtly wrong.
       this.hashes.record(this.a)
+
+      this.promise()
     }
     return ran
+  }
+
+  /**
+   * Re-state how far ahead we are known to be empty.
+   *
+   * On its own cadence, and never folded into "I just sent a command". Treating
+   * a sent command as a promise looks free and deadlocks: the relay can drop a
+   * frame, and then the peer never receives the promise this client believes it
+   * made and waits on that tick forever. A redundant watermark is one small
+   * message and is monotonic, so it can never do harm.
+   */
+  private promise(): void {
+    if (!this.buffer || !this.emitWatermark) return
+    const at = this.a.tick + this.delay
+    if (at - this.lastWatermarkSent < watermarkCadence(this.delay)) return
+    this.lastWatermarkSent = at
+    this.emitWatermark(at)
   }
 }

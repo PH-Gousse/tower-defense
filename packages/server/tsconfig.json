@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    // Workers is not Node. There is no `fs`, no `Buffer`, and no `ws` -- the
+    // relay uses WebSocketPair and the Hibernation API instead. Node types are
+    // here only for the vitest suite that exercises Room without a runtime.
+    "types": ["@cloudflare/workers-types", "node"]
+  },
+  "include": ["src", "test"]
+}

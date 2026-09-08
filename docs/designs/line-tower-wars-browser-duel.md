@@ -879,7 +879,20 @@ Resequenced so a URL exists on day one and the bot is playable before any netcod
    What is not exercised yet is the peer exchange, because there is no peer until step 10.
    `Driver.checkPeer()` is the seam: feed it the peer's ring and it freezes on a mismatch and
    reports `no-overlap` as the stall it is.
-10. **Server and 1v1.** Durable Object per match: lobby, `start`, RTT negotiation, wire
+10. **Server and 1v1.** **Built, not deployed** — the relay needs a Cloudflare account, so
+    `pnpm --filter @ltw/server deploy` is the one step left. Everything else is in and tested:
+    lobby, `start`, RTT negotiation, wire validation, version handshake, ordered relay with
+    watermarks, room codes, join-by-URL, socket close, out-of-band concede, rematch.
+    **Local prediction is the piece NOT built** — see `TODOS.md`.
+    Two corrections to this document fell out of building it. First, the watermark cadence
+    cannot be a fixed 10 ticks: a client can only honestly promise "nothing through `T + delay`",
+    so one watermark buys exactly `delay` ticks of progress, and with the delay flooring at 4
+    a fixed cadence of 10 deadlocks both clients permanently — at exactly the connection quality
+    two people on one network produce. It is `min(10, delay)` now. Second, a command must not be
+    treated as its own promise: the relay can drop a frame, and the peer then waits forever on a
+    tick the sender believes it promised, so the watermark goes out on its own cadence
+    regardless.
+    Original wording follows: Durable Object per match: lobby, `start`, RTT negotiation, wire
     validation, version handshake, ordered relay with `None` watermarks, room codes,
     join-by-URL, socket close, out-of-band concede, rematch, local prediction with an input
     queue.

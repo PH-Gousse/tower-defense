@@ -1,4 +1,6 @@
 import { createScene, WebGLUnavailable, type Selection, type Scene } from './scene'
+import { Net, relayUrl } from './net'
+import { STALL_TICKS } from '@ltw/sim'
 import {
   TowerKind, ARCHETYPES, levelOf, MAX_LEVEL, TICK_HZ, MatchResult,
   CREEPS, tierUnlockTick, INCOME_EVERY_TICKS, MAX_TIER,
@@ -197,7 +199,12 @@ scene.onStats((s) => {
     if (s.lives <= 5) lives.setAttribute('data-low', 'true')
     else lives.removeAttribute('data-low')
   }
-  if (over) {
+  if (stalled) {
+    // Under strict wait a slow peer stops both simulations. Say so, or the
+    // player whose connection is fine thinks the game broke.
+    stalled.hidden = s.peerLag < STALL_TICKS
+  }
+  if (over && !endedByRelay) {
     over.hidden = s.result === MatchResult.Playing
     if (overDetail && s.result !== MatchResult.Playing) {
       const won = s.winner === 0
@@ -293,6 +300,148 @@ scene.onTileHover((h) => {
   note.textContent =
     h.mazeDelta === null ? 'click to build' : `+${h.mazeDelta} tiles · click to build`
 })
+
+// --- playing a friend --------------------------------------------------------
+//
+// The bot path and the network path share everything except who supplies the
+// opponent's inputs. That is deliberate: a bot match is a genuine rehearsal for
+// a networked one rather than a second program, so the fixed timestep, the
+// hashing and the command log are all exercised long before a socket exists.
+
+const btnHost = el('btnHost') as HTMLButtonElement | null
+const btnJoin = el('btnJoin') as HTMLButtonElement | null
+const joinCode = el('joinCode') as HTMLInputElement | null
+const roomCode = el('roomCode')
+const netNote = el('netNote')
+const stalled = el('stalled')
+const btnConcede = el('concede') as HTMLButtonElement | null
+const btnRematch = el('btnRematch') as HTMLButtonElement | null
+
+let net: Net | null = null
+let mySeat: 0 | 1 = 0
+let endedByRelay: { reason: 'concede' | 'left'; winner: 0 | 1 } | null = null
+
+function netSay(text: string): void {
+  if (netNote) netNote.textContent = text
+}
+
+function connect(code: string): void {
+  netSay('connecting…')
+  net = new Net(relayUrl(code), {
+    onWelcome: (seat, roomCodeGiven) => {
+      mySeat = seat
+      if (roomCode) roomCode.textContent = roomCodeGiven
+      // A link is easier to send than six letters read down a phone.
+      const url = new URL(window.location.href)
+      url.searchParams.set('room', roomCodeGiven)
+      window.history.replaceState(null, '', url)
+      netSay(seat === 0 ? 'Room open. Send the code or this page’s link.' : 'Joined. Starting…')
+    },
+    onLobby: (seated) => {
+      if (seated < 2) netSay('Waiting for your opponent to join…')
+    },
+    onStart: (delay) => {
+      // From here the inputs decide when the simulation advances, not the clock.
+      scene.driver.goLockstep(
+        delay,
+        (cmd) => net?.sendCommand(cmd),
+        (tick) => net?.sendWatermark(tick),
+      )
+      if (startScreen) startScreen.hidden = true
+      if (btnConcede) btnConcede.hidden = false
+      scene.start()
+    },
+    onCommand: (cmd) => scene.driver.receive(cmd),
+    onWatermark: (player, tick) => scene.driver.receiveWatermark(player, tick),
+    onEnded: (reason, winner) => {
+      endedByRelay = { reason, winner }
+      if (btnConcede) btnConcede.hidden = true
+      if (btnRematch) btnRematch.hidden = false
+      showEnding()
+    },
+    onRefused: (reason, detail) => {
+      netSay(
+        reason === 'version'
+          ? 'This tab is running an old build. Reload the page — the game updated.'
+          : reason === 'room-full'
+            ? 'That room already has two players.'
+            : reason === 'already-started'
+              ? 'That match has already started.'
+              : `Refused: ${reason}${detail ? ` (${detail})` : ''}`,
+      )
+      net?.close()
+      net = null
+    },
+    onDropped: (reason) => toast(`One input was dropped by the relay: ${reason}`),
+    onPeer: (present) => netSay(present ? 'Opponent connected.' : 'Opponent left.'),
+    onRematch: (seated) => netSay(seated < 2 ? 'Waiting for them to accept…' : 'Rematch starting…'),
+    onClosed: () => {
+      netSay('Connection lost. There is no reconnect yet — reload to start again.')
+      if (btnConcede) btnConcede.hidden = true
+    },
+  })
+  net.connect()
+}
+
+async function hostRoom(): Promise<void> {
+  netSay('creating a room…')
+  try {
+    const base = (import.meta.env.VITE_RELAY ?? 'https://ltw-relay.workers.dev')
+      .replace(/^ws/, 'http')
+      .replace(/\/$/, '')
+    const res = await fetch(`${base}/new`)
+    const { code } = (await res.json()) as { code: string }
+    connect(code)
+  } catch {
+    netSay('Could not reach the relay. It may not be deployed yet.')
+  }
+}
+
+btnHost?.addEventListener('click', () => void hostRoom())
+btnJoin?.addEventListener('click', () => {
+  const code = (joinCode?.value ?? '').trim().toUpperCase()
+  if (code.length !== 6) {
+    netSay('A room code is six letters and digits.')
+    return
+  }
+  connect(code)
+})
+
+btnConcede?.addEventListener('click', () => {
+  // Out of band. A concede stamped for T+delay could not be applied while the
+  // sim is stalled waiting for the peer, which is exactly when it is wanted.
+  net?.concede()
+})
+
+btnRematch?.addEventListener('click', () => {
+  net?.rematch()
+  if (btnRematch) btnRematch.hidden = true
+})
+
+// Join by URL: ?room=ABCDEF skips the lobby entirely.
+const roomFromUrl = new URLSearchParams(window.location.search).get('room')
+if (roomFromUrl && roomFromUrl.length === 6) {
+  if (joinCode) joinCode.value = roomFromUrl.toUpperCase()
+  connect(roomFromUrl.toUpperCase())
+}
+
+function showEnding(): void {
+  if (!over || !endedByRelay) return
+  over.hidden = false
+  const title = document.querySelector('#over h2')
+  const won = endedByRelay.winner === mySeat
+  if (title) title.textContent = won ? 'You win' : 'You lose'
+  if (overDetail) {
+    overDetail.textContent =
+      endedByRelay.reason === 'concede'
+        ? won
+          ? 'Your opponent conceded.'
+          : 'You conceded.'
+        : won
+          ? 'Your opponent left the match.'
+          : 'You left the match.'
+  }
+}
 
 // --- start ------------------------------------------------------------------
 // The scene is built above so a missing WebGL context fails before the player

@@ -5,3 +5,7 @@ dist/
 .idea/
 .vscode/
 .gstack/
+
+# Local wrangler state: miniflare's SQLite for Durable Objects, caches and D1.
+# Regenerated on every `wrangler dev`, machine-specific, never useful in a diff.
+.wrangler/

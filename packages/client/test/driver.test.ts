@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { Driver } from '../src/driver'
 import {
   TICK_MS, TowerKind, MatchResult, tileIndex, creepSpec, STARTING_INCOME, BOT_HARD, Kind,
+  type Command,
 } from '@ltw/sim'
 
 /**
@@ -247,5 +248,75 @@ describe('desync apparatus', () => {
     expect(dump.balance.creeps.length).toBeGreaterThan(0)
     expect(dump.peerHashes).not.toBeNull()
     expect(dump.divergedAtTick).toBeGreaterThanOrEqual(0)
+  })
+})
+
+describe('lockstep mode', () => {
+  it('stamps local commands ahead by the delay and sends them, not applies them', () => {
+    // Applying your own command early would mean the two clients applied the
+    // same command at different ticks, which is the desync the whole design
+    // exists to prevent. The lag it creates is what prediction covers over.
+    const d = new Driver(0, null)
+    const sent: Command[] = []
+    d.advance(0)
+    d.goLockstep(6, (c) => sent.push(c), () => {})
+    d.queueSend(0)
+    expect(sent).toHaveLength(1)
+    expect(sent[0]!.tick).toBe(d.current.tick + 6)
+    // Nothing applied locally: income is untouched until the relay returns it.
+    expect(d.mySide.income).toBe(STARTING_INCOME)
+  })
+
+  it('will not advance past a tick the peer has not accounted for', () => {
+    const d = new Driver(0, null)
+    d.advance(0)
+    d.goLockstep(4, () => {}, () => {})
+    let t = 0
+    // The bootstrap covers ticks 0..3 for both seats and nothing beyond.
+    for (let f = 1; f <= 20; f++) { t += TICK_MS; d.advance(t) }
+    expect(d.current.tick).toBe(4)
+
+    // One seat promising more is not enough; strict wait needs both.
+    d.receiveWatermark(0, 40)
+    t += TICK_MS * 5
+    d.advance(t)
+    expect(d.current.tick).toBe(4)
+
+    d.receiveWatermark(1, 40)
+    t += TICK_MS * 5
+    d.advance(t)
+    expect(d.current.tick).toBeGreaterThan(4)
+  })
+
+  it('re-states its watermark on a cadence, not only when it acts', () => {
+    // Folding the promise into "I just sent a command" deadlocks: the relay can
+    // drop a frame, and the peer then waits forever on a tick the sender
+    // believes it promised.
+    const d = new Driver(0, null)
+    const marks: number[] = []
+    d.advance(0)
+    d.goLockstep(4, () => {}, (tick) => marks.push(tick))
+    let t = 0
+    for (let f = 1; f <= 12; f++) { t += TICK_MS; d.advance(t) }
+    expect(marks.length).toBeGreaterThan(0)
+    for (let i = 1; i < marks.length; i++) expect(marks[i]!).toBeGreaterThan(marks[i - 1]!)
+  })
+
+  it('reports how far behind the peer is, for the stall overlay', () => {
+    // Measured as their promise against ours. Comparing against the current
+    // tick cannot work: strict wait means the tick never exceeds either mark,
+    // so that difference is never positive and the overlay could never appear.
+    const d = new Driver(0, null)
+    d.advance(0)
+    d.goLockstep(4, () => {}, () => {})
+    d.receiveWatermark(0, 200)
+    d.receiveWatermark(1, 200)
+    expect(d.peerLag(0)).toBe(0)
+
+    // We keep promising; they stop. That is precisely a stall.
+    d.receiveWatermark(0, 300)
+    expect(d.peerLag(0)).toBe(100)
+    // And from the other seat's point of view, nobody is behind.
+    expect(d.peerLag(1)).toBe(0)
   })
 })

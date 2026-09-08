@@ -8,10 +8,12 @@
     "gauntlet": "vite-node src/gauntlet-run.ts",
     "lap": "vite-node src/lap-run.ts",
     "roster": "vite-node src/roster-run.ts",
-    "replay": "vite-node src/replay-run.ts"
+    "replay": "vite-node src/replay-run.ts",
+    "live": "vite-node scripts/live-duel.mts"
   },
   "dependencies": {
-    "@ltw/sim": "workspace:*"
+    "@ltw/sim": "workspace:*",
+    "@ltw/server": "workspace:*"
   },
   "devDependencies": {
     "vitest": "^3.2.0",

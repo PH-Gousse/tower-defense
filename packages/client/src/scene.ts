@@ -98,6 +98,8 @@ export interface Stats {
   readonly oppCreeps: number
   /** Non-null once a peer's hashes disagreed with ours. The sim is frozen. */
   readonly desync: Divergence | null
+  /** Ticks the opponent is behind. 0 against a bot, or when keeping up. */
+  readonly peerLag: number
 }
 
 export interface Selection {
@@ -128,6 +130,8 @@ export interface Scene {
   readonly setBot: (bot: BotConfig | null) => void
   /** The match as a reproducible JSON file. See packages/sim/src/dump.ts. */
   readonly dump: (trigger: 'desync' | 'manual') => DesyncDump
+  /** The driver, for the network layer to feed and question. */
+  readonly driver: Driver
   start: () => void
 }
 
@@ -638,6 +642,7 @@ export function createScene(
     send: (creep) => driver.queueSend(creep),
     setBot: (b) => driver.setBot(b),
     dump: (trigger) => driver.dump(trigger, BUILD),
+    driver,
     upgradeSelected: () => {
       if (selected) driver.queueUpgrade(selected.x, selected.y)
     },
@@ -689,6 +694,7 @@ export function createScene(
             oppLives: state.players[1 - ME]!.lives,
             oppCreeps: state.lanes[1 - ME]!.creeps.count,
             desync: driver.desync,
+            peerLag: driver.lockstep ? driver.peerLag(ME) : 0,
           })
         }
         syncCreeps(driver.alpha)

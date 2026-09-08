@@ -39,6 +39,11 @@ jobs:
         run: pnpm --filter @ltw/sim test
       - name: Client driver tests (headless — no WebGL needed)
         run: pnpm --filter @ltw/client test
+      - name: Relay logic (rooms, handshake, validation)
+        # The Durable Object adapter is not covered here -- it needs a Worker
+        # runtime. `pnpm --filter @ltw/harness live` exercises that against
+        # `wrangler dev`, and is run by hand.
+        run: pnpm --filter @ltw/server test
       - name: Bot ladder and match resolution (harness)
         # These run whole bot-vs-bot matches. The ladder test is the one that
         # matters: it has caught the difficulty presets being ordered backwards
