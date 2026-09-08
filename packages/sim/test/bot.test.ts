@@ -164,8 +164,10 @@ describe('bot', () => {
     }
     // Long enough for several tiers to pass and the targets to pull apart. The
     // early game is gold-bound rather than target-bound, so a short horizon
-    // measures the starting purse and not the ratio at all.
-    expect(towersAfter(0.1, 24000)).toBeGreaterThan(towersAfter(0.9, 24000))
+    // measures the starting purse and not the ratio at all. Tiers arrive every
+    // 600 ticks and the roster tops out at tier 20, so 12,000 is the whole
+    // ladder -- twice this ran fine locally and blew the timeout on CI.
+    expect(towersAfter(0.1, 12000)).toBeGreaterThan(towersAfter(0.9, 12000))
   })
 
   it('always builds the opening before it sends anything', () => {
