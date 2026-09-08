@@ -219,6 +219,21 @@ export class CameraRig {
   /** Pointer state. Drag-panning grabs the ground and keeps it under the cursor. */
   private dragPointer = -1
   private dragging = false
+  /**
+   * Whether the gesture that just ended actually moved the camera.
+   *
+   * The app needs this to tell a tap from a drag, and it must be the SAME
+   * answer the rig acted on. Letting the app re-derive it from its own pixel
+   * threshold is what created a dead zone: a click that drifted past the app's
+   * slop but was still judged a tap here did nothing at all -- no tower, no
+   * pan, no feedback. One source of truth, read on pointerup.
+   *
+   * Cleared on the next press rather than on release, because the rig's own
+   * release handler runs BEFORE the app's and would otherwise wipe the answer
+   * before anyone read it.
+   */
+  private panned = false
+  private pannedPointer = -1
   private readonly dragGrab = new THREE.Vector3()
   private readonly pointers = new Map<number, { x: number; y: number }>()
   private pinchDistance = 0
@@ -582,6 +597,16 @@ export class CameraRig {
     return this.rect
   }
 
+  /**
+   * Did the gesture on this pointer move the camera?
+   *
+   * Read it on `pointerup` to tell a tap from a drag. True means the rig
+   * consumed the gesture as a pan and the app should not treat it as a click.
+   */
+  didPan(pointerId: number): boolean {
+    return this.panned && this.pannedPointer === pointerId
+  }
+
   /** Ground point under a client pixel, or null when the ray misses y = 0. */
   private groundAt(clientX: number, clientY: number, out: THREE.Vector3): THREE.Vector3 | null {
     ndcFromClient(clientX, clientY, this.viewportRect, _ndc)
@@ -604,6 +629,9 @@ export class CameraRig {
 
     on(el, 'pointerdown', (ev: PointerEvent) => {
       this.pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY })
+      // A new gesture: whatever the last one did is no longer the answer.
+      this.panned = false
+      this.pannedPointer = -1
 
       if (ev.pointerType === 'touch') {
         if (this.pointers.size === 2) {
@@ -613,8 +641,15 @@ export class CameraRig {
         }
         if (this.pointers.size > 2) return
       } else if (ev.button !== 1 && ev.button !== 2) {
-        // Left click belongs to the game: selecting and building. Only the
-        // middle and right buttons drag the camera.
+        // Left click belongs to the app: selecting and building. Middle and
+        // right drag the camera; on touch, one finger drags.
+        //
+        // Left-drag panning was tried and reverted. In a game where the primary
+        // click PLACES something, the two cannot share the button: any slop
+        // threshold that is loose enough to survive a real click's drift is
+        // also loose enough to make dragging feel dead, and the version that
+        // shipped briefly made a drifting click place nothing at all. A mouse
+        // grabs with the right button; a finger grabs with itself.
         return
       }
 
@@ -662,6 +697,8 @@ export class CameraRig {
       // because a pixel is worth more world units at the top of a tilted view
       // than at the bottom.
       if (this.groundAt(ev.clientX, ev.clientY, _ground) === null) return
+      this.panned = true
+      this.pannedPointer = ev.pointerId
       this.pan(this.dragGrab.x - _ground.x, this.dragGrab.z - _ground.z)
       // Re-sample: the clamp may have refused part of that move, and carrying
       // the original grab point forward would make the camera lurch when the
