@@ -44,6 +44,50 @@ export interface InstanceParent {
 }
 
 /**
+ * Stop three.js culling an instanced mesh against a bounding sphere that
+ * describes nothing.
+ *
+ * **Every `InstancedMesh` in this renderer must go through here**, and the
+ * reason is a genuine trap in three.js rather than a preference.
+ *
+ * `InstancedMesh.boundingSphere` starts null. `Frustum.intersectsObject` fills
+ * it lazily -- `if (object.boundingSphere === null) object.computeBoundingSphere()`
+ * -- and `computeBoundingSphere` unions one sphere per instance:
+ *
+ *     this.boundingSphere.makeEmpty()
+ *     for (let i = 0; i < count; i++) { ...union... }
+ *
+ * On the first rendered frame every mesh here still has `count = 0`. The loop
+ * does not run, the sphere is left empty, and it is **cached** -- the null check
+ * never fires again, so it is never recomputed no matter how many towers or
+ * creeps are written afterwards.
+ *
+ * An empty `Sphere` is centre (0,0,0) with radius **-1**, and `intersectsSphere`
+ * compares against `negRadius = -sphere.radius`, so a radius of -1 inverts the
+ * test into: *is the mesh's local origin at least one world unit inside every
+ * frustum plane?* Visibility of every tower, creep, ghost and lap pip therefore
+ * hung on where the lane's CORNER sat relative to the screen edge, which is not
+ * a fact about where any of them are.
+ *
+ * It passed for as long as it did by luck, and the luck was the chrome. With the
+ * HUD and palette as top and bottom bars the camera reserved their height, sat
+ * further back than the board needed, and left the origin ~2.8 units inside the
+ * frustum. Moving them to side rails removed the vertical reservation, tightened
+ * the fit, and dropped that margin to ~0.5 -- under the one-unit threshold. Every
+ * instanced object vanished at once while the board, the rings and the route
+ * lines, ordinary meshes with honest bounding spheres, kept drawing.
+ *
+ * Culling is turned off rather than the sphere maintained, and that is a real
+ * choice: recomputing a sphere over every instance costs work on every tick
+ * anything moves, to decide whether to skip a mesh the camera's own pan clamp
+ * guarantees is on screen. There is nothing to win. What culling can still do
+ * here is be wrong, silently, exactly as it just was.
+ */
+export function spanningInstances(mesh: THREE.InstancedMesh): void {
+  mesh.frustumCulled = false
+}
+
+/**
  * Grow `mesh` to hold `needed` instances, returning the mesh to draw into.
  *
  * Returns the SAME mesh when it already fits, which is every tick but a few.

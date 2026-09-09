@@ -35,7 +35,7 @@ import {
   type DesyncDump,
 } from '@ltw/sim'
 import { Driver } from './driver'
-import { ensureCapacity, INITIAL_INSTANCES } from './instances'
+import { ensureCapacity, spanningInstances, INITIAL_INSTANCES } from './instances'
 import { PathLine } from './pathline'
 import { createRenderer } from './render/renderer'
 import { buildBoard, BOARD, BOARD_DIM } from './render/board'
@@ -339,6 +339,7 @@ export function createScene(
     )
     mesh.count = 0
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+    spanningInstances(mesh)
     scene.add(mesh)
     towerMeshes.push(mesh)
   }
@@ -363,6 +364,7 @@ export function createScene(
   )
   ghostMesh.count = 0
   ghostMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+  spanningInstances(ghostMesh)
   scene.add(ghostMesh)
 
   // Selection ring, and the range circle it implies.
@@ -425,6 +427,7 @@ export function createScene(
   )
   creeps.count = 0
   creeps.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+  spanningInstances(creeps)
   scene.add(creeps)
 
   /**
@@ -445,6 +448,7 @@ export function createScene(
   )
   pips.count = 0
   pips.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+  spanningInstances(pips)
   scene.add(pips)
 
   /**
@@ -496,6 +500,7 @@ export function createScene(
   )
   oppTowers.count = 0
   oppTowers.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+  spanningInstances(oppTowers)
   oppGroup.add(oppTowers)
 
   let oppCreeps = new THREE.InstancedMesh(
@@ -505,6 +510,7 @@ export function createScene(
   )
   oppCreeps.count = 0
   oppCreeps.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+  spanningInstances(oppCreeps)
   oppGroup.add(oppCreeps)
 
   const hoverMaterial = new THREE.MeshBasicMaterial({
