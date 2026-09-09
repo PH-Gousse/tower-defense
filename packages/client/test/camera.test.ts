@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { clampWindow, fitGround, groundWindow, OVERSCROLL } from '../src/render/CameraRig'
+import {
+  clampWindow, fitGround, groundWindow, OVERSCROLL,
+  DEFAULT_FOV_DEG, DEFAULT_PITCH_DEG, DEFAULT_MAX_DISTANCE,
+} from '../src/render/CameraRig'
 import { groundUnderNdc } from '../src/render/picking'
+import { railWidth, safeEdges } from '../src/chrome'
 
 /**
  * The framing maths, without a DOM.
@@ -29,8 +33,17 @@ const PHONE = 390 / 844
 const LANE = { halfW: 8 / 2, halfD: 24 / 2 }
 const BOTH = { halfW: (8 * 2 + 4) / 2, halfD: 24 / 2 }
 
-const PITCH_DEG = 56
-const FOV_DEG = 35
+/**
+ * The pose under test is the pose that SHIPS.
+ *
+ * These were local copies (`PITCH_DEG = 56`, `FOV_DEG = 35`) until the field of
+ * view narrowed. Local copies make this whole file dishonest the moment the rig
+ * is retuned: every assertion below stays green while describing a camera the
+ * game no longer builds. Import them, and a retune either keeps these
+ * properties or fails here.
+ */
+const PITCH_DEG = DEFAULT_PITCH_DEG
+const FOV_DEG = DEFAULT_FOV_DEG
 const PITCH = PITCH_DEG * DEG
 const FOV = FOV_DEG * DEG
 const MARGIN = 1.06
@@ -145,9 +158,31 @@ describe('fitGround', () => {
 
   it('is closer than a centre-pinned fit would be', () => {
     // The whole point of solving for the shift: both edges bind at once.
+    //
+    // This asserted `< centrePinned * 0.9` while the file carried its own
+    // FOV_DEG = 35. The 10% was not a property of the fit, it was a measurement
+    // of one pose: the saving comes from the window's ASYMMETRY, and a narrow
+    // lens at a high pitch has a more symmetric window, so there is less to
+    // win. At fov 35 the shift saved about 20%; at the shipped 18 it saves
+    // about 6%. Baking either number in makes the test a tripwire on retuning
+    // rather than a statement about the maths.
+    const centre = (halfD: number, fov: number): number =>
+      halfD * (Math.sin(PITCH) / Math.tan(fov / 2) + Math.cos(PITCH))
     const fit = fitGround(LANE.halfW, LANE.halfD, PITCH, FOV, DESKTOP)
-    const centrePinned = LANE.halfD * (Math.sin(PITCH) / Math.tan(FOV / 2) + Math.cos(PITCH))
-    expect(fit.distance).toBeLessThan(centrePinned * 0.9)
+    expect(fit.distance).toBeLessThan(centre(LANE.halfD, FOV))
+  })
+
+  it('saves more by shifting the wider the field of view gets', () => {
+    // The relationship behind the number the test above used to hardcode. A
+    // wider lens sees a more lopsided trapezoid, so freeing the target to slide
+    // along the gaze is worth more. Stated as a trend, it survives any retune.
+    const saving = (fov: number): number => {
+      const pinned = LANE.halfD * (Math.sin(PITCH) / Math.tan(fov / 2) + Math.cos(PITCH))
+      return 1 - fitGround(LANE.halfW, LANE.halfD, PITCH, fov, DESKTOP).distance / pinned
+    }
+    expect(saving(45 * DEG)).toBeGreaterThan(saving(35 * DEG))
+    expect(saving(35 * DEG)).toBeGreaterThan(saving(18 * DEG))
+    expect(saving(FOV)).toBeGreaterThan(0)
   })
 
   it('needs more distance as the field of view narrows', () => {
@@ -298,12 +333,20 @@ describe('the pan clamp', () => {
   it('does not jump as the zoom crosses the point where the strict range dies', () => {
     // Either side of the distance at which the bounds stop being satisfiable
     // the clamped target has to be continuous, or the view lurches mid-scroll.
+    //
+    // The scan used to run `d = 8; d < 70`, the old min and max distance
+    // written as literals. Narrowing the lens moved the lock point from about
+    // 33 to about 77, straight past the end of that window, so the loop found
+    // nothing and `locked` stayed 0 -- a test that reported a missing lock
+    // point rather than a discontinuity. Scan the range the rig can actually
+    // reach, so the window follows the clamp instead of shadowing it.
     let locked = 0
-    for (let d = 8; d < 70; d += 0.25) {
+    for (let d = 1; d < DEFAULT_MAX_DISTANCE; d += 0.25) {
       const w = groundWindow(d, PITCH, FOV, DESKTOP)
       if (BOUNDS.minZ + w.far >= BOUNDS.maxZ - w.near) { locked = d; break }
     }
-    expect(locked).toBeGreaterThan(8)
+    expect(locked).toBeGreaterThan(1)
+    expect(locked).toBeLessThan(DEFAULT_MAX_DISTANCE)
     const at = (d: number): number => {
       const w = groundWindow(d, PITCH, FOV, DESKTOP)
       return clampWindow(9999, BOUNDS.minZ, BOUNDS.maxZ, -w.far, w.near)
@@ -376,5 +419,138 @@ describe('the derived pose', () => {
     // The entrance row is z = 0 and must appear at the top of the screen.
     const camera = poseYaw(4, 12, 32, 56, 0)
     expect(camera.position.z).toBeGreaterThan(12)
+  })
+})
+
+/**
+ * The two clamps the fit silently obeys.
+ *
+ * `fitBounds` does not widen `maxDistance` when a rectangle needs more room --
+ * by design, stated in its own comment -- it clamps and shows the cropped view.
+ * And a rail that grows past its share flips the fit from height-bound to
+ * width-bound, at which point the board SHRINKS while the UI looks like it
+ * gained space. Neither failure raises anything. Both are arithmetic, so both
+ * are testable here rather than only visible in a browser.
+ *
+ * These reproduce `fitBounds`'s own reduction of the safe area to an effective
+ * fov and aspect, because that is what decides the distance -- asserting
+ * against raw `fitGround` would test a fit the game never performs.
+ */
+describe('the fit stays inside the clamps', () => {
+  /** `frame()` fits the whole content rectangle in landscape. */
+  const CONTENT = { halfW: (8 * 2 + 4) / 2, halfD: 24 / 2 }
+
+  /**
+   * The bars' measured heights, for the viewports that fall back to them.
+   *
+   * Approximations of what `getBoundingClientRect` reports, and deliberately on
+   * the generous side: a fit that survives a taller-than-real bar survives the
+   * real one. They only matter in portrait and on windows too narrow for rails.
+   */
+  const HUD_PX = 46
+  const PALETTE_PX = 68
+
+  /** Viewports the game has to survive, worst case last. */
+  const VIEWPORTS: ReadonlyArray<readonly [string, number, number]> = [
+    ['ultrawide 3440x1440', 3440, 1440],
+    ['iPad portrait 820x1180', 820, 1180],
+    ['iPhone portrait 390x844', 390, 844],
+    ['laptop 1456x830', 1456, 830],
+    ['laptop 1280x800', 1280, 800],
+    ['small 1024x640', 1024, 640],
+    ['short landscape 1024x500', 1024, 500],
+  ]
+
+  /** `CameraRig.fitBounds`, reduced to the arithmetic that picks the distance. */
+  function fitAs(
+    viewW: number, viewH: number, safeV: number, safeH: number,
+    halfW: number, halfD: number,
+  ): { distance: number; bound: 'height' | 'width' } {
+    const usableY = Math.max(0.2, (viewH - 2 * safeV) / viewH)
+    const usableX = Math.max(0.2, (viewW - 2 * safeH) / viewW)
+    const t = Math.tan(FOV / 2)
+    const fovEff = 2 * Math.atan(t * usableY)
+    const aspectEff = ((viewW / viewH) * usableX) / usableY
+    const f = fitGround(halfW * MARGIN, halfD * MARGIN, PITCH, fovEff, aspectEff)
+    // Which constraint bound: re-run with no width to isolate the vertical one.
+    const vertical = fitGround(0, halfD * MARGIN, PITCH, fovEff, aspectEff)
+    return {
+      distance: f.distance,
+      bound: f.distance > vertical.distance + 1e-9 ? 'width' : 'height',
+    }
+  }
+
+  /**
+   * The rectangle `frame()` actually fits, which is NOT the same on both
+   * orientations: landscape frames both lanes, portrait frames yours alone
+   * (`scene.ts`, and the comment there explains why -- fitting the pair into a
+   * phone's aspect needs roughly twice the distance and neither maze is
+   * readable at that range). Asserting the pair on a phone measures a fit the
+   * game never performs, and reports a distance it never uses.
+   */
+  function framedRect(viewW: number, viewH: number): { halfW: number; halfD: number } {
+    return viewW >= viewH ? CONTENT : LANE
+  }
+
+  /** The safe area for a viewport, exactly as `syncSafeArea` would report it. */
+  function safeFor(viewW: number, viewH: number): { v: number; h: number; rail: number } {
+    const rail = railWidth(viewW, viewH)
+    const e = safeEdges(rail, HUD_PX, PALETTE_PX)
+    return { v: Math.max(e.top, e.bottom), h: Math.max(e.left, e.right), rail }
+  }
+
+  it('never needs more distance than maxDistance allows, on any viewport', () => {
+    // THE BUG THIS EXISTS FOR. At the previous maxDistance of 70 the shipped
+    // field of view needed 90 on a laptop and 103.5 on a short window, so
+    // fitBounds clamped and cropped the board to 78% with nothing said.
+    for (const [name, w, h] of VIEWPORTS) {
+      const { v, h: sh } = safeFor(w, h)
+      const rect = framedRect(w, h)
+      const fit = fitAs(w, h, v, sh, rect.halfW, rect.halfD)
+      expect(fit.distance, `${name} needs ${fit.distance.toFixed(1)}`)
+        .toBeLessThanOrEqual(DEFAULT_MAX_DISTANCE)
+    }
+  })
+
+  it('keeps a margin under maxDistance rather than sitting on it', () => {
+    // A fit that exactly equals the ceiling is one CSS tweak from cropping.
+    const worst = VIEWPORTS.reduce((acc, [, w, h]) => {
+      const { v, h: sh } = safeFor(w, h)
+      const rect = framedRect(w, h)
+      return Math.max(acc, fitAs(w, h, v, sh, rect.halfW, rect.halfD).distance)
+    }, 0)
+    expect(worst).toBeLessThan(DEFAULT_MAX_DISTANCE * 0.95)
+  })
+
+  it('stays height-bound at the rail width the layout actually uses', () => {
+    // Height-bound is what makes the rails free. The moment the fit turns
+    // width-bound the rails are costing board area, which is the opposite of
+    // why they exist. `chrome.ts` derives the cap from this same maths, so this
+    // is the end-to-end check that it derived it correctly.
+    for (const [name, w, h] of VIEWPORTS) {
+      const { v, h: sh, rail } = safeFor(w, h)
+      if (rail === 0) continue // portrait and narrow windows keep the bars
+      const rect = framedRect(w, h)
+      const fit = fitAs(w, h, v, sh, rect.halfW, rect.halfD)
+      expect(fit.bound, `${name} at rail ${rail}px`).toBe('height')
+    }
+  })
+
+  it('would go width-bound if a rail overran its share, which is why it is capped', () => {
+    // The negative case, so the test above is known to be able to fail.
+    const fit = fitAs(1456, 830, 0, 520, CONTENT.halfW, CONTENT.halfD)
+    expect(fit.bound).toBe('width')
+  })
+
+  it('gives the board more height in rails than in bars', () => {
+    // The whole justification for moving the chrome sideways, as arithmetic
+    // rather than a screenshot: at the same field of view a closer camera means
+    // a larger board on screen.
+    const bars = fitAs(1456, 830, Math.max(HUD_PX, PALETTE_PX), 0,
+      CONTENT.halfW, CONTENT.halfD)
+    const rails = fitAs(1456, 830, 0, railWidth(1456, 830),
+      CONTENT.halfW, CONTENT.halfD)
+    expect(railWidth(1456, 830)).toBeGreaterThan(0)
+    expect(rails.distance).toBeLessThan(bars.distance)
   })
 })

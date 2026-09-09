@@ -110,7 +110,7 @@ export function fireTowers(state: GameState, lane: Lane, hash: SpatialHash): voi
     const kind = t.kind[i] as TowerKind
     const level = t.level[i] as number
     const spec = levelOf(kind, level)
-    const target = findTarget(state, lane, hash, i, spec.range)
+    const target = findTarget(lane, hash, i, spec.range)
     if (target === -1) continue
 
     t.cooldown[i] = spec.cooldownTicks
@@ -146,7 +146,6 @@ export function fireTowers(state: GameState, lane: Lane, hash: SpatialHash): voi
  * harness at step 8.
  */
 function findTarget(
-  state: GameState,
   lane: Lane,
   hash: SpatialHash,
   towerTile: number,

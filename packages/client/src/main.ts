@@ -5,9 +5,11 @@ import { createSender } from './send'
 import { STALL_TICKS } from '@ltw/sim'
 import {
   TowerKind, ARCHETYPES, levelOf, MAX_LEVEL, TICK_HZ, MatchResult,
-  CREEPS, tierUnlockTick, SEND_UNLOCK_TICKS, INCOME_EVERY_TICKS, MAX_TIER,
+  CREEPS, tierUnlockTick, SEND_UNLOCK_TICKS, INCOME_EVERY_TICKS,
   BOT_EASY, BOT_NORMAL, BOT_HARD, type BotConfig,
 } from '@ltw/sim'
+import { mmss, secondsUntil, ticksUntilIncome, ticksUntilNextTier, unlockedTier } from './clocks'
+import { railWidth, safeEdges } from './chrome'
 
 let scene: Scene
 try {
@@ -26,6 +28,9 @@ try {
 }
 
 const el = (id: string) => document.getElementById(id)
+const clock = el('clock')
+const incomeLeft = el('incomeLeft')
+const tierLeft = el('tierLeft')
 const lives = el('lives')
 const oppLives = el('oppLives')
 const income = el('income')
@@ -90,11 +95,21 @@ if (sendRow) {
   })
 }
 
-/** Highest tier buyable at this tick. */
-function unlockedTier(tick: number): number {
-  let tier = 0
-  while (tier + 1 <= MAX_TIER && tick >= tierUnlockTick(tier + 1)) tier += 1
-  return tier
+/**
+ * Write only when the text actually changed.
+ *
+ * `onStats` runs every tick -- 20 times a second -- while a clock changes once
+ * a second, so nineteen of every twenty writes are the same string. That is
+ * cheap on its own, but each write dirties a node inside the chrome, and the
+ * chrome is under a ResizeObserver whose callback measures both elements with
+ * `getBoundingClientRect`. Guarding here keeps that observer at one poke a
+ * second instead of twenty.
+ */
+const lastText = new WeakMap<HTMLElement, string>()
+function setText(node: HTMLElement | null, text: string): void {
+  if (!node || lastText.get(node) === text) return
+  lastText.set(node, text)
+  node.textContent = text
 }
 
 // One key per palette slot, along the top row in palette order. Hard-coding
@@ -168,9 +183,24 @@ scene.onSelect((sel: Selection | null) => {
 // --- stats -----------------------------------------------------------------
 
 scene.onStats((s) => {
-  if (gold) gold.textContent = String(s.gold)
-  if (income) income.textContent = `${s.income} /15s`
-  if (oppLives) oppLives.textContent = String(s.oppLives)
+  setText(gold, String(s.gold))
+  // The interval was spelled "/15s" by hand while INCOME_EVERY_TICKS sat
+  // imported and unused three lines above. Correct today and a lie the first
+  // time the cadence is tuned -- and it would read as a balance bug, not a
+  // display one.
+  setText(income, `${s.income} /${INCOME_EVERY_TICKS / TICK_HZ}s`)
+  setText(oppLives, String(s.oppLives))
+
+  // The three clocks. All fixed-width: the rail's width is what the camera
+  // reserves, so a string that gains a character re-frames the board.
+  setText(clock, mmss(s.tick))
+  setText(incomeLeft, mmss(ticksUntilIncome(s.tick)))
+  const nextTier = ticksUntilNextTier(s.tick)
+  setText(tierLeft, nextTier === null ? '--:--' : mmss(nextTier))
+  if (tierLeft) {
+    if (nextTier === null) tierLeft.setAttribute('data-none', 'true')
+    else tierLeft.removeAttribute('data-none')
+  }
 
   // Slide the window as tiers unlock, then paint each card. Cards carry three
   // states, not two: affordable, unaffordable, and not-yet-unlocked. Locked is
@@ -181,7 +211,7 @@ scene.onStats((s) => {
   // clock, where the eye already goes to decide what to send.
   if (sendLabel) {
     const left = SEND_UNLOCK_TICKS - s.tick
-    sendLabel.textContent = left > 0 ? `Build · ${Math.ceil(left / TICK_HZ)}s` : 'Send →'
+    setText(sendLabel, left > 0 ? `Build · ${secondsUntil(SEND_UNLOCK_TICKS, s.tick)}s` : 'Send →')
     sendLabel.classList.toggle('counting', left > 0)
   }
 
@@ -221,7 +251,7 @@ scene.onStats((s) => {
     if (c) {
       c.textContent =
         tierLocked && !opening
-          ? `${spec.cost}g · unlocks in ${Math.ceil((tierUnlockTick(spec.tier) - s.tick) / TICK_HZ)}s`
+          ? `${spec.cost}g · unlocks in ${secondsUntil(tierUnlockTick(spec.tier), s.tick)}s`
           : `${spec.cost}g` +
             (spec.count > 1 ? ` ×${spec.count}` : '') +
             ` · +${spec.incomeBonus} inc`
@@ -229,9 +259,9 @@ scene.onStats((s) => {
     if (!opening && !tierLocked && s.gold < spec.cost) b.setAttribute('data-broke', 'true')
     else b.removeAttribute('data-broke')
   }
-  if (leaks) leaks.textContent = String(s.leaks)
+  setText(leaks, String(s.leaks))
   if (lives) {
-    lives.textContent = String(s.lives)
+    setText(lives, String(s.lives))
     // Turn red under real pressure. A leak is a drain, not a one-off penalty,
     // so the number falling is the thing to watch.
     if (s.lives <= 5) lives.setAttribute('data-low', 'true')
@@ -256,10 +286,10 @@ scene.onStats((s) => {
     desyncPanel.hidden = s.desync === null
     if (s.desync && desyncTick) desyncTick.textContent = `tick ${s.desync.tick}`
   }
-  if (towers) towers.textContent = String(s.towers)
-  if (creeps) creeps.textContent = String(s.creeps)
-  if (kills) kills.textContent = String(s.kills)
-  if (maze) maze.textContent = s.maze < 0 ? 'sealed' : String(s.maze)
+  setText(towers, String(s.towers))
+  setText(creeps, String(s.creeps))
+  setText(kills, String(s.kills))
+  setText(maze, s.maze < 0 ? 'sealed' : String(s.maze))
   // Dim what you cannot afford rather than hiding it, so you can plan toward it.
   for (const t of tools) {
     const kind = Number(t.dataset.tower) as TowerKind
@@ -522,21 +552,45 @@ for (const b of Array.from(
 }
 
 /**
- * Keep the camera framing clear of the fixed HUD and palette.
+ * Choose the chrome layout, then keep the camera framing clear of it.
  *
- * The canvas fills the window and both bars sit on top of it, so without this
- * the board is framed edge to edge and the entrance and exit rows -- the two
- * the player most needs to see -- hide behind the chrome. Measured rather than
- * hardcoded because the palette's height is not fixed: it grows a row of send
- * buttons once a match starts, and grows again as heavier tiers unlock.
+ * The canvas fills the window and the chrome sits on top of it, so without this
+ * the board is framed edge to edge and the entrance and exit rows -- the two the
+ * player most needs to see -- hide behind it.
  *
- * A ResizeObserver rather than a `resize` listener, because the bars change
- * height without the window changing size.
+ * Which axis the chrome occupies is the whole point. As top and bottom bars it
+ * spent the one axis the camera has no slack on: the fit is bound by HEIGHT for
+ * a 20x24 board on any landscape screen, so 136px of bars cost 136px of board
+ * while roughly half the window's width sat empty. As side rails it spends the
+ * free axis instead and the board grows about 44% in area for nothing. See
+ * `chrome.ts` for why the rail's width is derived from the camera's own fit
+ * maths rather than from a tuned fraction.
+ *
+ *   layout decided here ──▶ data-layout + --rail ──▶ CSS positions the chrome
+ *          │                                              │
+ *          └──────────▶ safeEdges ──▶ setSafeArea ◀── measured back from the DOM
+ *
+ * The width is measured back off the rendered element rather than assumed from
+ * `railWidth`, so a scrollbar or a subpixel rounding reserves what is really
+ * there. A ResizeObserver rather than a `resize` listener, because the chrome
+ * can change size without the window doing so.
  */
 function syncSafeArea(): void {
-  const top = document.getElementById('hud')?.getBoundingClientRect().height ?? 0
-  const bottom = document.getElementById('palette')?.getBoundingClientRect().height ?? 0
-  scene.setSafeArea(top, 0, bottom, 0)
+  const hudEl = document.getElementById('hud')
+  const palEl = document.getElementById('palette')
+  const rail = railWidth(window.innerWidth, window.innerHeight)
+
+  document.body.dataset.layout = rail > 0 ? 'rails' : 'bars'
+  document.body.style.setProperty('--rail', `${rail}px`)
+
+  const hudBox = hudEl?.getBoundingClientRect()
+  const palBox = palEl?.getBoundingClientRect()
+  // In rails the rendered width is the reservation; in bars it is the height.
+  const measured = rail > 0
+    ? Math.max(rail, hudBox?.width ?? 0, palBox?.width ?? 0)
+    : 0
+  const edges = safeEdges(measured, hudBox?.height ?? 0, palBox?.height ?? 0)
+  scene.setSafeArea(edges.top, edges.right, edges.bottom, edges.left)
 }
 
 if (typeof ResizeObserver !== 'undefined') {
