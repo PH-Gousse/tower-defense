@@ -1,21 +1,18 @@
 /**
  * Press-and-hold repeat for the send palette.
  *
- * A send is one PURCHASE, and for Runner and Tank one purchase is one creep, so
- * filling a lane meant clicking the same card ten times. The obvious fix is to
- * make those cards ship a pack the way Swarm ships six, and it is the wrong one.
- * `count` is priced into `cost` and `incomeBonus`, so a 3-pack Runner costs 135g
- * and a 2-pack Tank 280g. Starting income is 25 and the bot saves across two
- * income periods, which is 50g: at those prices Swarm is the only card anyone
- * can reach in the opening, there is nothing left to counter-pick between, and
- * `pnpm --filter @ltw/harness opening` falls from 12-0 to 0-0 with all twelve
- * matches undecided. Measured, then reverted. It is not a bot artifact either --
- * a human on 25 income waiting out 280g for one click is the same game, slower.
+ * A send is one creep and one command, the way clicking a shrine in the map
+ * this game descends from queues one unit. Filling a lane is therefore a lot of
+ * clicks, and spamming is the intended way to mass-send rather than a symptom
+ * of a missing feature -- it is why an experienced player's sends arrive as a
+ * stream and not a blob. This makes the BUTTON cheaper to press. It does not
+ * make a send bigger, and it changes no balance: every repeat is an ordinary
+ * command the simulation can refuse.
  *
- * So the roster keeps its granularity and the BUTTON gets cheaper to press.
- * Repeating here changes no balance: every repeat is an ordinary command the
- * simulation can refuse, and holding Q already did this, because keydown
- * auto-repeats and the mouse did not.
+ * It exists because holding a key already did this -- keydown auto-repeats --
+ * and the mouse did not, so the two inputs disagreed about what holding meant.
+ * They now agree, and both go through `sendN` in `send.ts`, which owns the
+ * rules about whether a send may happen at all. This file owns only WHEN.
  *
  * Split out of `main.ts` and handed its timers so the cadence can be tested.
  * The whole thing is timing, and timing is the part that goes wrong quietly:
@@ -24,7 +21,7 @@
 
 /** Grace before a press counts as a hold. Long enough that a click sends once. */
 export const HOLD_DELAY_MS = 350
-/** Cadence once held. Slower than a tick, so `data-broke` is never stale. */
+/** Cadence once held. Slower than a tick, so the wallet check is never stale. */
 export const HOLD_EVERY_MS = 110
 
 type Listener = (ev: { button?: number; detail?: number }) => void
@@ -32,7 +29,6 @@ type Listener = (ev: { button?: number; detail?: number }) => void
 /** The slice of a button this needs. Narrow so a test can stand one up. */
 export interface HoldButton {
   addEventListener(type: string, listener: Listener): void
-  hasAttribute(name: string): boolean
 }
 
 /** The slice of `window` this needs, for the same reason. */
@@ -46,11 +42,16 @@ export interface HoldTimers {
 /**
  * Wire `b` so a press sends once and a hold keeps sending.
  *
+ * `send` reports whether a send actually happened. That boolean is the only
+ * thing this file knows about locks and wallets: it does not read the button's
+ * attributes, because deciding whether a send is allowed is `send.ts`'s job and
+ * a second copy of that decision here is exactly what went wrong before.
+ *
  * Returns the stop function, so the caller can also cut every button off on a
  * window blur -- a press held while the tab goes away would otherwise still be
  * repeating on return.
  */
-export function holdToRepeat(b: HoldButton, send: () => void, timers: HoldTimers): () => void {
+export function holdToRepeat(b: HoldButton, send: () => boolean, timers: HoldTimers): () => void {
   let delay = 0
   let timer = 0
 
@@ -61,25 +62,18 @@ export function holdToRepeat(b: HoldButton, send: () => void, timers: HoldTimers
     timer = 0
   }
 
-  const fire = (): boolean => {
-    if (b.hasAttribute('data-locked')) return false
-    send()
-    return true
-  }
-
   b.addEventListener('pointerdown', (ev) => {
     // Left button only: middle and right belong to the camera, which pans.
     if (ev.button !== 0) return
     // The first send goes on pointerdown, not click, so a hold that becomes a
     // repeat still starts on the press rather than a frame after the release.
     stop()
-    if (!fire()) return
+    if (!send()) return
     delay = timers.setTimeout(() => {
       timer = timers.setInterval(() => {
-        // Stop at the wallet rather than spraying sends the simulation would
-        // refuse anyway. Gold is repainted every tick and the cadence is slower
-        // than a tick, so `data-broke` is current by the time it is read.
-        if (b.hasAttribute('data-broke') || !fire()) stop()
+        // A refused send ends the hold: the wallet emptied, or the card locked
+        // mid-press. Carrying on would spray commands the simulation drops.
+        if (!send()) stop()
       }, HOLD_EVERY_MS)
     }, HOLD_DELAY_MS)
   })
@@ -92,7 +86,7 @@ export function holdToRepeat(b: HoldButton, send: () => void, timers: HoldTimers
   // carries detail >= 1 and was already served by the pointer path above, so
   // this is the keyboard-only branch and cannot double-send.
   b.addEventListener('click', (ev) => {
-    if (ev.detail === 0) fire()
+    if (ev.detail === 0) send()
   })
 
   return stop

@@ -53,8 +53,23 @@ interface Fixture {
   readonly data: BalanceData
 }
 
-const fixturePath = fileURLToPath(new URL('./golden/match-01.json', import.meta.url))
-const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as Fixture
+function load(name: string): Fixture {
+  const path = fileURLToPath(new URL(`./golden/${name}.json`, import.meta.url))
+  return JSON.parse(readFileSync(path, 'utf8')) as Fixture
+}
+
+/**
+ * `match-01` plays a rounded match: building, upgrading, selling, sends from
+ * both sides, kills, leaks.
+ *
+ * `match-02` exists for the one thing match-01 cannot reach, because it was
+ * recorded when the thing was impossible: MASS SENDING. Twenty creeps bought on
+ * a single tick spawn in one call, and keeping them apart is now the job of the
+ * along-path offset in `spawnPointFor` rather than of a release queue. That is
+ * the highest-risk arithmetic in the send path, so it gets a keystone of its own.
+ */
+const fixture = load('match-01')
+const massSend = load('match-02')
 
 function toCommand(c: FixtureCommand): Command {
   switch (c.kind) {
@@ -100,17 +115,40 @@ function replay(f: Fixture): string {
 }
 
 describe('golden fixture', () => {
-  it('replays match-01 to its committed hash', () => {
-    const actual = replay(fixture)
-    if (process.env.GOLDEN_UPDATE === '1') {
-      console.log(`GOLDEN_HASH=${actual}`)
-      return
-    }
-    expect(actual).toBe(fixture.expectedHash)
-  })
+  for (const [name, f] of [['match-01', fixture], ['match-02', massSend]] as const) {
+    it(`replays ${name} to its committed hash`, () => {
+      const actual = replay(f)
+      if (process.env.GOLDEN_UPDATE === '1') {
+        console.log(`GOLDEN_HASH ${name}=${actual}`)
+        return
+      }
+      expect(actual).toBe(f.expectedHash)
+    })
+  }
 
   it('is stable across repeated replays in one process', () => {
     expect(replay(fixture)).toBe(replay(fixture))
+    expect(replay(massSend)).toBe(replay(massSend))
+  })
+
+  it('mass-sends without stacking the wave on one point', () => {
+    // The thing match-02 is for. Twenty creeps bought on one tick must be
+    // twenty positions, not one position with twenty health bars -- that was
+    // the whole argument for keeping a spawn queue, and the along-path offset
+    // is what replaced it. A splash maze is standing in the lane, so if they
+    // ever do stack, they die together and this reads it as a collapse in the
+    // number of live creeps.
+    const final = replayState(massSend)
+    const c = final.lanes[0]!.creeps
+    expect(c.count).toBeGreaterThan(1)
+    const points = new Set<string>()
+    for (let i = 0; i < c.count; i++) points.add(`${c.x[i]},${c.y[i]}`)
+    // Every live creep in the lane is somewhere of its own.
+    expect(points.size).toBe(c.count)
+
+    // And splash actually engaged them, so the separation was tested against
+    // the tower it exists to keep relevant rather than against an empty lane.
+    expect(final.players[0]!.kills).toBeGreaterThan(1)
   })
 
   it('exercises the whole game in one match', () => {

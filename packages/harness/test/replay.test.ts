@@ -24,8 +24,7 @@ function playAndDump(ticks: number, perturbAt = -1) {
   for (let t = 0; t < ticks; t++) {
     const cmds: Command[] = []
     for (const p of [0, 1] as const) {
-      const c = botCommand(a, p, BOT_NORMAL)
-      if (c) cmds.push(c)
+      for (const c of botCommand(a, p, BOT_NORMAL)) cmds.push(c)
     }
     // The driver rewrites `tick` to the tick a command is applied on, because
     // `step()` ignores the field and the producers disagree about it.

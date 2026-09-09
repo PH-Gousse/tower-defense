@@ -1,13 +1,14 @@
 {
-  "_comment": "FROZEN. Do not edit to make a red test green — find out what diverged. The hash moves only when the SIMULATION legitimately changes; the history below records every time it has. As of step 8 this fixture also pins the balance data it was recorded under, in \"data\", and the replay installs it. That is what makes the hash independent of tuning: a red golden test now means the arithmetic diverged, never that someone edited a creep. Regenerating it requires changing \"data\" on purpose.",
+  "_comment": "FROZEN. Do not edit to make a red test green \u2014 find out what diverged. The hash moves only when the SIMULATION legitimately changes; the history below records every time it has. As of step 8 this fixture also pins the balance data it was recorded under, in \"data\", and the replay installs it. That is what makes the hash independent of tuning: a red golden test now means the arithmetic diverged, never that someone edited a creep. Regenerating it requires changing \"data\" on purpose.",
   "_hashHistory": [
     "ad3da200 - step 2/3, movement only",
     "ded775ca - step 4, towers began shooting (real behaviour change)",
     "adc38458 - step 5, leaks cost lives AND hashState was fixed to cover gold/towers/lives, which it had silently never covered",
     "f390d440 - step 6, two lanes, real creep roster, economy; creeps now arrive from sends rather than a config",
-    "ce02e89d - step 9, the lane turned vertical and shrank to 8 x 24 (a real geometry change: every route, every tower range overlap and every leak timing moved). The command log was remapped onto the new board; the schedule and the balance data in \"data\" are untouched."
+    "ce02e89d - step 9, the lane turned vertical and shrank to 8 x 24 (a real geometry change: every route, every tower range overlap and every leak timing moved). The command log was remapped onto the new board; the schedule and the balance data in \"data\" are untouched.",
+    "bd025b5c - the spawn queue was removed. A send used to enqueue its creeps and the lane released one every four ticks; it now spawns them on the tick the command applies, because gold is meant to be the only thing rationing a send. Separation between simultaneous arrivals moved from the queue's timing to spawnPointFor's along-path offset, so every creep in this replay enters at a different position than it used to and the whole match diverges from tick one. A real behaviour change; the command log and the balance data in \"data\" are untouched."
   ],
-  "_coverage": "Runs the full 2600 ticks without either player reaching zero, so the sim never freezes and everything after that tick keeps being exercised. Both lanes are live: player 0 ends on 14 lives / 6 leaks / 23 kills / income 39, player 1 on 14 lives / 6 leaks / 15 kills / income 53. Exercises building, upgrading, selling, sends from both sides, the spawn queue, tower fire, kill bounty, leaks costing lives, income ticks and tier-1 unlocks.",
+  "_coverage": "Runs the full 2600 ticks without either player reaching zero, so the sim never freezes and everything after that tick keeps being exercised. Both lanes are live: player 0 ends on 14 lives / 6 leaks / 23 kills / income 39, player 1 on 14 lives / 6 leaks / 15 kills / income 53. Exercises building, upgrading, selling, sends from both sides, sends spawning on the spot, tower fire, kill bounty, leaks costing lives, income ticks and tier-1 unlocks.",
   "ticks": 2600,
   "commands": [
     {
@@ -150,7 +151,7 @@
       "creep": 1
     }
   ],
-  "expectedHash": "ce02e89d",
+  "expectedHash": "bd025b5c",
   "data": {
     "sellRefund": 0.6,
     "archetypes": [
@@ -236,6 +237,9 @@
       }
     ],
     "unlockEveryTicks": 1200,
+    "_purseComment": "Added when the opening purse became freezable. These are the values this match was recorded under, in the pre-x10 scale. Pinning them is what keeps expectedHash at ce02e89d across the x10 rescale, and that the hash did not move is the proof the rescale changed no arithmetic.",
+    "startingGold": 600,
+    "startingIncome": 25,
     "creeps": [
       {
         "key": "swarm",

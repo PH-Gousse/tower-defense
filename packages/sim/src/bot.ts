@@ -12,7 +12,7 @@ import {
   tierUnlockTick,
   SEND_UNLOCK_TICKS,
 } from './data'
-import { opponentOf, type GameState, type Lane, type Player } from './state'
+import { opponentOf, SPAWN_PERIOD, type GameState, type Lane, type Player } from './state'
 import { Kind, Refusal, checkBuild, checkUpgrade, checkSend, type Command } from './step'
 import { templateAt } from './maze'
 
@@ -113,7 +113,7 @@ export interface BotConfig {
  * A fixed opening costs every difficulty exactly the same gold, so unlike the
  * `reserve` knob it replaces it cannot tilt the ladder, and it is bounded, so
  * it cannot produce the never-ending match that knob also produced. Six
- * single-target towers is 360g against 600g of starting gold: an opening a
+ * single-target towers is 3600g against 6000g of starting gold: an opening a
  * human would recognise, paid for before the first income tick.
  */
 const OPENING_TOWERS = 6
@@ -132,8 +132,16 @@ const OPENING_TOWERS = 6
  * Tied to income it self-corrects. A poor bot wants a small maze, sends to get
  * richer, and can then afford a bigger one. Which is how a person plays: you do
  * not open by building forty-five towers.
+ *
+ * ITS UNITS ARE TOWERS PER GOLD, so it is the one constant here that the x10
+ * gold rescale had to move -- 0.16 became 0.016. Everything else in this file
+ * counts towers, periods or ticks and was scale-free, which is exactly why this
+ * one is easy to miss: nothing fails loudly. Left at 0.16 both spend ratios
+ * simply saturate the tower ceiling, build the identical fifteen-tower maze,
+ * and the ratio silently stops meaning anything at all. `spends the ratio` in
+ * test/bot.test.ts is the test that catches it.
  */
-const TOWERS_PER_INCOME = 0.16
+const TOWERS_PER_INCOME = 0.016
 
 
 /**
@@ -191,8 +199,14 @@ export const BOT_NORMAL: BotConfig = { sendRatio: 0.5, reactionTicks: 10, templa
 export const BOT_HARD: BotConfig = { sendRatio: 0.75, reactionTicks: 10, template: 0 }
 
 /**
- * One decision. Returns `null` when the bot chooses to do nothing this tick,
- * which the caller should treat as `Kind.None`.
+ * One decision. Returns the commands it wants applied this tick, empty when it
+ * chooses to do nothing.
+ *
+ * A decision yields at most one BUILD or one UPGRADE, because a maze is placed
+ * a tile at a time and the next tile depends on the last. Sends are different:
+ * one purchase is one creep, so wanting a wave means saying so once per creep,
+ * and the array is how the bot says it -- see `sendBurst` for why a single
+ * command per decision would have quietly crippled its economy.
  *
  * Pure: a function of (state, player, config) plus the deterministic tick
  * counter. No clock, no randomness — the roster and template scans are ordered,
@@ -202,10 +216,10 @@ export function botCommand(
   state: GameState,
   player: 0 | 1,
   config: BotConfig = BOT_NORMAL,
-): Command | null {
+): readonly Command[] {
   // Reaction delay. Acting on every tick would make the bot inhumanly quick to
   // punish a leak, which is a difficulty knob rather than an intelligence one.
-  if (state.tick % config.reactionTicks !== 0) return null
+  if (state.tick % config.reactionTicks !== 0) return NONE
 
   const lane = state.lanes[player] as Lane
   const me = state.players[player] as Player
@@ -213,7 +227,7 @@ export function botCommand(
   const emergency = findLoopingCreep(lane)
   if (emergency !== -1) {
     const cmd = reinforceRoute(state, player, lane)
-    if (cmd) return cmd
+    if (cmd) return [cmd]
     // Nothing affordable to reinforce with. Fall through rather than idling:
     // sending back is still better than doing nothing.
   }
@@ -223,10 +237,10 @@ export function botCommand(
   // only arrives faster once the towers exist to keep it alive.
   if (towerCount(lane) < OPENING_TOWERS) {
     const opening = nextTemplateTile(state, player, lane, config, me.gold)
-    if (opening) return opening
+    if (opening) return [opening]
     // Cannot afford it yet. Hold rather than spending the gold on a creep --
     // that fall-through is exactly what stops the maze from ever being built.
-    return null
+    return NONE
   }
 
   // The split, applied to GOLD rather than to whichever decision came up.
@@ -313,17 +327,38 @@ export function botCommand(
   // tier, then let everything else go into the next creep.
   if (canBuild) {
     const build = nextTemplateTile(state, player, lane, config, buildBudget)
-    if (build) return build
+    if (build) return [build]
     const upgrade = bestUpgrade(state, player, lane, buildBudget)
-    if (upgrade) return upgrade
+    if (upgrade) return [upgrade]
   }
 
   if (emergency === -1 && target !== -1) {
     if (me.gold >= creepSpec(target).cost) {
-      return { tick: state.tick, player, kind: Kind.Send, creep: target }
+      // Spend the bank, not the purse.
+      //
+      // `target` was chosen as the heaviest creep `savingPeriods` of income can
+      // reach, so that same figure is what the bot was banking FOR, and it is
+      // the honest budget for this branch. Anything above it belongs to the
+      // maze, and handing the whole purse to creeps is the mistake the two
+      // comments above are about -- a branch below the saving logic spending
+      // its savings.
+      //
+      // It mostly buys one, and that is the budget working rather than a
+      // coincidence: the target is by construction the priciest creep the
+      // budget reaches, so the division usually comes out at one. It comes out
+      // higher exactly when the bot is rich enough that its target is cheap for
+      // it, which is when a wave is the right answer.
+      //
+      // Capping this at one instead looked safer and was the bug: the easy
+      // bot's tower target grows with income, so `canBuild` is nearly always
+      // true, and a cap tied to it left the bot buying a sixth of what it used
+      // to buy per decision for the whole match. Measured, the first life did
+      // not leave the board until 92% of the way through.
+      const bank = me.income * (config.savingPeriods ?? MAX_SAVING_PERIODS)
+      return sendBurst(state, player, target, Math.min(me.gold, bank), MAX_SEND_BURST)
     }
     // Not yet. Bank -- and bank nothing below may spend.
-    return null
+    return NONE
   }
 
   // Banking means banking. Nothing below may spend the gold the branch above is
@@ -339,15 +374,76 @@ export function botCommand(
   // the build branch made earlier -- a branch below the saving logic quietly
   // spending its savings -- and it is worth stating the rule rather than the
   // fix: only ONE phase may spend.
-  if (target !== -1) return null
+  if (target !== -1) return NONE
 
   // Nothing to save toward at all. Now an upgrade is genuinely free money.
   const upgrade = bestUpgrade(state, player, lane, me.gold)
-  if (upgrade) return upgrade
+  if (upgrade) return [upgrade]
 
+  // Nothing is being saved for and the maze is done: the whole purse is spare.
   const send = bestSend(state, player, me.gold)
-  if (send !== -1) return { tick: state.tick, player, kind: Kind.Send, creep: send }
-  return null
+  if (send !== -1) return sendBurst(state, player, send, me.gold, MAX_SEND_BURST)
+  return NONE
+}
+
+/** No command this decision. Shared and frozen so the empty case allocates nothing. */
+const NONE: readonly Command[] = Object.freeze([])
+
+/**
+ * Most creeps one decision may buy.
+ *
+ * Not a balance number -- gold runs out long before this in any measured match.
+ * It exists for two reasons. A single decision must not append an unbounded run
+ * to the command log, which is replayed and hashed and which a late-game income
+ * could otherwise make arbitrarily long. And it is pinned to SPAWN_PERIOD
+ * because creeps spawning at the same point on the same tick are welded
+ * together for the rest of the match: `spawnPointFor` can give 22 arrivals
+ * distinct starting points, so 22 is what a decision may buy. Raise them
+ * together or not at all.
+ */
+const MAX_SEND_BURST = SPAWN_PERIOD
+
+/**
+ * Buy as many of one creep as the purse allows, as separate commands.
+ *
+ * One purchase is one creep and one command, so a decision that wants a wave has
+ * to say so N times -- exactly as a player does by clicking N times. This used
+ * to be a single command, and that was correct while a purchase was a PACK: one
+ * command bought six swarm, and the bot and the player got the same six from it.
+ *
+ * With the pack gone, one command per decision would have capped the bot at two
+ * purchases a second -- one per `reactionTicks` -- against the nine a player
+ * gets from holding a send card. Income grows only by buying, so the cap would
+ * not have made the bot merely slower to attack: its economy would have
+ * compounded roughly six times slower for the rest of the match, and every
+ * balance number measured afterwards would have been measured against an
+ * opponent that could not play.
+ *
+ * `max` is how the caller keeps the other phase's gold out of it. Spending the
+ * whole purse is right only once the maze has met its target and the gold is
+ * genuinely spare; while the build phase still wants it, the caller passes 1 and
+ * the leftover keeps accumulating toward the next tile, exactly as it did when a
+ * decision could only ever buy one thing. Getting this wrong does not look like
+ * a bug, it looks like a bot that stopped building -- measured, both spend
+ * ratios settled on the same fifteen-tower maze.
+ */
+function sendBurst(
+  state: GameState,
+  player: 0 | 1,
+  creep: number,
+  gold: number,
+  max: number,
+): readonly Command[] {
+  const cost = creepSpec(creep).cost
+  if (cost <= 0) return NONE
+  const affordable = Math.floor(gold / cost)
+  const capped = affordable > MAX_SEND_BURST ? MAX_SEND_BURST : affordable
+  const n = capped > max ? max : capped
+  const out: Command[] = []
+  for (let i = 0; i < n; i++) {
+    out.push({ tick: state.tick, player, kind: Kind.Send, creep })
+  }
+  return out
 }
 
 /**

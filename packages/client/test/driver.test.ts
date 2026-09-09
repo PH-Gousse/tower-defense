@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { Driver } from '../src/driver'
 import {
-  TICK_MS, TowerKind, MatchResult, tileIndex, creepSpec, STARTING_INCOME, BOT_HARD, Kind,
+  TICK_MS, TowerKind, MatchResult, tileIndex, creepSpec, STARTING_INCOME, STARTING_GOLD, BOT_HARD, Kind,
   SEND_UNLOCK_TICKS,
   type Command,
 } from '@ltw/sim'
@@ -125,7 +125,10 @@ describe('Driver', () => {
     d.queueBuild(6, 6, TowerKind.Single)
     d.advance(TICK_MS)
     expect(d.current.lanes[0]!.towers.kind[tileIndex({ x: 6, y: 6 })]).toBe(TowerKind.Single)
-    expect(d.current.players[0]!.gold).toBeLessThan(600)
+    // Against the opening purse rather than a literal: the point is that the
+    // build was paid for, and a hardcoded number turns every economy edit into
+    // a red test that says nothing about the driver.
+    expect(d.current.players[0]!.gold).toBeLessThan(STARTING_GOLD)
   })
 
   it('queues upgrade and sell', () => {

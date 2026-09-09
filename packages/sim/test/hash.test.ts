@@ -32,8 +32,9 @@ const MUTATIONS: readonly { name: string; apply: (s: GameState) => void }[] = [
   { name: 'players[1].gold', apply: (s) => { s.players[1]!.gold += 1 } },
   { name: 'players[1].lives', apply: (s) => { s.players[1]!.lives -= 1 } },
   { name: 'lanes[1].blocked', apply: (s) => { s.lanes[1]!.blocked[tileIndex({ x: 3, y: 3 })] = 1 } },
-  { name: 'lane.queueTail', apply: (s) => { s.lanes[0]!.queueTail = 1 } },
-  { name: 'lane.nextRelease', apply: (s) => { s.lanes[0]!.nextRelease = 3 } },
+  // `released` is the last survivor of the spawn queue, and the only one that
+  // still had to be hashed: it decides where the NEXT creep starts, so peers
+  // that disagree about it diverge on the next send.
   { name: 'lane.released', apply: (s) => { s.lanes[0]!.released = 5 } },
   { name: 'creeps.owner', apply: (s) => { s.lanes[0]!.creeps.count = 1; s.lanes[0]!.creeps.owner[0] = 1 } },
   { name: 'creeps.spec', apply: (s) => { s.lanes[0]!.creeps.count = 1; s.lanes[0]!.creeps.spec[0] = 2 } },

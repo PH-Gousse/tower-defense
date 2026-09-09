@@ -1,6 +1,7 @@
 import { createScene, WebGLUnavailable, type Selection, type Scene } from './scene'
 import { Net, relayUrl } from './net'
 import { holdToRepeat } from './hold'
+import { createSender } from './send'
 import { STALL_TICKS } from '@ltw/sim'
 import {
   TowerKind, ARCHETYPES, levelOf, MAX_LEVEL, TICK_HZ, MatchResult,
@@ -67,15 +68,18 @@ const SEND_KEYS = ['q', 'w', 'e', 'r', 't', 'y']
 
 const creepButtons: HTMLButtonElement[] = []
 const holdStops: Array<() => void> = []
+
+// Every way to send goes through here: click, key, hold, and the ×N buttons
+// when they land. See `send.ts` for why that is one function and not five.
+const sendN = createSender(creepButtons, (creep) => scene.send(creep))
+
 if (sendRow) {
   for (let slot = 0; slot < ARCHETYPE_COUNT * WINDOW_TIERS; slot++) {
     const b = document.createElement('button')
     b.className = 'creep'
     b.dataset.creep = String(slot)
     b.innerHTML = '<span class="n"></span><span class="c"></span>'
-    holdStops.push(
-      holdToRepeat(b, () => scene.send(Number(b.dataset.creep)), window),
-    )
+    holdStops.push(holdToRepeat(b, () => sendN(slot, 1) > 0, window))
     sendRow.appendChild(b)
     creepButtons.push(b)
   }
@@ -97,11 +101,16 @@ function unlockedTier(tick: number): number {
 // three of them silently stranded half the palette on the mouse the moment the
 // roster grew.
 window.addEventListener('keydown', (ev) => {
+  // Auto-repeat is the operating system holding the key down for you, about
+  // thirty times a second, on its own schedule. That is not the hold cadence --
+  // it is faster than a tick, so the wallet check it never had would have been
+  // stale anyway -- and one press of `q` could empty a wallet before the finger
+  // came off. A held key sends once. Holding the BUTTON is the deliberate
+  // repeat, at HOLD_EVERY_MS, and it stops when a send is refused.
+  if (ev.repeat) return
   const slot = SEND_KEYS.indexOf(ev.key.toLowerCase())
   if (slot === -1) return
-  const b = creepButtons[slot]
-  if (!b || b.hasAttribute('data-locked')) return
-  scene.send(Number(b.dataset.creep))
+  sendN(slot, 1)
 })
 
 // --- build palette ---------------------------------------------------------
@@ -204,6 +213,11 @@ scene.onStats((s) => {
     if (opening || tierLocked) b.setAttribute('data-locked', 'true')
     else b.removeAttribute('data-locked')
 
+    // The ×N reads as nothing today and that is correct, not leftover: every
+    // archetype ships count 1, because one purchase is one creep. The roster
+    // still carries the field and the sim still honours it, so a pack card can
+    // come back without touching this line -- which is why it stays a condition
+    // rather than being deleted along with the six-swarm pack.
     if (c) {
       c.textContent =
         tierLocked && !opening

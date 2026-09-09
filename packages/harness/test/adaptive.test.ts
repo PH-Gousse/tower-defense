@@ -67,14 +67,28 @@ describe('adaptive play', () => {
     expect(r.wins).toBeGreaterThan(r.losses * 2)
   })
 
-  it('reacting to the wave in your own lane is WORSE than not looking', async () => {
+  it('reacting to the wave in your own lane never wins', async () => {
     // Not a neutral change: the fixed 3:1:1 mix answers all three creep shapes
     // adequately, while specialising answers the wave that is already dying --
     // and the bot only ever adds towers, never sells, so every over-commitment
     // is permanent. If this ever starts winning, the maze rules changed and the
     // default in `bot.ts` should be revisited.
+    //
+    // The MEASUREMENT changed when the spawn queue was removed, and the history
+    // is the point. Under the queue, creeps trickled into a lane one every four
+    // ticks and `defence` lost 0-12 -- a decisive, useful result. Sends now
+    // spawn on the spot, so a wave arrives as a clump and dies as a clump, and
+    // the lane composition the bot reads is a far more transient signal: at
+    // spend ratios 0.25 and 0.55 the defence bot now plays a bit-identical
+    // match to not looking at all (same final state hash), and all twelve go to
+    // draws. So the assertion is the surviving half of the claim: reading your
+    // own lane is not an improvement. It went from harmful to worthless.
+    //
+    // Nothing ships on this -- DEFAULT_ADAPTIVE is 'send', and 'send' is still
+    // 12-0. Why clumping kills the read is genuinely unexplained; if defence
+    // mode ever matters again, that is the thing to find out first.
     const r = await versusTemplate('defence')
-    expect(r.wins).toBeLessThan(r.losses)
+    expect(r.wins).toBe(0)
   })
 
   it('so the shipped default is send-only, and it beats doing both', async () => {

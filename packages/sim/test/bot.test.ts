@@ -64,22 +64,28 @@ describe('bot', () => {
 
   it('only ever emits commands a player could legally submit', () => {
     // The bot gets no special rules, no extra gold and no bent legality.
+    // Double-buffered rather than a fresh state per tick. MAX_CREEPS sizes ten
+    // typed arrays per lane, so a state is megabytes now, and allocating one
+    // every tick took this file from 1.4s to 4.4s on its own.
     let s: GameState = createState()
+    let into: GameState = createState()
     for (let t = 0; t < 3000; t++) {
       const cmds = []
       for (const p of [0, 1] as const) {
-        const c = botCommand(s, p, p === 0 ? BOT_NORMAL : BOT_HARD)
-        if (!c) continue
-        if (c.kind === Kind.Build) {
-          expect(checkBuild(s, p, c.x, c.y, c.tower).refusal, `tick ${s.tick} build`).toBe(Refusal.None)
-        } else if (c.kind === Kind.Upgrade) {
-          expect(checkUpgrade(s, p, c.x, c.y), `tick ${s.tick} upgrade`).toBe(Refusal.None)
-        } else if (c.kind === Kind.Send) {
-          expect(checkSend(s, p, c.creep), `tick ${s.tick} send`).toBe(Refusal.None)
+        for (const c of botCommand(s, p, p === 0 ? BOT_NORMAL : BOT_HARD)) {
+          if (c.kind === Kind.Build) {
+            expect(checkBuild(s, p, c.x, c.y, c.tower).refusal, `tick ${s.tick} build`).toBe(Refusal.None)
+          } else if (c.kind === Kind.Upgrade) {
+            expect(checkUpgrade(s, p, c.x, c.y), `tick ${s.tick} upgrade`).toBe(Refusal.None)
+          } else if (c.kind === Kind.Send) {
+            expect(checkSend(s, p, c.creep), `tick ${s.tick} send`).toBe(Refusal.None)
+          }
+          cmds.push(c)
         }
-        cmds.push(c)
       }
-      s = step(s, cmds, createState())
+      const out = step(s, cmds, into)
+      into = s
+      s = out
     }
   })
 
@@ -90,24 +96,36 @@ describe('bot', () => {
     // is a test failing for the one reason that tells you nothing.
     for (let t = 1; t < BOT_HARD.reactionTicks; t++) {
       const probe = run(t)
-      expect(botCommand(probe, 0, BOT_HARD), `tick ${t}`).toBeNull()
+      expect(botCommand(probe, 0, BOT_HARD), `tick ${t}`).toEqual([])
     }
-    expect(botCommand(s, 0, BOT_HARD)).not.toBeNull()
+    expect(botCommand(s, 0, BOT_HARD).length).toBeGreaterThan(0)
   })
 
   it('reinforces the route when a creep is looping in its lane', () => {
     // The emergency state: a creep that has already leaked is the thing to
     // answer, ahead of whatever the template wanted next.
     let s = run(40, { 0: [send(TANK, 1)] })
+    // Rotating a pair rather than calling the `tick` helper, which allocates a
+    // whole state per call: this marches up to 3000 ticks, and a state is
+    // megabytes once MAX_CREEPS is sized past what gold can buy.
+    let into: GameState = createState()
+    const advance = (from: GameState): GameState => {
+      const out = step(from, [], into)
+      into = from
+      return out
+    }
     // March the tank round until it leaks at least once.
-    for (let t = 0; t < 3000 && s.lanes[0]!.creeps.laps[0]! < 1; t++) s = tick(s)
+    for (let t = 0; t < 3000 && s.lanes[0]!.creeps.laps[0]! < 1; t++) s = advance(s)
     expect(s.lanes[0]!.creeps.laps[0] as number).toBeGreaterThanOrEqual(1)
 
     // Align to a decision tick, then the bot must act on its own lane.
-    while (s.tick % BOT_NORMAL.reactionTicks !== 0) s = tick(s)
-    const cmd = botCommand(s, 0, BOT_NORMAL)
-    expect(cmd).not.toBeNull()
-    expect(cmd!.kind === Kind.Build || cmd!.kind === Kind.Upgrade).toBe(true)
+    while (s.tick % BOT_NORMAL.reactionTicks !== 0) s = advance(s)
+    const cmds = botCommand(s, 0, BOT_NORMAL)
+    // An emergency yields one tile, not a burst: a maze is placed a tile at a
+    // time and the next one depends on where the last went.
+    expect(cmds).toHaveLength(1)
+    const cmd = cmds[0]!
+    expect(cmd.kind === Kind.Build || cmd.kind === Kind.Upgrade).toBe(true)
   })
 
   it('escalates to higher tiers once they unlock', () => {
@@ -120,13 +138,17 @@ describe('bot', () => {
     ;(s.players[1] as { lives: number }).lives = 100000
     let sawTier0 = false
     let sawTier1 = false
+    let into: GameState = createState()
     for (let t = 0; t < 1600; t++) {
-      const c = botCommand(s, 0, BOT_HARD)
-      if (c && c.kind === Kind.Send) {
+      const cmds = botCommand(s, 0, BOT_HARD)
+      for (const c of cmds) {
+        if (c.kind !== Kind.Send) continue
         if (c.creep <= 2) sawTier0 = true
         if (c.creep >= 3) sawTier1 = true
       }
-      s = step(s, c ? [c] : [], createState())
+      const out = step(s, cmds, into)
+      into = s
+      s = out
       ;(s.players[0] as { gold: number }).gold = 100000
       ;(s.players[1] as { lives: number }).lives = 100000
     }
@@ -156,8 +178,7 @@ describe('bot', () => {
       // Double-buffered rather than a fresh state per tick: at 24,000 ticks the
       // allocation alone blew the test timeout.
       for (let t = 0; t < ticks; t++) {
-        const c = botCommand(s, 0, cfg)
-        const out = step(s, c ? [c] : [], into)
+        const out = step(s, botCommand(s, 0, cfg), into)
         into = s
         s = out
       }
@@ -179,14 +200,17 @@ describe('bot', () => {
     const cfg = { sendRatio: 1, reactionTicks: 4, template: 0 }
     let firstSendTick = -1
     let towersAtFirstSend = -1
+    let into: GameState = createState()
     for (let t = 0; t < 1200 && firstSendTick === -1; t++) {
-      const c = botCommand(s, 0, cfg)
-      if (c?.kind === Kind.Send) {
+      const cmds = botCommand(s, 0, cfg)
+      if (cmds.some((c) => c.kind === Kind.Send)) {
         firstSendTick = t
         towersAtFirstSend = 0
         for (const k of s.lanes[0]!.towers.kind) if (k !== -1) towersAtFirstSend += 1
       }
-      s = step(s, c ? [c] : [], createState())
+      const out = step(s, cmds, into)
+      into = s
+      s = out
     }
     expect(firstSendTick).toBeGreaterThan(-1)
     expect(towersAtFirstSend).toBe(6)

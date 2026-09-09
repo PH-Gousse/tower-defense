@@ -37,6 +37,7 @@ import {
   type DesyncDump,
 } from '@ltw/sim'
 import { Driver } from './driver'
+import { ensureCapacity, INITIAL_INSTANCES } from './instances'
 import { PathLine } from './pathline'
 import { createRenderer } from './render/renderer'
 import { buildBoard, BOARD, BOARD_DIM } from './render/board'
@@ -72,6 +73,7 @@ const REFUSAL_TEXT: Record<Refusal, string> = {
   [Refusal.AlreadyMaxLevel]: 'Already at maximum level',
   [Refusal.TierLocked]: 'Not unlocked yet',
   [Refusal.BuildPhase]: 'Build phase — no sending yet',
+  [Refusal.LaneFull]: 'Their lane is full — nothing more fits',
 }
 
 /** One colour per archetype so a maze is readable without clicking anything. */
@@ -374,10 +376,10 @@ export function createScene(
 
   // Creeps are instanced from the start because the design bounds their
   // population only by gold. This is the mesh that has to survive 500 of them.
-  const creeps = new THREE.InstancedMesh(
+  let creeps = new THREE.InstancedMesh(
     new THREE.SphereGeometry(CREEP_R, 10, 8),
     new THREE.MeshLambertMaterial({ color: 0xd8613f }),
-    MAX_CREEPS,
+    INITIAL_INSTANCES,
   )
   creeps.count = 0
   creeps.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
@@ -394,10 +396,10 @@ export function createScene(
    * nine. Lap 1 draws nothing.
    */
   const MAX_PIPS = 5
-  const pips = new THREE.InstancedMesh(
+  let pips = new THREE.InstancedMesh(
     new THREE.SphereGeometry(0.07, 6, 5),
     new THREE.MeshBasicMaterial({ color: 0xe8b84b }),
-    MAX_CREEPS * MAX_PIPS,
+    INITIAL_INSTANCES,
   )
   pips.count = 0
   pips.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
@@ -454,10 +456,10 @@ export function createScene(
   oppTowers.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
   oppGroup.add(oppTowers)
 
-  const oppCreeps = new THREE.InstancedMesh(
+  let oppCreeps = new THREE.InstancedMesh(
     new THREE.SphereGeometry(CREEP_R, 10, 8),
     new THREE.MeshLambertMaterial({ color: 0x9ac06a }),
-    MAX_CREEPS,
+    INITIAL_INSTANCES,
   )
   oppCreeps.count = 0
   oppCreeps.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
@@ -771,6 +773,19 @@ export function createScene(
   function syncCreeps(alpha: number): void {
     const curr = driver.current.lanes[me()]!.creeps
     const prev = driver.previous.lanes[me()]!.creeps
+
+    // Size the buffers before writing into them. Pips need counting first: a
+    // creep draws one per lap up to MAX_PIPS, so the total is a property of the
+    // match rather than of the creep count, and reserving MAX_PIPS per creep
+    // would over-allocate fivefold for a board that has barely lapped.
+    let pipsNeeded = 0
+    for (let i = 0; i < curr.count; i++) {
+      const laps = curr.laps[i] as number
+      pipsNeeded += laps > MAX_PIPS ? MAX_PIPS : laps
+    }
+    creeps = ensureCapacity(creeps, curr.count, MAX_CREEPS, scene)
+    pips = ensureCapacity(pips, pipsNeeded, MAX_CREEPS * MAX_PIPS, scene)
+
     let pipCount = 0
     for (let i = 0; i < curr.count; i++) {
       const cx = curr.x[i] as number
@@ -825,6 +840,7 @@ export function createScene(
     oppTowers.instanceMatrix.needsUpdate = true
 
     const c = lane.creeps
+    oppCreeps = ensureCapacity(oppCreeps, c.count, MAX_CREEPS, oppGroup)
     for (let i = 0; i < c.count; i++) {
       scratch.makeTranslation(c.x[i] as number, CREEP_R + 0.02, c.y[i] as number)
       oppCreeps.setMatrixAt(i, scratch)

@@ -82,7 +82,12 @@ describe('towers', () => {
   })
 
   it('splash damages several creeps from one shot', () => {
-    const s = run(400, { 0: [build(5, 11, TowerKind.Splash, 0)], 1: [send(SWARM, 1)] })
+    // Six swarm bought on one tick, which is what a wave is now that a purchase
+    // is a single creep. Splash exists to answer several creeps at once, so the
+    // test has to put several there -- with one creep it would be measuring
+    // single-target damage under another name.
+    const wave = Array.from({ length: 6 }, () => send(SWARM, 1))
+    const s = run(400, { 0: [build(5, 11, TowerKind.Splash, 0)], 1: wave })
     const alive = s.lanes[0]!.creeps.count
     // Against the creep's own starting HP, not a literal. The old threshold was
     // 90 against a 30 HP swarm, so every living creep counted as "hurt" and the

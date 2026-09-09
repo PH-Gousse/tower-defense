@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createState, spawnPointFor, type GameState } from '../src/state'
+import { createState, spawnPointFor, SPAWN_PERIOD, type GameState } from '../src/state'
 import { step, canBuild, checkBuild, Refusal } from '../src/step'
 import { GRID_W, ENTRANCE_ROW, EXIT_ROW, tileIndex } from '../src/grid'
 import { UNREACHABLE, buildField, mazeLength } from '../src/field'
@@ -43,7 +43,7 @@ describe('step', () => {
   })
 })
 
-describe('sends and the spawn queue', () => {
+describe('sends and where creeps enter', () => {
   it('puts creeps in the opponent lane, never the sender own lane', () => {
     // A creep is owned by its sender for scoring but exists only in the
     // defender's lane. Player 1 sends, so lane 0 fills and lane 1 stays empty.
@@ -53,26 +53,47 @@ describe('sends and the spawn queue', () => {
     expect(s.lanes[0]!.creeps.owner[0]).toBe(1)
   })
 
-  it('releases one creep at a time rather than all at once', () => {
-    // A swarm send is 6 creeps. Released together at the same tile they would
-    // never separate, so they would travel as a single point and one splash hit
-    // would kill all six.
-    const early = run(6, { 0: [send(SWARM)] })
-    const later = run(40, { 0: [send(SWARM)] })
-    expect(early.lanes[0]!.creeps.count).toBeLessThan(6)
-    expect(early.lanes[0]!.creeps.count).toBeGreaterThan(0)
-    expect(later.lanes[0]!.creeps.count).toBe(6)
+  it('puts the whole wave on the board at once, with no pacing', () => {
+    // This used to assert the opposite. A release queue paced arrivals at one
+    // creep every four ticks, which capped a lane at five a second however fast
+    // you clicked -- and clicking fast is how you mass-send. Gold is the only
+    // limit now, so six purchases on one tick are six creeps on that tick.
+    const wave = Array.from({ length: 6 }, () => send(SWARM))
+    expect(run(1, { 0: wave }).lanes[0]!.creeps.count).toBe(6)
   })
 
-  it('alternates spawn tiles so consecutive releases separate', () => {
-    // Both spawn tiles sit on the entrance row, so the alternation is in x now
-    // rather than in y. Release 0 and release 2 share a tile; 0 and 1 do not.
-    expect(spawnPointFor(0)).not.toEqual(spawnPointFor(1))
-    expect(spawnPointFor(0)).toEqual(spawnPointFor(2))
+  it('starts simultaneous creeps at distinct points, and keeps them apart', () => {
+    // The property the queue used to provide, and the reason it could go.
+    // Creeps steer centre-to-centre, so a sideways offset is erased by the first
+    // tile transition; the offset runs ALONG the route instead, which turns a
+    // distance gap into a time gap that centre-snapping cannot undo.
+    // The offset follows field.dir at the spawn tile, so an empty lane -- whose
+    // route leaves the entrance heading EAST -- sets creeps back in x, not y.
+    // Reading the field rather than assuming "back is -y" is the whole point:
+    // a y-offset here is lateral, and two creeps equally far either side of the
+    // centre reach it on the same tick and weld together.
+    const field = createState().lanes[0]!.field
+    const a = spawnPointFor(0, field)
+    const b = spawnPointFor(1, field)
+    const c2 = spawnPointFor(2, field)
+    expect(a).not.toEqual(b)
+    // Same tile as release 0, but further back along the route.
+    expect(c2.y).toBe(a.y)
+    expect(c2.x).toBeLessThan(a.x)
+    // Tile and slot are coprime, so the pattern repeats only every SPAWN_PERIOD.
+    expect(spawnPointFor(SPAWN_PERIOD, field)).toEqual(a)
 
-    // What that buys, which is the point: a swarm is six distinct points, not
-    // one point that a single splash shot clears.
-    const c = run(40, { 0: [send(SWARM)] }).lanes[0]!.creeps
+    // What that buys: six creeps bought on one tick are six distinct points,
+    // not one point that a single splash shot clears...
+    const wave = Array.from({ length: 6 }, () => send(SWARM))
+    const spawned = run(1, { 0: wave }).lanes[0]!.creeps
+    const atSpawn = new Set<string>()
+    for (let i = 0; i < 6; i++) atSpawn.add(`${spawned.x[i]},${spawned.y[i]}`)
+    expect(atSpawn.size).toBe(6)
+
+    // ...and they are still six distinct points a long way down the lane, which
+    // is the half that a sideways offset would have failed.
+    const c = run(40, { 0: wave }).lanes[0]!.creeps
     const seen = new Set<string>()
     for (let i = 0; i < 4; i++) seen.add(`${c.x[i]},${c.y[i]}`)
     expect(seen.size).toBe(4)

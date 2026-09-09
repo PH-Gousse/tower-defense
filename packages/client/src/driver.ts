@@ -419,8 +419,7 @@ export class Driver {
       // a human one.
       if (this.bot) {
         const opponent = (1 - this.me) as 0 | 1
-        const cmd = botCommand(this.a, opponent, this.bot)
-        if (cmd) commands.push(cmd)
+        for (const cmd of botCommand(this.a, opponent, this.bot)) commands.push(cmd)
       }
 
       // Log with `tick` rewritten to the tick the command is actually applied

@@ -24,7 +24,6 @@ import {
   MatchResult,
   PLAYER_COUNT,
   INCOME_EVERY_TICKS,
-  SPAWN_EVERY_TICKS,
   type GameState,
   type Lane,
   type Player,
@@ -51,15 +50,21 @@ import { createSpatialHash, rebuildHash, fireTowers, type SpatialHash } from './
  * per tick; `prev` is never written.
  *
  *   commands ──▶ total order ──▶ apply ──▶ income ──▶ per lane:
- *                (player,kind)                          release queue
- *                                                       fire towers
- *                                                       remove dead (bounty)
- *                                                       move creeps (leak)
+ *                (player,kind)            (sends            fire towers
+ *                                          spawn            remove dead (bounty)
+ *                                          here)            move creeps (leak)
+ *
+ * Sends land in `apply`, not in a later stage: a purchase puts its creep on the
+ * board on the tick it is applied. There used to be a release queue between the
+ * two, pacing arrivals at one creep every four ticks, and it is gone -- gold is
+ * the only thing rationing a send now. What it was really providing was
+ * separation between simultaneous arrivals, and `spawnPointFor` provides that
+ * directly.
  *
  * Ordering is the whole determinism story now that arithmetic is restricted.
  * The pins: commands sort by (player, kind); lanes process in index order;
  * creeps update in id order, which is array order because ids are monotonic and
- * creeps are appended; towers fire in tile order; queues release FIFO.
+ * creeps are appended; towers fire in tile order.
  */
 
 export enum Kind {
@@ -111,6 +116,17 @@ export enum Refusal {
   TierLocked = 8,
   /** The opening build phase is still running; nobody may send yet. */
   BuildPhase = 9,
+  /**
+   * The target lane is holding as many creeps as it can.
+   *
+   * Not a rule anyone should meet. `MAX_CREEPS` is sized past what gold can buy
+   * in any match, so this is the backstop for the damage ramp being mistuned --
+   * creeps never expire, so if towers stop outpacing arrivals the count climbs
+   * without limit. It refuses BEFORE the debit and says so on screen, because
+   * the alternative is what the code used to do: take the gold, grant the
+   * income, and drop the creep in silence.
+   */
+  LaneFull = 10,
 }
 
 export interface BuildCheck {
@@ -225,6 +241,12 @@ export function checkSend(state: GameState, player: number, creep: number): Refu
   if (state.tick < SEND_UNLOCK_TICKS) return Refusal.BuildPhase
   if (state.tick < tierUnlockTick(spec.tier)) return Refusal.TierLocked
   if ((state.players[player] as Player).gold < spec.cost) return Refusal.NotEnoughGold
+  // Reading the OPPONENT's lane, because that is where the creeps land. The
+  // check belongs here rather than at the spawn: `applyCommands` debits gold and
+  // grants income before it spawns anything, so a capacity check any later than
+  // this one charges for a creep that never arrives.
+  const target = state.lanes[opponentOf(player)] as Lane
+  if (target.creeps.count + spec.count > MAX_CREEPS) return Refusal.LaneFull
   return Refusal.None
 }
 
@@ -262,7 +284,6 @@ export function step(prev: GameState, commands: readonly Command[], into: GameSt
   }
 
   for (let l = 0; l < s.lanes.length; l++) {
-    releaseFromQueue(s, l)
     const lane = s.lanes[l] as Lane
     rebuildHash(lane, hash)
     fireTowers(s, lane, hash)
@@ -290,7 +311,7 @@ function applyCommands(s: GameState, commands: readonly Command[]): void {
       // grows, which is what makes turtling a losing strategy and over-sending
       // a real temptation.
       pl.income += spec.incomeBonus
-      enqueueSend(s, opponentOf(player), cmd.creep, player, spec.count)
+      spawnSend(s, opponentOf(player), cmd.creep, player, spec.count)
       continue
     }
 
@@ -332,8 +353,25 @@ function applyCommands(s: GameState, commands: readonly Command[]): void {
   }
 }
 
-/** A send enqueues `count` creeps into the target lane, owned by the sender. */
-function enqueueSend(
+/**
+ * A send puts its `count` creeps in the target lane NOW, owned by the sender.
+ *
+ * There is no queue and no pacing. Sending is one purchase, one creep, one
+ * command, and the only thing rationing it is gold -- which is what makes a
+ * mass send a real tactic and Splash the answer to it. The queue this replaced
+ * released one creep every four ticks, which capped a lane at five arrivals a
+ * second however fast you clicked.
+ *
+ * What the queue was really providing was separation, and `spawnPointFor` now
+ * provides it directly: creeps arriving together start at different points
+ * along the route, so they stay apart without anyone waiting.
+ *
+ * `count` is 1 for every archetype today. The loop stays because the roster
+ * still carries the field and a pack card can come back, and because each
+ * creep in a pack must take its own `released` number or the pack would land
+ * on one point -- exactly the bug this function exists to avoid.
+ */
+function spawnSend(
   s: GameState,
   targetLane: number,
   creep: number,
@@ -341,65 +379,31 @@ function enqueueSend(
   count: number,
 ): void {
   const lane = s.lanes[targetLane] as Lane
-  for (let n = 0; n < count; n++) {
-    if (lane.queueTail >= lane.queueCreep.length) break
-    lane.queueCreep[lane.queueTail] = creep
-    lane.queueOwner[lane.queueTail] = owner
-    lane.queueTail += 1
-  }
-}
-
-/**
- * Release one queued creep every SPAWN_EVERY_TICKS.
- *
- * Never all at once. Identical creeps entering on the same tick at the same
- * tile would never separate — they would travel as a single point and one
- * splash hit would kill all six, which erases the Splash tower's reason to
- * exist.
- */
-function releaseFromQueue(s: GameState, laneIndex: number): void {
-  const lane = s.lanes[laneIndex] as Lane
-  if (lane.queueHead >= lane.queueTail) {
-    // Nothing pending. Reset so the next send releases promptly rather than
-    // waiting out a stale countdown.
-    lane.nextRelease = 0
-    return
-  }
-  if (lane.nextRelease > 0) {
-    lane.nextRelease -= 1
-    return
-  }
-
-  const creep = lane.queueCreep[lane.queueHead] as number
-  const owner = lane.queueOwner[lane.queueHead] as number
-  lane.queueHead += 1
-  lane.nextRelease = SPAWN_EVERY_TICKS
-
-  // Reset indices once the queue drains, so head/tail cannot run off the end
-  // over a long match.
-  if (lane.queueHead === lane.queueTail) {
-    lane.queueHead = 0
-    lane.queueTail = 0
-  }
-
   const spec = creepSpec(creep)
   const c = lane.creeps
-  if (c.count >= c.id.length) return
-  const i = c.count
-  const p = spawnPointFor(lane.released)
-  c.id[i] = s.nextCreepId
-  c.owner[i] = owner
-  c.spec[i] = creep
-  c.x[i] = p.x
-  c.y[i] = p.y
-  c.hp[i] = spec.hp
-  c.laps[i] = 0
-  c.speed[i] = spec.speed
-  c.slowPercent[i] = 0
-  c.slowUntil[i] = 0
-  c.count = i + 1
-  s.nextCreepId += 1
-  lane.released += 1
+  for (let n = 0; n < count; n++) {
+    // Unreachable: `checkSend` refuses a send the lane cannot hold, and every
+    // caller runs that check first. Kept as an assertion in the arithmetic
+    // rather than deleted, because writing past a typed array's end silently
+    // does nothing and the creep would vanish with the gold already spent --
+    // which is exactly the bug this pair of changes removed.
+    if (c.count >= c.id.length) return
+    const i = c.count
+    const p = spawnPointFor(lane.released, lane.field)
+    c.id[i] = s.nextCreepId
+    c.owner[i] = owner
+    c.spec[i] = creep
+    c.x[i] = p.x
+    c.y[i] = p.y
+    c.hp[i] = spec.hp
+    c.laps[i] = 0
+    c.speed[i] = spec.speed
+    c.slowPercent[i] = 0
+    c.slowUntil[i] = 0
+    c.count = i + 1
+    s.nextCreepId += 1
+    lane.released += 1
+  }
 }
 
 /**
@@ -480,7 +484,7 @@ function moveCreeps(s: GameState, laneIndex: number): void {
         defender.leaks += 1
         c.laps[i] = (c.laps[i] as number) + 1
         lane.released += 1
-        const p = spawnPointFor(lane.released)
+        const p = spawnPointFor(lane.released, lane.field)
         c.x[i] = p.x
         c.y[i] = p.y
         if (defender.lives <= 0) {
@@ -496,7 +500,7 @@ function moveCreeps(s: GameState, laneIndex: number): void {
         // placement that caused it: walling a creep in then costs the trapper
         // towers and achieves nothing, which was always the requirement.
         lane.released += 1
-        const p = spawnPointFor(lane.released)
+        const p = spawnPointFor(lane.released, lane.field)
         c.x[i] = p.x
         c.y[i] = p.y
         break

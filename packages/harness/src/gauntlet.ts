@@ -110,7 +110,9 @@ export function runGauntlet(creepIndex: number, towers: number, level: number): 
     const leaked = startLives - a.players[1]!.lives
     // Stop at the first leak (the creep survived) or when the wave is gone.
     if (leaked > 0) return result(spec, towers, level, a, leaked, ticks, minHpSeen)
-    if (t > 20 && c.count === 0 && lane.queueHead === lane.queueTail) {
+    // An empty lane is the end of the wave outright now. There is no queue
+    // left to drain: a send spawns on the tick it is applied.
+    if (t > 20 && c.count === 0) {
       return result(spec, towers, level, a, 0, ticks, minHpSeen)
     }
   }

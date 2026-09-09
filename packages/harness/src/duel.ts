@@ -123,12 +123,16 @@ export function runDuel(options: DuelOptions = {}): DuelResult {
       if (!c.buffer) continue
       const at = c.tick + delay
       const cfg = bots?.[c.seat]
-      const cmd: Command | null = cfg ? botCommand(c.a, c.seat, cfg) : null
+      const cmds: readonly Command[] = cfg ? botCommand(c.a, c.seat, cfg) : []
       frame += 1
+      // A drop takes the whole frame, not one command out of it. That is what a
+      // lost relay packet does, and it is the case the buffer has to survive.
       const drop = options.dropEvery ? frame % options.dropEvery === 0 : false
-      if (cmd && !drop) {
-        deliver(room.receive(c.seat, { t: 'cmd', cmd: { ...cmd, tick: at } }))
-        commandsRelayed += 1
+      if (!drop) {
+        for (const cmd of cmds) {
+          deliver(room.receive(c.seat, { t: 'cmd', cmd: { ...cmd, tick: at } }))
+          commandsRelayed += 1
+        }
       }
       // The watermark goes out on its own cadence, independent of commands.
       //

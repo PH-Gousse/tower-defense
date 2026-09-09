@@ -287,6 +287,26 @@ export const CREEP_DATA_VERSION = creepFile.version
 /** Highest tier the roster reaches. Tier N unlocks N minutes in. */
 export const MAX_TIER = creepFile.maxTier
 
+/**
+ * The opening purse and the income it starts on.
+ *
+ * They live HERE, with the rest of the balance data, rather than beside the
+ * state they initialise. They are tuning numbers, and every tuning number has
+ * to be freezable or the golden fixture cannot keep the promise it makes in its
+ * own comment: that a red hash means the arithmetic diverged and never that
+ * somebody edited a balance file. As constants in `state.ts` they were outside
+ * the freeze, so the x10 gold rescale moved the fixture's hash while changing no
+ * arithmetic whatsoever -- which is exactly the false alarm that teaches people
+ * to regenerate the hash without reading it. `state.ts` re-exports both, so
+ * every existing import site is unchanged.
+ */
+export let STARTING_GOLD = 6000
+/** Paid into gold every INCOME_EVERY_TICKS. Sending is the only way it grows. */
+export let STARTING_INCOME = 250
+
+const DEFAULT_STARTING_GOLD = STARTING_GOLD
+const DEFAULT_STARTING_INCOME = STARTING_INCOME
+
 /** The balance numbers a replay needs pinned to reproduce a hash. */
 export interface BalanceData {
   readonly sellRefund: number
@@ -294,6 +314,10 @@ export interface BalanceData {
   readonly unlockEveryTicks: number
   /** Optional: a fixture recorded before the build phase existed has none. */
   readonly sendUnlockTicks?: number
+  /** Optional: a fixture recorded before the opening purse was freezable has none. */
+  readonly startingGold?: number
+  /** Optional, for the same reason as `startingGold`. */
+  readonly startingIncome?: number
   readonly creeps: readonly CreepSpec[]
 }
 
@@ -304,6 +328,8 @@ export function liveBalanceData(): BalanceData {
     archetypes: ARCHETYPES,
     unlockEveryTicks: UNLOCK_EVERY_TICKS,
     sendUnlockTicks: SEND_UNLOCK_TICKS,
+    startingGold: STARTING_GOLD,
+    startingIncome: STARTING_INCOME,
     creeps: CREEPS,
   }
 }
@@ -323,6 +349,12 @@ export function installBalanceData(next: BalanceData): BalanceData {
   // Missing means none: a fixture frozen before the build phase existed replays
   // the match it recorded, rather than one where half its sends are refused.
   SEND_UNLOCK_TICKS = assertSendUnlock(next.sendUnlockTicks ?? 0)
+  // Missing means today's value, NOT zero: a fixture frozen before these were
+  // freezable recorded a match played on the purse of its day, and the numbers
+  // it was recorded under are the ones written into its "data" block by hand.
+  // Defaulting to zero would replay it with no gold and no income at all.
+  STARTING_GOLD = next.startingGold ?? DEFAULT_STARTING_GOLD
+  STARTING_INCOME = next.startingIncome ?? DEFAULT_STARTING_INCOME
   CREEPS = next.creeps
   return previous
 }

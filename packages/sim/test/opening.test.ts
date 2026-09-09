@@ -177,9 +177,8 @@ function botRun(ticks: number): Command[] {
   let b = createState()
   const out: Command[] = []
   for (let t = 0; t < ticks; t++) {
-    const cmd = botCommand(a, 1, BOT_NORMAL)
-    const cmds = cmd ? [cmd] : []
-    if (cmd) out.push(cmd)
+    const cmds = botCommand(a, 1, BOT_NORMAL)
+    for (const cmd of cmds) out.push(cmd)
     const next = step(a, cmds, b)
     b = a
     a = next

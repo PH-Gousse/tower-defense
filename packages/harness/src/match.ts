@@ -88,9 +88,10 @@ export function runMatch(options: MatchOptions = {}): MatchResultSummary {
   for (let t = 0; t < maxTicks; t++) {
     const commands: Command[] = []
     for (const p of [0, 1] as const) {
-      const cmd = botCommand(a, p, bots[p] as BotConfig)
-      if (cmd) {
+      for (const cmd of botCommand(a, p, bots[p] as BotConfig)) {
         commands.push(cmd)
+        // Counted per command, which is per creep now that a purchase is one
+        // creep. A decision that buys a wave is several sends, not one.
         if (cmd.kind === Kind.Send) sends[p] = (sends[p] as number) + 1
       }
     }

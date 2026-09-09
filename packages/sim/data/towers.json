@@ -1,6 +1,7 @@
 {
-  "version": 2,
+  "version": 3,
   "_comment": "Step 4 values are placeholders with the right SHAPE, not tuned numbers. Tuning is step 8 and needs the harness. sellRefund is a fraction of total gold spent on the tower including upgrades. RANGES WERE HALVED when the lane went from 40 x 24 horizontal to 8 x 24 vertical: range is measured in tiles, so shrinking the board made every tower cover a far larger share of the route without a single number changing -- a range-6 single-target covered three quarters of an 8-wide lane. Before/after measurements are in the P0 in TODOS.md. version bumped to 2 because versionsMatch gates peers, and two clients whose towers deal different damage have desynced.",
+  "_scaleComment": "Version 3: every cost multiplied by ten, and nothing else touched. The scale exists so creep prices can be divided by a pack size without rounding away a tenth of the card -- see the _scaleComment in creeps.json. damage, range, cooldownTicks and slowPercent are not gold and did not move, so every tower's gold-per-damage is exactly what it was and no tuning result from step 8 is invalidated. sellRefund is a fraction, so it is scale-free.",
   "sellRefund": 0.6,
   "archetypes": [
     {
@@ -8,9 +9,9 @@
       "name": "Single-target",
       "answers": "tanks",
       "levels": [
-        { "cost": 60,  "damage": 30, "range": 3.0,  "cooldownTicks": 25 },
-        { "cost": 90,  "damage": 55, "range": 3.25, "cooldownTicks": 24 },
-        { "cost": 140, "damage": 84, "range": 3.5,  "cooldownTicks": 22 }
+        { "cost": 600,  "damage": 30, "range": 3.0,  "cooldownTicks": 25 },
+        { "cost": 900,  "damage": 55, "range": 3.25, "cooldownTicks": 24 },
+        { "cost": 1400, "damage": 84, "range": 3.5,  "cooldownTicks": 22 }
       ]
     },
     {
@@ -19,9 +20,9 @@
       "answers": "swarms",
       "splashRadius": 1.2,
       "levels": [
-        { "cost": 110, "damage": 12, "range": 1.5, "cooldownTicks": 12 },
-        { "cost": 160, "damage": 20, "range": 1.7, "cooldownTicks": 12 },
-        { "cost": 240, "damage": 32, "range": 1.9, "cooldownTicks": 11 }
+        { "cost": 1100, "damage": 12, "range": 1.5, "cooldownTicks": 12 },
+        { "cost": 1600, "damage": 20, "range": 1.7, "cooldownTicks": 12 },
+        { "cost": 2400, "damage": 32, "range": 1.9, "cooldownTicks": 11 }
       ]
     },
     {
@@ -30,9 +31,9 @@
       "answers": "runners",
       "slowTicks": 20,
       "levels": [
-        { "cost": 80,  "damage": 4, "range": 2.25, "cooldownTicks": 10, "slowPercent": 30 },
-        { "cost": 120, "damage": 6, "range": 2.4,  "cooldownTicks": 10, "slowPercent": 40 },
-        { "cost": 180, "damage": 9, "range": 2.6,  "cooldownTicks": 10, "slowPercent": 50 }
+        { "cost": 800,  "damage": 4, "range": 2.25, "cooldownTicks": 10, "slowPercent": 30 },
+        { "cost": 1200, "damage": 6, "range": 2.4,  "cooldownTicks": 10, "slowPercent": 40 },
+        { "cost": 1800, "damage": 9, "range": 2.6,  "cooldownTicks": 10, "slowPercent": 50 }
       ]
     }
   ]

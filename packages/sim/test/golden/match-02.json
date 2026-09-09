@@ -1,0 +1,1312 @@
+{
+  "_comment": "FROZEN. Do not edit to make a red test green \u2014 find out what diverged. Companion to match-01: where that one plays a rounded match, this one exists for MASS SENDING. Twenty creeps bought on a single tick spawn in one call, which is the case the spawn queue used to make impossible and the along-path offset in spawnPointFor now has to handle alone. It is the highest-risk arithmetic in the send path and the fixture that would catch it drifting.",
+  "_hashHistory": [
+    "0e2fe8d7 - first recording, added with the spawn queue removal"
+  ],
+  "_coverage": "1400 ticks, match still Playing at the end so nothing stops being exercised. Player 0 defends lane 0 with four splash and one single-target beside column 6, which is where the route actually runs (probed, not guessed -- an earlier draft put towers where nothing walked and recorded a match with zero kills). Player 1 mass-sends into it: 20 swarm on tick 400, 12 more on 700, 3 runners on 900, and a full 22-creep burst on tick 1390 that is still on the board at the final tick, which is what lets the replay assert a wave is N distinct creeps rather than one creep wearing N health bars. Player 0 ends on 16 lives / 34 kills, so splash genuinely engaged the waves rather than the separation being tested against an empty lane. MEASURED SENSITIVITY: changing SPAWN_SETBACK from 0.45 to 0.31 moves this hash and does NOT move match-01's. match-01 ends with no live creeps, so sub-tile spawn offsets wash out of it entirely -- this fixture is the only one that pins them.",
+  "ticks": 1400,
+  "commands": [
+    {
+      "at": 5,
+      "player": 0,
+      "kind": "build",
+      "tower": 1,
+      "x": 5,
+      "y": 5
+    },
+    {
+      "at": 15,
+      "player": 0,
+      "kind": "build",
+      "tower": 1,
+      "x": 7,
+      "y": 7
+    },
+    {
+      "at": 25,
+      "player": 0,
+      "kind": "build",
+      "tower": 1,
+      "x": 5,
+      "y": 9
+    },
+    {
+      "at": 35,
+      "player": 0,
+      "kind": "build",
+      "tower": 1,
+      "x": 7,
+      "y": 11
+    },
+    {
+      "at": 60,
+      "player": 0,
+      "kind": "build",
+      "tower": 0,
+      "x": 5,
+      "y": 13
+    },
+    {
+      "at": 10,
+      "player": 1,
+      "kind": "build",
+      "tower": 0,
+      "x": 5,
+      "y": 5
+    },
+    {
+      "at": 20,
+      "player": 1,
+      "kind": "build",
+      "tower": 0,
+      "x": 7,
+      "y": 7
+    },
+    {
+      "at": 30,
+      "player": 1,
+      "kind": "build",
+      "tower": 0,
+      "x": 5,
+      "y": 9
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 900,
+      "player": 1,
+      "kind": "send",
+      "creep": 1
+    },
+    {
+      "at": 900,
+      "player": 1,
+      "kind": "send",
+      "creep": 1
+    },
+    {
+      "at": 900,
+      "player": 1,
+      "kind": "send",
+      "creep": 1
+    },
+    {
+      "at": 800,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 800,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 800,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 800,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 800,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 800,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 800,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 800,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1390,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1390,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1390,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1390,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1390,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1390,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1390,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1390,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1390,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1390,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1390,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1390,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1390,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1390,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1390,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1390,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1390,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1390,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1390,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1390,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1390,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1390,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    }
+  ],
+  "expectedHash": "0e2fe8d7",
+  "data": {
+    "sellRefund": 0.6,
+    "archetypes": [
+      {
+        "key": "single",
+        "name": "Single-target",
+        "answers": "tanks",
+        "levels": [
+          {
+            "cost": 600,
+            "damage": 30,
+            "range": 3,
+            "cooldownTicks": 25
+          },
+          {
+            "cost": 900,
+            "damage": 55,
+            "range": 3.25,
+            "cooldownTicks": 24
+          },
+          {
+            "cost": 1400,
+            "damage": 84,
+            "range": 3.5,
+            "cooldownTicks": 22
+          }
+        ]
+      },
+      {
+        "key": "splash",
+        "name": "Splash",
+        "answers": "swarms",
+        "splashRadius": 1.2,
+        "levels": [
+          {
+            "cost": 1100,
+            "damage": 12,
+            "range": 1.5,
+            "cooldownTicks": 12
+          },
+          {
+            "cost": 1600,
+            "damage": 20,
+            "range": 1.7,
+            "cooldownTicks": 12
+          },
+          {
+            "cost": 2400,
+            "damage": 32,
+            "range": 1.9,
+            "cooldownTicks": 11
+          }
+        ]
+      },
+      {
+        "key": "slow",
+        "name": "Slow",
+        "answers": "runners",
+        "slowTicks": 20,
+        "levels": [
+          {
+            "cost": 800,
+            "damage": 4,
+            "range": 2.25,
+            "cooldownTicks": 10,
+            "slowPercent": 30
+          },
+          {
+            "cost": 1200,
+            "damage": 6,
+            "range": 2.4,
+            "cooldownTicks": 10,
+            "slowPercent": 40
+          },
+          {
+            "cost": 1800,
+            "damage": 9,
+            "range": 2.6,
+            "cooldownTicks": 10,
+            "slowPercent": 50
+          }
+        ]
+      }
+    ],
+    "unlockEveryTicks": 600,
+    "sendUnlockTicks": 400,
+    "startingGold": 6000,
+    "startingIncome": 250,
+    "creeps": [
+      {
+        "key": "swarm",
+        "name": "Swarm",
+        "archetype": 0,
+        "tier": 0,
+        "cost": 33,
+        "count": 1,
+        "hp": 30,
+        "speed": 0.075,
+        "incomeBonus": 10,
+        "bounty": 10
+      },
+      {
+        "key": "runner",
+        "name": "Runner",
+        "archetype": 1,
+        "tier": 0,
+        "cost": 450,
+        "count": 1,
+        "hp": 217,
+        "speed": 0.145,
+        "incomeBonus": 80,
+        "bounty": 90
+      },
+      {
+        "key": "tank",
+        "name": "Tank",
+        "archetype": 2,
+        "tier": 0,
+        "cost": 1400,
+        "count": 1,
+        "hp": 900,
+        "speed": 0.055,
+        "incomeBonus": 140,
+        "bounty": 280
+      },
+      {
+        "key": "swarm2",
+        "name": "Swarm II",
+        "archetype": 0,
+        "tier": 1,
+        "cost": 48,
+        "count": 1,
+        "hp": 60,
+        "speed": 0.075,
+        "incomeBonus": 17,
+        "bounty": 15
+      },
+      {
+        "key": "runner2",
+        "name": "Runner II",
+        "archetype": 1,
+        "tier": 1,
+        "cost": 653,
+        "count": 1,
+        "hp": 434,
+        "speed": 0.145,
+        "incomeBonus": 136,
+        "bounty": 131
+      },
+      {
+        "key": "tank2",
+        "name": "Tank II",
+        "archetype": 2,
+        "tier": 1,
+        "cost": 2030,
+        "count": 1,
+        "hp": 1800,
+        "speed": 0.055,
+        "incomeBonus": 238,
+        "bounty": 406
+      },
+      {
+        "key": "swarm3",
+        "name": "Swarm III",
+        "archetype": 0,
+        "tier": 2,
+        "cost": 70,
+        "count": 1,
+        "hp": 120,
+        "speed": 0.075,
+        "incomeBonus": 29,
+        "bounty": 21
+      },
+      {
+        "key": "runner3",
+        "name": "Runner III",
+        "archetype": 1,
+        "tier": 2,
+        "cost": 946,
+        "count": 1,
+        "hp": 868,
+        "speed": 0.145,
+        "incomeBonus": 231,
+        "bounty": 189
+      },
+      {
+        "key": "tank3",
+        "name": "Tank III",
+        "archetype": 2,
+        "tier": 2,
+        "cost": 2944,
+        "count": 1,
+        "hp": 3600,
+        "speed": 0.055,
+        "incomeBonus": 405,
+        "bounty": 589
+      },
+      {
+        "key": "swarm4",
+        "name": "Swarm IV",
+        "archetype": 0,
+        "tier": 3,
+        "cost": 102,
+        "count": 1,
+        "hp": 240,
+        "speed": 0.075,
+        "incomeBonus": 49,
+        "bounty": 30
+      },
+      {
+        "key": "runner4",
+        "name": "Runner IV",
+        "archetype": 1,
+        "tier": 3,
+        "cost": 1372,
+        "count": 1,
+        "hp": 1736,
+        "speed": 0.145,
+        "incomeBonus": 393,
+        "bounty": 274
+      },
+      {
+        "key": "tank4",
+        "name": "Tank IV",
+        "archetype": 2,
+        "tier": 3,
+        "cost": 4268,
+        "count": 1,
+        "hp": 7200,
+        "speed": 0.055,
+        "incomeBonus": 688,
+        "bounty": 854
+      },
+      {
+        "key": "swarm5",
+        "name": "Swarm V",
+        "archetype": 0,
+        "tier": 4,
+        "cost": 147,
+        "count": 1,
+        "hp": 480,
+        "speed": 0.075,
+        "incomeBonus": 84,
+        "bounty": 44
+      },
+      {
+        "key": "runner5",
+        "name": "Runner V",
+        "archetype": 1,
+        "tier": 4,
+        "cost": 1989,
+        "count": 1,
+        "hp": 3472,
+        "speed": 0.145,
+        "incomeBonus": 668,
+        "bounty": 398
+      },
+      {
+        "key": "tank5",
+        "name": "Tank V",
+        "archetype": 2,
+        "tier": 4,
+        "cost": 6189,
+        "count": 1,
+        "hp": 14400,
+        "speed": 0.055,
+        "incomeBonus": 1169,
+        "bounty": 1238
+      },
+      {
+        "key": "swarm6",
+        "name": "Swarm VI",
+        "archetype": 0,
+        "tier": 5,
+        "cost": 214,
+        "count": 1,
+        "hp": 960,
+        "speed": 0.075,
+        "incomeBonus": 142,
+        "bounty": 64
+      },
+      {
+        "key": "runner6",
+        "name": "Runner VI",
+        "archetype": 1,
+        "tier": 5,
+        "cost": 2884,
+        "count": 1,
+        "hp": 6944,
+        "speed": 0.145,
+        "incomeBonus": 1136,
+        "bounty": 577
+      },
+      {
+        "key": "tank6",
+        "name": "Tank VI",
+        "archetype": 2,
+        "tier": 5,
+        "cost": 8974,
+        "count": 1,
+        "hp": 28800,
+        "speed": 0.055,
+        "incomeBonus": 1988,
+        "bounty": 1795
+      },
+      {
+        "key": "swarm7",
+        "name": "Swarm VII",
+        "archetype": 0,
+        "tier": 6,
+        "cost": 310,
+        "count": 1,
+        "hp": 1920,
+        "speed": 0.075,
+        "incomeBonus": 241,
+        "bounty": 93
+      },
+      {
+        "key": "runner7",
+        "name": "Runner VII",
+        "archetype": 1,
+        "tier": 6,
+        "cost": 4182,
+        "count": 1,
+        "hp": 13888,
+        "speed": 0.145,
+        "incomeBonus": 1931,
+        "bounty": 836
+      },
+      {
+        "key": "tank7",
+        "name": "Tank VII",
+        "archetype": 2,
+        "tier": 6,
+        "cost": 13012,
+        "count": 1,
+        "hp": 57600,
+        "speed": 0.055,
+        "incomeBonus": 3379,
+        "bounty": 2602
+      },
+      {
+        "key": "swarm8",
+        "name": "Swarm VIII",
+        "archetype": 0,
+        "tier": 7,
+        "cost": 449,
+        "count": 1,
+        "hp": 3840,
+        "speed": 0.075,
+        "incomeBonus": 410,
+        "bounty": 135
+      },
+      {
+        "key": "runner8",
+        "name": "Runner VIII",
+        "archetype": 1,
+        "tier": 7,
+        "cost": 6064,
+        "count": 1,
+        "hp": 27776,
+        "speed": 0.145,
+        "incomeBonus": 3283,
+        "bounty": 1213
+      },
+      {
+        "key": "tank8",
+        "name": "Tank VIII",
+        "archetype": 2,
+        "tier": 7,
+        "cost": 18867,
+        "count": 1,
+        "hp": 115200,
+        "speed": 0.055,
+        "incomeBonus": 5745,
+        "bounty": 3773
+      },
+      {
+        "key": "swarm9",
+        "name": "Swarm IX",
+        "archetype": 0,
+        "tier": 8,
+        "cost": 651,
+        "count": 1,
+        "hp": 7680,
+        "speed": 0.075,
+        "incomeBonus": 698,
+        "bounty": 195
+      },
+      {
+        "key": "runner9",
+        "name": "Runner IX",
+        "archetype": 1,
+        "tier": 8,
+        "cost": 8793,
+        "count": 1,
+        "hp": 55552,
+        "speed": 0.145,
+        "incomeBonus": 5581,
+        "bounty": 1759
+      },
+      {
+        "key": "tank9",
+        "name": "Tank IX",
+        "archetype": 2,
+        "tier": 8,
+        "cost": 27357,
+        "count": 1,
+        "hp": 230400,
+        "speed": 0.055,
+        "incomeBonus": 9766,
+        "bounty": 5471
+      },
+      {
+        "key": "swarm10",
+        "name": "Swarm X",
+        "archetype": 0,
+        "tier": 9,
+        "cost": 944,
+        "count": 1,
+        "hp": 15360,
+        "speed": 0.075,
+        "incomeBonus": 1186,
+        "bounty": 283
+      },
+      {
+        "key": "runner10",
+        "name": "Runner X",
+        "archetype": 1,
+        "tier": 9,
+        "cost": 12750,
+        "count": 1,
+        "hp": 111104,
+        "speed": 0.145,
+        "incomeBonus": 9487,
+        "bounty": 2550
+      },
+      {
+        "key": "tank10",
+        "name": "Tank X",
+        "archetype": 2,
+        "tier": 9,
+        "cost": 39668,
+        "count": 1,
+        "hp": 460800,
+        "speed": 0.055,
+        "incomeBonus": 16602,
+        "bounty": 7934
+      },
+      {
+        "key": "swarm11",
+        "name": "Swarm T11",
+        "archetype": 0,
+        "tier": 10,
+        "cost": 1369,
+        "count": 1,
+        "hp": 30720,
+        "speed": 0.075,
+        "incomeBonus": 2016,
+        "bounty": 411
+      },
+      {
+        "key": "runner11",
+        "name": "Runner T11",
+        "archetype": 1,
+        "tier": 10,
+        "cost": 18488,
+        "count": 1,
+        "hp": 222208,
+        "speed": 0.145,
+        "incomeBonus": 16128,
+        "bounty": 3698
+      },
+      {
+        "key": "tank11",
+        "name": "Tank T11",
+        "archetype": 2,
+        "tier": 10,
+        "cost": 57519,
+        "count": 1,
+        "hp": 921600,
+        "speed": 0.055,
+        "incomeBonus": 28224,
+        "bounty": 11504
+      },
+      {
+        "key": "swarm12",
+        "name": "Swarm T12",
+        "archetype": 0,
+        "tier": 11,
+        "cost": 1986,
+        "count": 1,
+        "hp": 61440,
+        "speed": 0.075,
+        "incomeBonus": 3427,
+        "bounty": 596
+      },
+      {
+        "key": "runner12",
+        "name": "Runner T12",
+        "archetype": 1,
+        "tier": 11,
+        "cost": 26808,
+        "count": 1,
+        "hp": 444416,
+        "speed": 0.145,
+        "incomeBonus": 27418,
+        "bounty": 5362
+      },
+      {
+        "key": "tank12",
+        "name": "Tank T12",
+        "archetype": 2,
+        "tier": 11,
+        "cost": 83402,
+        "count": 1,
+        "hp": 1843200,
+        "speed": 0.055,
+        "incomeBonus": 47981,
+        "bounty": 16680
+      },
+      {
+        "key": "swarm13",
+        "name": "Swarm T13",
+        "archetype": 0,
+        "tier": 12,
+        "cost": 2879,
+        "count": 1,
+        "hp": 122880,
+        "speed": 0.075,
+        "incomeBonus": 5826,
+        "bounty": 864
+      },
+      {
+        "key": "runner13",
+        "name": "Runner T13",
+        "archetype": 1,
+        "tier": 12,
+        "cost": 38871,
+        "count": 1,
+        "hp": 888832,
+        "speed": 0.145,
+        "incomeBonus": 46610,
+        "bounty": 7774
+      },
+      {
+        "key": "tank13",
+        "name": "Tank T13",
+        "archetype": 2,
+        "tier": 12,
+        "cost": 120933,
+        "count": 1,
+        "hp": 3686400,
+        "speed": 0.055,
+        "incomeBonus": 81567,
+        "bounty": 24187
+      },
+      {
+        "key": "swarm14",
+        "name": "Swarm T14",
+        "archetype": 0,
+        "tier": 13,
+        "cost": 4175,
+        "count": 1,
+        "hp": 245760,
+        "speed": 0.075,
+        "incomeBonus": 9905,
+        "bounty": 1253
+      },
+      {
+        "key": "runner14",
+        "name": "Runner T14",
+        "archetype": 1,
+        "tier": 13,
+        "cost": 56363,
+        "count": 1,
+        "hp": 1777664,
+        "speed": 0.145,
+        "incomeBonus": 79237,
+        "bounty": 11273
+      },
+      {
+        "key": "tank14",
+        "name": "Tank T14",
+        "archetype": 2,
+        "tier": 13,
+        "cost": 175353,
+        "count": 1,
+        "hp": 7372800,
+        "speed": 0.055,
+        "incomeBonus": 138664,
+        "bounty": 35071
+      },
+      {
+        "key": "swarm15",
+        "name": "Swarm T15",
+        "archetype": 0,
+        "tier": 14,
+        "cost": 6054,
+        "count": 1,
+        "hp": 491520,
+        "speed": 0.075,
+        "incomeBonus": 16838,
+        "bounty": 1816
+      },
+      {
+        "key": "runner15",
+        "name": "Runner T15",
+        "archetype": 1,
+        "tier": 14,
+        "cost": 81727,
+        "count": 1,
+        "hp": 3555328,
+        "speed": 0.145,
+        "incomeBonus": 134702,
+        "bounty": 16345
+      },
+      {
+        "key": "tank15",
+        "name": "Tank T15",
+        "archetype": 2,
+        "tier": 14,
+        "cost": 254261,
+        "count": 1,
+        "hp": 14745600,
+        "speed": 0.055,
+        "incomeBonus": 235729,
+        "bounty": 50852
+      },
+      {
+        "key": "swarm16",
+        "name": "Swarm T16",
+        "archetype": 0,
+        "tier": 15,
+        "cost": 8778,
+        "count": 1,
+        "hp": 983040,
+        "speed": 0.075,
+        "incomeBonus": 28624,
+        "bounty": 2633
+      },
+      {
+        "key": "runner16",
+        "name": "Runner T16",
+        "archetype": 1,
+        "tier": 15,
+        "cost": 118504,
+        "count": 1,
+        "hp": 7110656,
+        "speed": 0.145,
+        "incomeBonus": 228994,
+        "bounty": 23701
+      },
+      {
+        "key": "tank16",
+        "name": "Tank T16",
+        "archetype": 2,
+        "tier": 15,
+        "cost": 368679,
+        "count": 1,
+        "hp": 29491200,
+        "speed": 0.055,
+        "incomeBonus": 400739,
+        "bounty": 73736
+      },
+      {
+        "key": "swarm17",
+        "name": "Swarm T17",
+        "archetype": 0,
+        "tier": 16,
+        "cost": 12728,
+        "count": 1,
+        "hp": 1966080,
+        "speed": 0.075,
+        "incomeBonus": 48661,
+        "bounty": 3818
+      },
+      {
+        "key": "runner17",
+        "name": "Runner T17",
+        "archetype": 1,
+        "tier": 16,
+        "cost": 171831,
+        "count": 1,
+        "hp": 14221312,
+        "speed": 0.145,
+        "incomeBonus": 389290,
+        "bounty": 34366
+      },
+      {
+        "key": "tank17",
+        "name": "Tank T17",
+        "archetype": 2,
+        "tier": 16,
+        "cost": 534584,
+        "count": 1,
+        "hp": 58982400,
+        "speed": 0.055,
+        "incomeBonus": 681257,
+        "bounty": 106917
+      },
+      {
+        "key": "swarm18",
+        "name": "Swarm T18",
+        "archetype": 0,
+        "tier": 17,
+        "cost": 18456,
+        "count": 1,
+        "hp": 3932160,
+        "speed": 0.075,
+        "incomeBonus": 82724,
+        "bounty": 5537
+      },
+      {
+        "key": "runner18",
+        "name": "Runner T18",
+        "archetype": 1,
+        "tier": 17,
+        "cost": 249154,
+        "count": 1,
+        "hp": 28442624,
+        "speed": 0.145,
+        "incomeBonus": 661792,
+        "bounty": 49831
+      },
+      {
+        "key": "tank18",
+        "name": "Tank T18",
+        "archetype": 2,
+        "tier": 17,
+        "cost": 775147,
+        "count": 1,
+        "hp": 117964800,
+        "speed": 0.055,
+        "incomeBonus": 1158136,
+        "bounty": 155029
+      },
+      {
+        "key": "swarm19",
+        "name": "Swarm T19",
+        "archetype": 0,
+        "tier": 18,
+        "cost": 26761,
+        "count": 1,
+        "hp": 7864320,
+        "speed": 0.075,
+        "incomeBonus": 140631,
+        "bounty": 8028
+      },
+      {
+        "key": "runner19",
+        "name": "Runner T19",
+        "archetype": 1,
+        "tier": 18,
+        "cost": 361274,
+        "count": 1,
+        "hp": 56885248,
+        "speed": 0.145,
+        "incomeBonus": 1125047,
+        "bounty": 72255
+      },
+      {
+        "key": "tank19",
+        "name": "Tank T19",
+        "archetype": 2,
+        "tier": 18,
+        "cost": 1123963,
+        "count": 1,
+        "hp": 235929600,
+        "speed": 0.055,
+        "incomeBonus": 1968832,
+        "bounty": 224793
+      },
+      {
+        "key": "swarm20",
+        "name": "Swarm T20",
+        "archetype": 0,
+        "tier": 19,
+        "cost": 38803,
+        "count": 1,
+        "hp": 15728640,
+        "speed": 0.075,
+        "incomeBonus": 239072,
+        "bounty": 11641
+      },
+      {
+        "key": "runner20",
+        "name": "Runner T20",
+        "archetype": 1,
+        "tier": 19,
+        "cost": 523847,
+        "count": 1,
+        "hp": 113770496,
+        "speed": 0.145,
+        "incomeBonus": 1912579,
+        "bounty": 104769
+      },
+      {
+        "key": "tank20",
+        "name": "Tank T20",
+        "archetype": 2,
+        "tier": 19,
+        "cost": 1629747,
+        "count": 1,
+        "hp": 471859200,
+        "speed": 0.055,
+        "incomeBonus": 3347014,
+        "bounty": 325949
+      },
+      {
+        "key": "swarm21",
+        "name": "Swarm T21",
+        "archetype": 0,
+        "tier": 20,
+        "cost": 56265,
+        "count": 1,
+        "hp": 31457280,
+        "speed": 0.075,
+        "incomeBonus": 406423,
+        "bounty": 16880
+      },
+      {
+        "key": "runner21",
+        "name": "Runner T21",
+        "archetype": 1,
+        "tier": 20,
+        "cost": 759578,
+        "count": 1,
+        "hp": 227540992,
+        "speed": 0.145,
+        "incomeBonus": 3251385,
+        "bounty": 151916
+      },
+      {
+        "key": "tank21",
+        "name": "Tank T21",
+        "archetype": 2,
+        "tier": 20,
+        "cost": 2363133,
+        "count": 1,
+        "hp": 943718400,
+        "speed": 0.055,
+        "incomeBonus": 5689924,
+        "bounty": 472627
+      }
+    ]
+  }
+}

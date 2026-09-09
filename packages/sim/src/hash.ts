@@ -112,16 +112,12 @@ export function hashState(s: GameState): number {
     const dist = lane.field.dist
     for (let i = 0; i < dist.length; i++) h.int(dist[i] as number)
 
-    // Pending sends are match state: two clients disagreeing about what is
-    // queued would diverge the moment it released.
-    h.int(lane.queueHead)
-    h.int(lane.queueTail)
-    h.int(lane.nextRelease)
+    // There are no pending sends any more -- a send spawns on the spot -- but
+    // the release counter is still match state, and more load-bearing than it
+    // looks: it chooses where the NEXT creep starts, so two clients that
+    // disagree about it would spawn the next arrival at different points and
+    // diverge from there.
     h.int(lane.released)
-    for (let q = lane.queueHead; q < lane.queueTail; q++) {
-      h.int(lane.queueCreep[q] as number)
-      h.byte(lane.queueOwner[q] as number)
-    }
 
     const c = lane.creeps
     h.int(c.count)

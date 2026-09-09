@@ -26,7 +26,6 @@ function harness(attrs: Set<string> = new Set()) {
       list.push(listener)
       listeners.set(type, list)
     },
-    hasAttribute: (name) => attrs.has(name),
   }
 
   let now = 0
@@ -47,8 +46,19 @@ function harness(attrs: Set<string> = new Set()) {
     clearInterval: (id) => void pending.delete(id),
   }
 
+  // The real sender refuses a locked card and an empty wallet and reports it as
+  // a boolean; the fake one answers the same two questions off `attrs`, so
+  // these tests stay about timing, which is all this file decides.
   const sends: number[] = []
-  const stop = holdToRepeat(button, () => sends.push(now), timers)
+  const stop = holdToRepeat(
+    button,
+    () => {
+      if (attrs.has('data-locked') || attrs.has('data-broke')) return false
+      sends.push(now)
+      return true
+    },
+    timers,
+  )
 
   return {
     sends,

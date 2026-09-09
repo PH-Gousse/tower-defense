@@ -365,3 +365,39 @@ loop. Parallelising it means holding two mental models at once on the workstream
 tell you when it is wrong.
 **Trigger:** when you reach step 10 and are deciding whether to parallelise.
 **Effort:** n/a — a scheduling decision. **Priority: P3.**
+
+### Tower upgrade curve vs the new ×5 creep HP jumps
+**What:** Re-measure tower level scaling against a three-tier ladder whose creep HP jumps ×5 at
+five and ten minutes.
+
+**Why:** The ×10 economy rescale preserves every ratio, so towers are safe on that axis. But the
+ladder changed SHAPE — gentle ×1.45 steps over twenty tiers became three big ×5 jumps — and the
+tower upgrade curve was tuned against the gentle one. The ×5 jump exists precisely so a tier-1
+maze is visibly inadequate when tier 2 unlocks; whether upgrading out of that is affordable, or
+even possible, is a tower-side property nobody has measured.
+
+**Context:** Tower levels live in `towers.json` (sellRefund moves 0.6 → 0.8 in the same change).
+`pnpm --filter @ltw/harness lap` measures what a maze kills per lap and is the right tool. The
+two reinvestment moments at 5:00 and 10:00 are where the design expects matches to swing, so a
+mistuned curve shows up as "upgrades do nothing" at exactly the moment players are paying most
+attention.
+**Trigger:** after the ×5 ladder (T6) and the damage ramp (T7) land — both move the target.
+**Effort:** M → S. **Priority: P1.**
+
+### Adaptive bot template selection
+**What:** Let the bot pick its maze template by reading the opponent instead of always building
+template 0.
+
+**Why:** `bot.ts:44-46` already says it: "The knobs make the bot flood harder and respond sooner;
+they never make it maze *smarter*. If it reads flat in play, adaptive template selection is the
+first thing to build after this." `BOT_EASY`, `BOT_NORMAL` and `BOT_HARD` (bot.ts:189-191) all
+carry `template: 0`, so all three difficulties build the identical maze and differ only in send
+volume and reaction latency. This is the only remaining axis for a genuinely better opponent
+rather than a merely faster one.
+
+**Context:** Promoted out of a source comment, where it was invisible when deciding what to build
+next. The eng review of 2026-09-09 opens the bot up twice — `botCommand` returns `Command[]`
+(T9) and the emergency trigger moves to a measured lane-damage accumulator (T8) — so the next
+person starts from a better base than the comment's author had.
+**Trigger:** after T8 and T9 land.
+**Effort:** L → M. **Priority: P2.**

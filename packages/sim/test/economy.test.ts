@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createState, STARTING_GOLD, STARTING_INCOME, INCOME_EVERY_TICKS } from '../src/state'
+import { createState, STARTING_GOLD, STARTING_INCOME, INCOME_EVERY_TICKS, MAX_CREEPS } from '../src/state'
 import { checkSend, checkUpgrade, checkSell, sellValue, Refusal } from '../src/step'
 import { TowerKind, levelOf, investedIn, SELL_REFUND, CREEPS, creepSpec, tierUnlockTick, UNLOCK_EVERY_TICKS } from '../src/data'
 import { tileIndex } from '../src/grid'
@@ -82,9 +82,17 @@ describe('income per gold', () => {
 describe('kill bounty', () => {
   it('pays the defender, not the sender', () => {
     // Killing in your own lane is what earns it.
+    //
+    // The towers sit at x=5, one tile off the route, which runs down column 6.
+    // They used to sit at x=3, and that was luck rather than design: the closest
+    // the creep ever came was exactly 3.000 against a range of exactly 3.0, so
+    // whether this test passed turned on the creep's sub-tile phase at the
+    // sampling tick. Removing the spawn queue shifted that phase by two
+    // hundredths of a tile and the tower stopped firing at all. The assertion
+    // below is unchanged; only the scaffolding it needs to reach it is.
     const cmds = {
       0: [send(SWARM, 1)],
-      1: [build(3, 11, TowerKind.Single, 0), build(3, 12, TowerKind.Single, 0)],
+      1: [build(5, 11, TowerKind.Single, 0), build(5, 12, TowerKind.Single, 0)],
     }
     const s = run(600, cmds)
     expect(s.players[0]!.kills).toBeGreaterThan(0)
@@ -97,6 +105,47 @@ describe('kill bounty', () => {
 
   it('never exceeds the send cost, or sending would be a gift', () => {
     for (const c of CREEPS) expect(c.bounty).toBeLessThan(c.cost)
+  })
+})
+
+describe('a refused send costs nothing', () => {
+  /**
+   * The bug this pins used to be reachable and silent.
+   *
+   * `applyCommands` debits gold and grants income, and only THEN puts creeps in
+   * the lane. Every capacity check lived at the spawn, so a lane that could not
+   * hold the creep took the money, granted the permanent income, and dropped
+   * the creep without a word. It was unreachable while the cap was 512 queued
+   * and 2048 live; it stopped being unreachable the moment sends became
+   * unpaced. `checkSend` now answers the capacity question before any gold
+   * moves, which is where the other nine refusals already lived.
+   */
+  it('refuses when the target lane is full, before taking the gold', () => {
+    const s = createState()
+    s.tick = 1
+    // Fill the lane player 0 sends into. Player 0 sends, so that is lane 1.
+    s.lanes[1]!.creeps.count = MAX_CREEPS
+    expect(checkSend(s, 0, SWARM)).toBe(Refusal.LaneFull)
+
+    // Gold and income are the whole assertion. Not the creep count: these 2048
+    // are a raised `count` over zeroed arrays, so they read as 0 HP and
+    // `removeDead` compacts every one of them away inside the same tick. That
+    // is an artefact of the fake, and asserting on it would be asserting on the
+    // scaffolding rather than on the refusal.
+    const goldBefore = s.players[0]!.gold
+    const incomeBefore = s.players[0]!.income
+    const out = tick(s, [send(SWARM, 0)])
+    expect(out.players[0]!.gold).toBe(goldBefore)
+    expect(out.players[0]!.income).toBe(incomeBefore)
+  })
+
+  it('allows the send that exactly fills the lane', () => {
+    // Off-by-one in the other direction: refusing at capacity minus one would
+    // quietly cost the last creep the lane can actually hold.
+    const s = createState()
+    s.tick = 1
+    s.lanes[1]!.creeps.count = MAX_CREEPS - creepSpec(SWARM).count
+    expect(checkSend(s, 0, SWARM)).toBe(Refusal.None)
   })
 })
 

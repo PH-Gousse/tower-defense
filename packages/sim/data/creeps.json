@@ -1,8 +1,10 @@
 {
-  "version": 4,
+  "version": 5,
   "_comment": "Step 8. The roster is a RULE, not a list. A finite list cannot guarantee a match ends: the tower board saturates at a bounded lap damage (~157,000 for 136 level-3 towers, measured by `pnpm --filter @ltw/harness lap`), so a ladder that stops short leaves a maze nothing can break, and two competent players stalemate forever. Growth is geometric and the tiers keep coming, so creep HP passes any bounded maze eventually and somebody always loses. Tier N stats are base * growth^N, generated at load up to maxTier.",
+  "_atomComment": "Version 5 makes ONE PURCHASE ONE CREEP. Swarm used to ship a pack of six, so a single click put six creeps in the lane and there was no way to send fewer -- the multiplication happened here, in the data, where no amount of work on the button could reach it. `count` is now 1 for every archetype and the pack is something the player assembles by clicking six times, which is how the map this game descends from has always worked: a shrine click queues one unit and spamming is the intended way to mass-send. Splash still has swarms to answer, because six clicks still produce six creeps; they now cost six decisions instead of one. NOT a balance change: swarm's price and income were divided by the pack size at the same moment, so six clicks cost and earn what one click cost and earned in version 4.",
+  "_scaleComment": "Every gold figure was multiplied by ten in the same change, and that is what makes the pack split lossless. Swarm at 20 gold for six creeps is 3.33 a creep, which rounds to 3 and cheapens the card by ten percent; at the x10 scale it is 33.33, which rounds to 33 and errs by half a percent. Gold is hashed as a 32-bit integer for desync detection (`hash.ts`), so sub-unit prices are not available at any scale -- the scale is the room to express them. Ratios are otherwise untouched: costs, income, bounty, starting gold and every tower price moved by the same factor, so nothing about the game changed except the number of digits.",
   "unlockEveryTicks": 600,
-  "_sendUnlockComment": "The opening build phase, in ticks at 20Hz. Sending was legal from tick 0, which meant the first wave could be in your lane before you had placed a single tower -- there was no opening, just a scramble. 400 is 20 seconds: enough to spend the 600 starting gold as a maze rather than a reflex, and deliberately SHORT of the 600-tick tier-1 unlock so that unlock stays its own separate beat instead of arriving in the same instant sending does.",
+  "_sendUnlockComment": "The opening build phase, in ticks at 20Hz. Sending was legal from tick 0, which meant the first wave could be in your lane before you had placed a single tower -- there was no opening, just a scramble. 400 is 20 seconds: enough to spend the 6000 starting gold as a maze rather than a reflex, and deliberately SHORT of the 600-tick tier-1 unlock so that unlock stays its own separate beat instead of arriving in the same instant sending does.",
   "sendUnlockTicks": 400,
   "maxTier": 20,
   "growth": {
@@ -14,37 +16,38 @@
   },
   "archetypes": [
     {
+      "_comment": "cost and incomeBonus are the version-4 pack price divided by the pack size of six, at the x10 scale: 200/6 and 60/6. The fraction is kept rather than pre-rounded because expandCreeps rounds once per tier, so carrying it here keeps every tier on the curve instead of compounding a rounding error up the ladder. bounty was always per KILL, never per purchase, so it only took the x10 and no division.",
       "key": "swarm",
       "name": "Swarm",
       "answers": "splash",
-      "cost": 20,
-      "count": 6,
+      "cost": 33.333333,
+      "count": 1,
       "hp": 30,
       "speed": 0.075,
-      "incomeBonus": 6,
-      "bounty": 1
+      "incomeBonus": 10,
+      "bounty": 10
     },
     {
       "key": "runner",
       "name": "Runner",
       "answers": "slow",
-      "cost": 45,
+      "cost": 450,
       "count": 1,
       "hp": 217,
       "speed": 0.145,
-      "incomeBonus": 8,
-      "bounty": 9
+      "incomeBonus": 80,
+      "bounty": 90
     },
     {
       "key": "tank",
       "name": "Tank",
       "answers": "single-target",
-      "cost": 140,
+      "cost": 1400,
       "count": 1,
       "hp": 900,
       "speed": 0.055,
-      "incomeBonus": 14,
-      "bounty": 28
+      "incomeBonus": 140,
+      "bounty": 280
     }
   ]
 }
