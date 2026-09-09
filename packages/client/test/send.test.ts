@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createSender, type SendCard } from '../src/send'
+import { holdToRepeat, HOLD_DELAY_MS, HOLD_EVERY_MS } from '../src/hold'
 
 /**
  * The send atom.
@@ -122,5 +123,108 @@ describe('createSender', () => {
     expect(sendN(0, 0)).toBe(0)
     expect(sendN(0, -5)).toBe(0)
     expect(sent).toEqual([])
+  })
+})
+
+/**
+ * The seam `main.ts` actually uses.
+ *
+ * `send.ts` decides whether a send happens and `hold.ts` decides when, and both
+ * are tested on their own. Nothing tested them wired together, which is the
+ * shape main.ts builds: holdToRepeat(button, () => sendN(slot, 1) > 0, timers).
+ * A bug that lives in the composition -- a press that sends nothing, or a
+ * single click that sends twice -- passes both unit suites and reaches the
+ * player, so it gets its own test.
+ */
+describe('the palette wiring, composed as main.ts composes it', () => {
+  function palette(attrs: string[] = []) {
+    const set = new Set(attrs)
+    const listeners = new Map<string, Array<(ev: { button?: number; detail?: number }) => void>>()
+    const button = {
+      addEventListener(type: string, l: (ev: { button?: number; detail?: number }) => void) {
+        const list = listeners.get(type) ?? []
+        list.push(l)
+        listeners.set(type, list)
+      },
+    }
+    const card: SendCard = {
+      dataset: { creep: '0' },
+      hasAttribute: (n) => set.has(n),
+    }
+    let now = 0
+    let nextId = 1
+    const pending = new Map<number, { at: number; every: number; fn: () => void }>()
+    const timers = {
+      setTimeout(fn: () => void, ms: number) { const id = nextId++; pending.set(id, { at: now + ms, every: 0, fn }); return id },
+      setInterval(fn: () => void, ms: number) { const id = nextId++; pending.set(id, { at: now + ms, every: ms, fn }); return id },
+      clearTimeout: (id: number) => void pending.delete(id),
+      clearInterval: (id: number) => void pending.delete(id),
+    }
+    const sent: number[] = []
+    const sendN = createSender([card], (c) => void sent.push(c))
+    holdToRepeat(button, () => sendN(0, 1) > 0, timers)
+    return {
+      sent,
+      attrs: set,
+      emit(type: string, ev: { button?: number; detail?: number } = { button: 0 }) {
+        for (const l of listeners.get(type) ?? []) l(ev)
+      },
+      advance(ms: number) {
+        const end = now + ms
+        for (;;) {
+          let soonest = -1
+          let at = Infinity
+          for (const [id, t] of pending) if (t.at < at) { at = t.at; soonest = id }
+          if (soonest === -1 || at > end) break
+          const t = pending.get(soonest)!
+          now = t.at
+          if (t.every > 0) t.at = now + t.every
+          else pending.delete(soonest)
+          t.fn()
+        }
+        now = end
+      },
+    }
+  }
+
+  it('sends exactly one creep for one press and release', () => {
+    // The whole report, as a test: click Swarm once, one creep goes.
+    const p = palette()
+    p.emit('pointerdown')
+    p.emit('pointerup')
+    p.advance(5000)
+    expect(p.sent).toEqual([0])
+  })
+
+  it('sends nothing at all when the card is locked', () => {
+    const p = palette(['data-locked'])
+    p.emit('pointerdown')
+    p.advance(5000)
+    expect(p.sent).toEqual([])
+  })
+
+  it('sends nothing when the wallet is empty, and does not start repeating', () => {
+    const p = palette(['data-broke'])
+    p.emit('pointerdown')
+    p.advance(5000)
+    expect(p.sent).toEqual([])
+  })
+
+  it('still streams while held, one creep per repeat', () => {
+    const p = palette()
+    p.emit('pointerdown')
+    p.advance(HOLD_DELAY_MS + HOLD_EVERY_MS * 3)
+    expect(p.sent).toHaveLength(4)
+    expect(p.sent.every((c) => c === 0)).toBe(true)
+  })
+
+  it('stops the stream the moment the wallet empties mid-hold', () => {
+    const p = palette()
+    p.emit('pointerdown')
+    p.advance(HOLD_DELAY_MS + HOLD_EVERY_MS)
+    const held = p.sent.length
+    p.attrs.add('data-broke')
+    p.advance(5000)
+    expect(p.sent).toHaveLength(held)
   })
 })
