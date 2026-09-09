@@ -18,7 +18,7 @@ resolves.
 
 The cause was structural, not a number being wrong. Creep power was a finite list of six while
 tower power grew with the board, and the board's lap damage is bounded but large — measured at
-~157,000 for 136 level-3 towers. A ladder that stops short leaves a maze nothing can break.
+measured at 40,572 for 50 level-3 towers, where it saturates. A ladder that stops short leaves a maze nothing can break. (The 157,000 once quoted here was never reproducible: the lap tool threw on its first cell from the moment the build phase landed until it was repaired.)
 Two changes fixed it:
 
 - **The roster is a growth rule, not a list.** Tier N is base × growth^N, generated to tier 20,
@@ -401,3 +401,41 @@ next. The eng review of 2026-09-09 opens the bot up twice — `botCommand` retur
 person starts from a better base than the comment's author had.
 **Trigger:** after T8 and T9 land.
 **Effort:** L → M. **Priority: P2.**
+
+### The bounded ladder has no match-ender
+**What:** Give the three-tier ladder a way to guarantee that a match ends, or accept that two
+strong players can stalemate forever.
+
+**Why:** A match here is only decided by leaks, so a stalemate is not a grind, it is both mazes
+being unbreakable: nothing gets through, nobody loses a life, and both players get richer
+indefinitely. The twenty-tier ladder ended matches by arithmetic — creep HP doubled every tier and
+never stopped, so it passed any maze eventually. Bounding the ladder at three tiers removed that
+and put nothing in its place.
+
+**Context:** Measured with `pnpm --filter @ltw/harness lap` (which had to be repaired first — it
+had thrown on its first cell since the build phase landed, because the probe never advanced past
+`SEND_UNLOCK_TICKS`, so the ~157,000 figure quoted in this file and in creeps.json was never
+reproducible and is wrong):
+
+    defence     maze   HP needed to survive one lap (spd 0.055)
+    30x L3       57    25,284
+    50x L3       72    40,572
+    80x L3       72    40,572
+    120x L3      72    40,572
+
+The maze SATURATES at 50 towers — 80 and 120 add nothing, because the route is fixed and the extra
+towers cannot reach it. So the real ceiling is 40,572, not 157,000. The heaviest creep this ladder
+can ever produce is Tank III at 250 * 5^2 = 6,250, which is 15% of what it needs. Creeps are short
+by 6.5x and no amount of gold changes that.
+
+Bots do not reach it: `MAX_TOWER_TARGET` is 45, just under saturation, and mirror matches still
+decide in 4 to 17 minutes. It needs two players who both build past 50 towers, which may never
+happen in practice — which is why this is written down rather than built.
+
+A valve would have to make creeps eventually unstoppable, the way the old ladder did, so it points
+the OPPOSITE way to the WC3 Reforged mechanic it was modelled on: Reforged raises the damage creeps
+take, which strengthens mazes, which here widens the gap it is meant to close. Sizing, if it is
+ever built: closing 6.5x over sixty income periods is about 3% per period, not the 0.5% originally
+sketched.
+**Trigger:** the first real match that runs past twenty minutes with neither side losing lives.
+**Effort:** M → S. **Priority: P1.**

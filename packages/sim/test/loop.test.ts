@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { MatchResult, STARTING_LIVES } from '../src/state'
 import { hashState } from '../src/hash'
 import { GRID_H, tileIndex } from '../src/grid'
-import { TowerKind, creepSpec } from '../src/data'
+import { TowerKind, creepSpec, tierUnlockTick } from '../src/data'
 import { build, send, runUntil, tick, RUNNER, TANK, TANK2, withoutBuildPhase } from './helpers'
 
 // Not a test of the opening: see withoutBuildPhase.
@@ -94,10 +94,17 @@ describe('the loop', () => {
     // laps is more or fewer than the lives you have left.
     //
     // One tower against a Tank II is the losing end of that race by a hair.
+    //
+    // The send waits for the tier to open rather than for tick 1300. That
+    // literal was a tier clock in disguise: it sat comfortably past the old
+    // 600-tick unlock, and when the ladder moved to three tiers five minutes
+    // apart it silently became a send the rules refuse, which reads as "the
+    // maze never killed anything" rather than as "nothing was ever sent".
+    const tier1At = tierUnlockTick(creepSpec(TANK2).tier)
     const weak = runUntil(
       (x) => x.players[0]!.kills > 0,
       80000,
-      { 0: [build(6, 11, TowerKind.Single, 0)], 1300: [send(TANK2, 1)] },
+      { 0: [build(6, 11, TowerKind.Single, 0)], [tier1At]: [send(TANK2, 1)] },
     )
     expect(weak.players[0]!.kills).toBe(1)
     // It died — but only after taking lives with it. How many depends entirely
@@ -118,7 +125,7 @@ describe('the loop', () => {
           build(10, 11, TowerKind.Single, 0),
           build(11, 11, TowerKind.Single, 0),
         ],
-        1300: [send(TANK2, 1)],
+        [tier1At]: [send(TANK2, 1)],
       },
     )
     expect(strong.players[0]!.leaks).toBeLessThan(weak.players[0]!.leaks)

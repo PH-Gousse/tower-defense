@@ -65,6 +65,15 @@ export function measureLapDamage(towers: number, level: number, speed: number): 
     ;(b.players[0] as { gold: number }).gold = 1000
     ;(a.players[1] as { lives: number }).lives = 1_000_000
     ;(b.players[1] as { lives: number }).lives = 1_000_000
+    // Past the opening build phase, or the probe's one send is refused as
+    // BuildPhase and no creep ever spawns -- which this reports as "probe never
+    // completed a lap", because from here the two are indistinguishable.
+    // `gauntlet.ts` has always done this; this file was missed when the build
+    // phase landed, and the tool has thrown on its first cell ever since. The
+    // ~157,000 saturated-maze figure quoted in creeps.json and TODOS.md predates
+    // that and could not be reproduced until this line existed.
+    ;(a as { tick: number }).tick = 100_000
+    ;(b as { tick: number }).tick = 100_000
 
     let cmds: Command[] = [{ tick: 0, player: 0, kind: Kind.Send, creep: 0 }]
     const startLives = a.players[1]!.lives

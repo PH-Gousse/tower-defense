@@ -39,11 +39,23 @@ describe('towers', () => {
   })
 
   it('leaves a creep alive when it out-tanks the maze', () => {
-    // A tank against a single tower: damaged, but never killed.
-    const s = run(1200, { 0: [build(5, 11, TowerKind.Single, 0)], 1: [send(TANK, 1)] })
+    // A tank against a single tower: damaged, but it completes a lap.
+    //
+    // Asserted against the lap rather than against a tick budget. "Alive after
+    // 1200 ticks" was a statement about the roster, not about towers: it held
+    // while a tank had 900 HP and stopped holding the moment the ladder gave it
+    // 250, even though nothing about tower behaviour had changed. Surviving one
+    // full lap is the claim that actually belongs here, and it survives tuning.
+    const s = runUntil(
+      (x) => x.players[0]!.leaks > 0,
+      20000,
+      { 0: [build(5, 11, TowerKind.Single, 0)], 1: [send(TANK, 1)] },
+    )
+    expect(s.players[0]!.leaks).toBeGreaterThan(0)
     expect(s.players[0]!.kills).toBe(0)
     expect(s.lanes[0]!.creeps.count).toBe(1)
-    expect(s.lanes[0]!.creeps.hp[0] as number).toBeLessThan(1400)
+    // Damaged on the way round, read from the roster rather than a literal.
+    expect(s.lanes[0]!.creeps.hp[0] as number).toBeLessThan(creepSpec(TANK).hp)
   })
 
   it('respects cooldown rather than firing every tick', () => {

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { createState, type GameState } from '../src/state'
 import { botCommand, BOT_EASY, BOT_NORMAL, BOT_HARD } from '../src/bot'
+import { tierUnlockTick } from '../src/data'
 import { MAZE_TEMPLATES, templateAt } from '../src/maze'
 import { step, Kind, Refusal, checkBuild, checkUpgrade, checkSend } from '../src/step'
 import { hashState } from '../src/hash'
@@ -133,13 +134,18 @@ describe('bot', () => {
     // however much income it accumulates.
     let s = createState()
     ;(s.players[0] as { gold: number }).gold = 100000
-    // Player 1 needs to survive past the tier-1 unlock at tick 1200, or the
-    // match ends first and the sim freezes. An undefended lane loses in ~780.
+    // Player 1 needs to survive past the tier-1 unlock, or the match ends first
+    // and the sim freezes. An undefended lane loses in ~780 ticks.
     ;(s.players[1] as { lives: number }).lives = 100000
     let sawTier0 = false
     let sawTier1 = false
     let into: GameState = createState()
-    for (let t = 0; t < 1600; t++) {
+    // Run to the unlock plus a margin, derived rather than written down. This
+    // was 1600 ticks, which was the old 600-tick unlock plus room; the ladder
+    // now opens tier 1 five minutes in, and a hardcoded horizon turns "the bot
+    // never escalated" into a test about how long the loop happened to run.
+    const horizon = tierUnlockTick(1) + 1000
+    for (let t = 0; t < horizon; t++) {
       const cmds = botCommand(s, 0, BOT_HARD)
       for (const c of cmds) {
         if (c.kind !== Kind.Send) continue
