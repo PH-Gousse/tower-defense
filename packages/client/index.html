@@ -25,6 +25,16 @@
       pointer-events: none;
     }
     #hud div { padding: 7px 13px; border-right: 1px solid #23272e; }
+    /* Every cell, not only the last.
+
+       The last cell has carried nowrap since the placement message took the HUD
+       from 49px to 217px at 560px wide. The rule was right and its scope was
+       not: any cell squeezed narrow enough wraps its label, and adding the three
+       clocks brings that squeeze much closer. In the rail layout it matters
+       more again, because there the reserved axis is WIDTH -- a wrapped label
+       widens the rail, which moves the camera. */
+    #hud div { white-space: nowrap; }
+    #hud { overflow: hidden; }
     /* The placement message must never change the bar's height.
 
        It is the one cell whose text is a sentence, and it changes on every
@@ -197,20 +207,85 @@
     #hud b { display: block; font-size: 9.5px; letter-spacing: .08em;
              text-transform: uppercase; color: #7d858f; font-weight: 600; }
     #hud span { font-variant-numeric: tabular-nums; font-size: 15px; }
+
+    /* Hierarchy. Eleven cells at identical weight is a debug overlay, not a
+       HUD: the two numbers that decide the match sat in the same typography as
+       the tile coordinate under the cursor. `primary` is what you glance at
+       under pressure; `detail` is what you read when you have a moment. */
+    #hud .primary span { font-size: 21px; }
+    #hud .detail span { font-size: 13px; color: #aab2bb; }
+    #hud .detail b { font-size: 9px; }
+    #lives[data-low] { color: #e0655a; }
+    #tierLeft[data-none] { color: #6b727b; }
+
+    /* ---- rails -------------------------------------------------------------
+
+       The chrome moves from the top and bottom edges to the left and right
+       ones, because the camera's fit is bound by HEIGHT on any landscape screen
+       and horizontal space is therefore free. `main.ts` decides which layout
+       applies and publishes it as `data-layout` plus a `--rail` width; nothing
+       here re-derives that, so the CSS and the camera's safe area cannot
+       disagree about how wide the chrome is.
+
+       Widths are fixed rather than content-driven on purpose: the rail's width
+       IS the camera's reservation, so a rail that sized itself to its contents
+       would re-frame the board every time a clock gained a digit. */
+    body[data-layout="rails"] #hud {
+      top: 0; bottom: 0; left: 0; right: auto;
+      width: var(--rail); flex-direction: column; align-items: stretch;
+      border-bottom: 0; border-right: 1px solid #2a2f36;
+    }
+    body[data-layout="rails"] #hud div {
+      border-right: 0; border-bottom: 1px solid #23272e;
+    }
+    body[data-layout="rails"] #hud div:last-child { margin-left: 0; margin-top: auto; border-bottom: 0; }
+
+    body[data-layout="rails"] #palette {
+      top: 0; bottom: 0; right: 0; left: auto;
+      width: var(--rail); flex-direction: column; align-items: stretch;
+      border-top: 0; border-left: 1px solid #2a2f36; gap: 6px;
+    }
+    body[data-layout="rails"] #sendRow { flex-direction: column; gap: 6px; }
+    body[data-layout="rails"] #palette .sep {
+      width: auto; height: 1px; align-self: stretch; margin: 4px 0;
+    }
+    body[data-layout="rails"] #palette .hint {
+      margin-left: 0; margin-top: auto; white-space: normal; line-height: 1.7;
+    }
+    body[data-layout="rails"] .tool,
+    body[data-layout="rails"] .creep { min-width: 0; }
+    body[data-layout="rails"] #sendLabel { min-width: 0; }
+
+    /* Floating elements clear whichever chrome is present. */
+    body[data-layout="rails"] #panel { right: calc(var(--rail) + 14px); top: 14px; }
+    body[data-layout="rails"] #concede { right: calc(var(--rail) + 14px); bottom: 14px; }
+    body[data-layout="rails"] #toast { bottom: 20px; }
+    body[data-layout="rails"] #stalled { top: 14px; }
   </style>
 </head>
 <body>
+  <!-- Ordered by what you look at under pressure, not by what was easy to add.
+
+       The three clocks are new. The game is built on timed beats -- the build
+       phase ends at 0:20, income arrives in a lump every 15s, tiers unlock at
+       5:00 and 10:00 -- and none of them were on screen. "Income 250 /15s" said
+       the rate and never the moment; the only countdown anywhere was buried in a
+       locked send card's caption. Every value here is derived from the tick the
+       stats snapshot already carries, so none of this touches the simulation. -->
   <div id="hud">
-    <div><b>Lives</b><span id="lives">20</span></div>
-    <div><b>Opponent</b><span id="oppLives">20</span></div>
-    <div><b>Gold</b><span id="gold">600</span></div>
-    <div><b>Income</b><span id="income">25</span></div>
-    <div><b>Towers</b><span id="towers">0</span></div>
-    <div><b>Creeps</b><span id="creeps">0</span></div>
-    <div><b>Kills</b><span id="kills">0</span></div>
-    <div><b>Leaks</b><span id="leaks">0</span></div>
-    <div><b>Maze</b><span id="maze">39</span></div>
-    <div><b>Tile</b><span id="tile">&mdash;</span></div>
+    <div class="primary"><b>Time</b><span id="clock">00:00</span></div>
+    <div class="primary"><b>Lives</b><span id="lives">20</span></div>
+    <div class="primary"><b>Opponent</b><span id="oppLives">20</span></div>
+    <div class="primary"><b>Gold</b><span id="gold">6000</span></div>
+    <div><b>Income</b><span id="income">250</span></div>
+    <div><b>Next income</b><span id="incomeLeft">00:15</span></div>
+    <div><b>Next tier</b><span id="tierLeft">05:00</span></div>
+    <div class="detail"><b>Towers</b><span id="towers">0</span></div>
+    <div class="detail"><b>Creeps</b><span id="creeps">0</span></div>
+    <div class="detail"><b>Kills</b><span id="kills">0</span></div>
+    <div class="detail"><b>Leaks</b><span id="leaks">0</span></div>
+    <div class="detail"><b>Maze</b><span id="maze">29</span></div>
+    <div class="detail"><b>Tile</b><span id="tile">&mdash;</span></div>
     <div><b>Placement</b><span id="note">hover a tile</span></div>
   </div>
 

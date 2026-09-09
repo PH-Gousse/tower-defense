@@ -112,6 +112,74 @@ const _ndc = new THREE.Vector2()
  */
 const HORIZON_CAP = 50
 
+/**
+ * The tuned pose. **Exported because the tests must not re-declare them.**
+ *
+ * `camera.test.ts` used to carry its own `FOV_DEG = 35` / `PITCH_DEG = 56`
+ * copies. That made every camera test green regardless of what the rig actually
+ * shipped: narrowing the field of view here would have left a suite asserting
+ * the fit, the clamp and the pan travel of a configuration the game no longer
+ * used. Importing these is what keeps the tests pointed at the real build.
+ *
+ * ---
+ *
+ * **Field of view: 18, from 35, from 45 originally.**
+ *
+ * Under perspective a lane's near row renders wider than its far row, and this
+ * is a game about reading a maze at a glance -- two towers the same distance
+ * apart look different distances apart depending where they sit. Measured as
+ * the near/far row width ratio at the framing the game opens on (both lanes,
+ * 1456x830 viewport, chrome reserved), which is the condition the earlier
+ * figures in this file omitted and could not be reproduced without:
+ *
+ *     fov 45, pitch 56   ratio 1.565    the rig's first pose
+ *     fov 35, pitch 56   ratio 1.403    what shipped until now
+ *     fov 24, pitch 66   ratio 1.161
+ *     fov 18, pitch 70   ratio 1.095    here
+ *
+ * Orthographic would be 1.000, and was rejected rather than deferred: every one
+ * of `factors`, `fitGround` and `screenToGround` is written in terms of
+ * `tan(fov/2)`, so an orthographic camera is a rewrite of the picking path, and
+ * a misplaced 600g tower cannot be undone for free. 18 buys three quarters of
+ * the remaining taper for a two-line change that reverts in one commit.
+ *
+ * **Pitch: 70, from Warcraft 3's own 56.** Raising it with the fov is what keeps
+ * the board filling the frame rather than receding; the two move together.
+ *
+ * WC3 itself runs a stronger perspective than any of these -- roughly 13 tiles
+ * back over 15 tiles of depth. It gets away with that by never framing a whole
+ * map at once. This camera has to fit all 24 tiles of a lane, and matching WC3's
+ * ratio there leaves the entrance row too small to read.
+ */
+export const DEFAULT_FOV_DEG = 18
+export const DEFAULT_PITCH_DEG = 70
+
+/**
+ * Ceiling on how far back the camera may sit.
+ *
+ * **This constant is tuned to `DEFAULT_FOV_DEG` and must move with it.** A
+ * narrower lens has to sit further back to see the same board, and `fitBounds`
+ * clamps the fitted distance rather than widening this limit -- deliberately,
+ * see the comment there. So a fov change that outgrows this does not throw or
+ * warn: it silently renders a cropped board.
+ *
+ * The binding case is a SHORT viewport, not a typical one. Required distance
+ * across the viewports the guard test walks, at fov 18 / pitch 70:
+ *
+ *     3440x1440    83.1
+ *     iPad  820x1180    85.1
+ *     iPhone 390x844    89.8
+ *     1456x830          90.0
+ *     1280x800          90.7
+ *     1024x640          95.6
+ *     1024x500         103.5   <- binds
+ *
+ * 115 is that worst case with 10% of headroom. At the previous 70, fov 18 would
+ * have cropped every one of these -- the 1456x830 case to 78% of the board.
+ * `camera.test.ts` walks the same table and fails if any fit exceeds this.
+ */
+export const DEFAULT_MAX_DISTANCE = 115
+
 function factors(pitchRad: number, fovRad: number) {
   const t = Math.tan(fovRad / 2)
   const sinP = Math.sin(pitchRad)
@@ -255,39 +323,18 @@ export class CameraRig {
 
   constructor(host: HTMLElement, opts: CameraRigOptions = {}) {
     this.host = host
-    this._pitchDeg = opts.pitchDeg ?? 56
+    this._pitchDeg = opts.pitchDeg ?? DEFAULT_PITCH_DEG
     this._yawDeg = opts.yawDeg ?? 0
     this._distance = opts.distance ?? 40
     this.minDistance = opts.minDistance ?? 14
-    this.maxDistance = opts.maxDistance ?? 70
+    this.maxDistance = opts.maxDistance ?? DEFAULT_MAX_DISTANCE
     this.panSpeed = opts.panSpeed ?? 26
     this.zoomSpeed = opts.zoomSpeed ?? 1.18
     this.edgeSize = opts.edgeSize ?? 0
     this.bounds = opts.bounds ?? { minX: -1e6, minZ: -1e6, maxX: 1e6, maxZ: 1e6 }
     this.panKeys = PAN_KEY_SETS[opts.keys ?? 'wasd']
 
-    /**
-     * 35, not the 45 this started at.
-     *
-     * Pitch 56 is Warcraft 3's own angle of attack and did not need to move.
-     * The field of view did. At 45 a lane's near edge renders 1.50x the width
-     * of its far edge, and on a board whose entire job is to make a maze
-     * readable, that much taper is a real cost -- two towers the same distance
-     * apart look different distances apart depending where they sit. Narrowing
-     * to 35 and backing off to ~40.6 brings that ratio to 1.29 while keeping
-     * enough perspective that tower sides and heights still read as solid.
-     *
-     * Narrowing further does keep helping (24 gives 1.24) but the scene starts
-     * to flatten toward the orthographic look this camera replaced, and past
-     * about 20 the whole lane no longer fits inside `maxDistance` at all.
-     *
-     * Warcraft 3 itself runs a *stronger* perspective than any of these -- its
-     * camera sits about 13 tiles back and shows roughly 15 tiles of depth. It
-     * gets away with that because it never frames a whole map at once; this
-     * camera has to fit all 24 tiles of a lane on screen, and matching WC3's
-     * ratio there would leave the entrance row too small to read.
-     */
-    this.camera = new THREE.PerspectiveCamera(opts.fovDeg ?? 35, 1, 0.5, 500)
+    this.camera = new THREE.PerspectiveCamera(opts.fovDeg ?? DEFAULT_FOV_DEG, 1, 0.5, 500)
     this.camera.up.set(0, 1, 0)
 
     this.bind()

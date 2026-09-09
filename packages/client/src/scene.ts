@@ -17,14 +17,12 @@ import {
   tileY,
   checkBuild,
   checkUpgrade,
-  checkSell,
   sellValue,
   buildField,
   createField,
   mazeLength,
   pathFrom,
   TowerKind,
-  ARCHETYPES,
   levelOf,
   MAX_LEVEL,
   MatchResult,
@@ -250,14 +248,16 @@ export function createScene(
   /**
    * Perspective, on a fixed high-angle rig. See `render/CameraRig.ts`.
    *
-   * This board was orthographic until now, for a reason worth recording rather
-   * than deleting: under perspective a tower at the far end of the lane draws
+   * This board was orthographic once, for a reason worth recording rather than
+   * deleting: under perspective a tower at the far end of the lane draws
    * smaller than an identical one near the camera, and this is a game about
    * reading a maze at a glance. That cost is real and it has not gone away --
-   * it has been bounded. At the rig's tuned 35 degree field of view the near
-   * row of a lane renders 1.29x the width of the far row, against 1.50x at the
-   * 45 degrees the rig started on; the tilt buys back depth cues (tower sides,
-   * height as height) that flat orthographic never had.
+   * it has been bounded, twice. At the rig's tuned pose the near row of a lane
+   * now renders 1.095x the width of the far row, against 1.403x before and
+   * 1.565x at the 45 degrees the rig started on; the tilt still buys back depth
+   * cues (tower sides, height as height) that flat orthographic never had.
+   * `DEFAULT_FOV_DEG` carries the measurements and the conditions they hold
+   * under -- the numbers formerly quoted here stated neither, and were wrong.
    *
    * The pan bounds are the whole content rectangle rather than your own lane,
    * so a player can always walk the camera over to the opponent's board. That
@@ -273,17 +273,25 @@ export function createScene(
     // rig must not claim WASD. See the `keys` option.
     keys: 'arrows',
     /**
-     * Closer than the rig's default 14, which is useless on this board.
+     * The closest useful zoom, in tiles rather than in distance.
      *
      * Originally a workaround: the clamp used to require the whole view to fit
      * inside the content, and on a 2:1 desktop the view is still 22.4 tiles
      * wide at distance 14 against a 22-tile rectangle, so every attempt to zoom
      * into your own maze snapped the camera back to the gap between the boards.
      * The clamp holds the target now instead of the view, so that trap is gone
-     * -- but 8 stays, because leaning in far enough to read a single corner of
-     * a maze is worth having on its own.
+     * -- but a low floor stays, because leaning in far enough to read a single
+     * corner of a maze is worth having on its own.
+     *
+     * 8 became 16 when the field of view narrowed to 18. Distance is the wrong
+     * unit for this limit: what the player cares about is how much ground fills
+     * the screen, and that is `2 * d * tan(fov/2)`. Holding d at 8 through the
+     * fov change would have silently halved the closest view from about five
+     * tiles to about two and a half -- tightening the zoom as a side effect of
+     * a change about taper. 16 is 8 scaled by tan(35/2)/tan(18/2), which keeps
+     * the floor exactly where it was.
      */
-    minDistance: 8,
+    minDistance: 16,
     // Edge scrolling is off. It is right for an RTS with an opaque UI band at
     // the bottom, and wrong here: the board already fits on screen at the
     // default framing, so the only thing edge scroll would reliably do is slide
@@ -366,13 +374,47 @@ export function createScene(
   selectRing.visible = false
   scene.add(selectRing)
 
-  const rangeRing = new THREE.Mesh(
-    new THREE.RingGeometry(1, 1.04, 48),
+  /**
+   * Two range circles, not one, over a single shared geometry.
+   *
+   * Selection and hover are simultaneous states, and a single mesh forces a
+   * precedence rule between them. Sharing one was the shape this started in and
+   * it had two failures waiting in it: `previewTile(null)` fires whenever the
+   * cursor leaves the board, so hiding the ring there would hide the ring of a
+   * tower the player had deliberately selected; and tinting the ring red for a
+   * refused placement would recolour the selection's ring too, because a
+   * `MeshBasicMaterial` instance is shared state.
+   *
+   * Split, each ring has exactly one writer -- `select()` owns `selectRange`,
+   * `previewTile()` owns `hoverRange` -- and neither can reach the other. The
+   * geometry is shared, so this costs one draw call and no memory worth
+   * counting, against a scene that already carries four other overlays.
+   *
+   * It also buys the comparison the player is actually making while placing:
+   * both circles on screen at once answers "does this cover the gap that one
+   * misses?", which one ring could never show.
+   */
+  const rangeGeo = new THREE.RingGeometry(1, 1.04, 48)
+
+  const selectRange = new THREE.Mesh(
+    rangeGeo,
     new THREE.MeshBasicMaterial({ color: 0x63c8a0, transparent: true, opacity: 0.35, side: THREE.DoubleSide }),
   )
-  rangeRing.rotation.x = -Math.PI / 2
-  rangeRing.visible = false
-  scene.add(rangeRing)
+  selectRange.rotation.x = -Math.PI / 2
+  selectRange.visible = false
+  scene.add(selectRange)
+
+  /**
+   * Dimmer than the selection ring and tinted by legality, so the two read
+   * apart when both are on screen: what you have versus what you are proposing.
+   */
+  const hoverRange = new THREE.Mesh(
+    rangeGeo,
+    new THREE.MeshBasicMaterial({ color: 0x4f8cc9, transparent: true, opacity: 0.26, side: THREE.DoubleSide }),
+  )
+  hoverRange.rotation.x = -Math.PI / 2
+  hoverRange.visible = false
+  scene.add(hoverRange)
 
   // Creeps are instanced from the start because the design bounds their
   // population only by gold. This is the mesh that has to survive 500 of them.
@@ -564,6 +606,11 @@ export function createScene(
   function previewTile(t: Tile | null): void {
     if (!t) {
       hover.visible = false
+      // Only the hover's own ring. The selection's is `select()`'s to hide, and
+      // reaching for it here is what made one shared mesh unworkable: the
+      // cursor leaving the board would erase the range of a tower the player
+      // had deliberately clicked.
+      hoverRange.visible = false
       candidatePath.hide()
       hoverCb({ tile: null, mazeDelta: null, refusal: Refusal.None, refusalText: '' })
       return
@@ -576,6 +623,31 @@ export function createScene(
     hover.position.set(t.x + 0.5, 0.03, t.y + 0.5)
     hoverMaterial.color.setHex(allowed ? OK_COLOUR : REFUSED_COLOUR)
     hover.visible = true
+
+    /**
+     * What the tower you are about to buy would cover.
+     *
+     * Level 1, because that is what a placement builds -- the upgrade path is
+     * the selection ring's job once the tower exists. Shown on refused tiles
+     * too, tinted with the ghost: knowing a spot has the coverage you want is
+     * useful even when the reason you cannot build there is that it would seal
+     * the lane, since the answer is usually the neighbouring tile.
+     */
+    if (check.refusal === Refusal.Occupied) {
+      // A tile that already holds a tower has a range worth seeing, but it is
+      // that tower's, not the tool's -- and it is one click away on the
+      // selection ring. Drawing the proposed reach over an existing tower would
+      // read as a claim about the tower that is there.
+      hoverRange.visible = false
+    } else {
+      const reach = levelOf(tool, 1).range
+      hoverRange.position.set(t.x + 0.5, 0.042, t.y + 0.5)
+      hoverRange.scale.set(reach, reach, 1)
+      ;(hoverRange.material as THREE.MeshBasicMaterial).color.setHex(
+        allowed ? OK_COLOUR : REFUSED_COLOUR,
+      )
+      hoverRange.visible = true
+    }
 
     if (allowed) {
       // checkBuild already rebuilt the field into probeField with this tile
@@ -675,7 +747,7 @@ export function createScene(
     selected = t
     if (!t) {
       selectRing.visible = false
-      rangeRing.visible = false
+      selectRange.visible = false
       selectCb(null)
       return
     }
@@ -687,9 +759,9 @@ export function createScene(
 
     selectRing.position.set(t.x + 0.5, 0.05, t.y + 0.5)
     selectRing.visible = true
-    rangeRing.position.set(t.x + 0.5, 0.045, t.y + 0.5)
-    rangeRing.scale.set(spec.range, spec.range, 1)
-    rangeRing.visible = true
+    selectRange.position.set(t.x + 0.5, 0.045, t.y + 0.5)
+    selectRange.scale.set(spec.range, spec.range, 1)
+    selectRange.visible = true
 
     const canUpgrade = checkUpgrade(state, me(), t.x, t.y) === Refusal.None
     selectCb({

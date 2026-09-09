@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   createState, step, hashState, buildDump, parseDump, HashRing, MatchResult,
   botCommand, BOT_NORMAL, Kind,
-  type Command, type GameState, type HashEntry,
+  type Command, type GameState,
 } from '@ltw/sim'
 import { replayDump, replayFile } from '../src/replay'
 

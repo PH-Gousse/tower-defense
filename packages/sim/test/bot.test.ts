@@ -1,14 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import { createState, type GameState } from '../src/state'
-import { botCommand, BOT_EASY, BOT_NORMAL, BOT_HARD } from '../src/bot'
+import { botCommand, BOT_NORMAL, BOT_HARD } from '../src/bot'
 import { tierUnlockTick } from '../src/data'
 import { MAZE_TEMPLATES, templateAt } from '../src/maze'
 import { step, Kind, Refusal, checkBuild, checkUpgrade, checkSend } from '../src/step'
 import { hashState } from '../src/hash'
 import { GRID_W, GRID_H, tileIndex, SPAWN_INDICES } from '../src/grid'
 import { buildField, spawnsReachable } from '../src/field'
-import { TowerKind } from '../src/data'
-import { send, run, tick, TANK, withoutBuildPhase } from './helpers'
+import { send, run, TANK, withoutBuildPhase } from './helpers'
 
 // Not a test of the opening: see withoutBuildPhase.
 withoutBuildPhase()

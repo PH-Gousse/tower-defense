@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { MatchResult, STARTING_LIVES } from '../src/state'
 import { hashState } from '../src/hash'
-import { GRID_H, tileIndex } from '../src/grid'
+import { tileIndex } from '../src/grid'
 import { TowerKind, creepSpec, tierUnlockTick } from '../src/data'
 import { build, send, runUntil, tick, RUNNER, TANK, TANK2, withoutBuildPhase } from './helpers'
 
