@@ -1,175 +1,192 @@
 import * as THREE from 'three'
 import type { LaneLayout } from './picking'
+import { laneTexture, type LaneTextureOptions } from './textures'
+import { kerbModel, postModel } from './models'
 
 /**
  * One lane's ground, drawn once and shared by the game and the /camera demo.
  *
- * It started life inside the demo. When the game was asked to "look like
- * /camera" the honest move was to lift it out rather than copy a palette
- * across: two copies of a checkerboard drift the moment either is touched, and
- * the demo's whole job is to predict what the game will look like. Now that
- * claim holds by construction instead of by discipline.
+ * A lane is a baked turf-and-cobble floor, a stone kerb around it with gaps
+ * where creeps enter and leave, and a banner post at each corner in the
+ * owner's colour. It knows nothing about the simulation: rows and tiles arrive
+ * as plain numbers so this stays a renderer, and so the demo can draw a board
+ * without a sim.
  *
- * Knows nothing about the simulation. Rows and tiles arrive as plain numbers so
- * this stays a renderer, and so the demo can draw a board without a sim.
+ * The floor used to be five instanced meshes of flat quads plus a line grid.
+ * It is one textured quad now -- see `laneTexture` for why -- and the kerb is
+ * what makes the lane read as a place rather than a spreadsheet.
  */
 
 export interface BoardPalette {
-  readonly tileLight: number
-  readonly tileDark: number
-  /** The full reserved row at each end. */
-  readonly entrance: number
-  readonly exit: number
-  readonly border: number
-  /**
-   * Brighter patch on the tiles creeps actually use.
-   *
-   * The reserved rows span the whole width, but only two tiles at each end
-   * spawn and drain, and the diagonal that fact creates is the reason a bare
-   * lane is 29 steps rather than 23. Colouring the row alone would look right
-   * and quietly delete that -- a player could no longer see which corner their
-   * creeps walk in from.
-   */
-  readonly spawnMark: number
-  readonly exitMark: number
+  /** Turf hue and lightness. The opponent's is a shade cooler and darker. */
+  readonly hue: number
+  readonly light: number
+  /** CSS rgba() of the glow on the tiles creeps actually use. */
+  readonly spawnGlow: string
+  readonly exitGlow: string
+  /** Banner colour on the corner posts: 0 is blue, 1 is red. */
+  readonly team: 0 | 1
 }
 
-/** The /camera palette: lit checkerboard, warm ends. */
+/** Your lane. */
 export const BOARD: BoardPalette = {
-  tileLight: 0x3f4a3a,
-  tileDark: 0x36402f,
-  entrance: 0x2f7f5f,
-  exit: 0xa8493c,
-  border: 0x6b7a5e,
-  spawnMark: 0x54c79a,
-  exitMark: 0xd8705f,
+  hue: 106,
+  light: 0.35,
+  spawnGlow: 'rgba(110, 240, 160, 0.95)',
+  exitGlow: 'rgba(250, 120, 90, 0.95)',
+  team: 0,
 }
 
 /**
- * The opponent's board: same shapes, lower key.
+ * The opponent's lane: same shapes, a touch cooler and darker.
  *
  * Both boards render at full size because reading their maze is how you pick
  * what to send. They still must not be confusable at a glance -- you build on
- * exactly one of them.
+ * exactly one of them -- so the banners differ and the turf is a shade off.
  */
-export const BOARD_DIM: BoardPalette = {
-  tileLight: 0x2f3830,
-  tileDark: 0x282f26,
-  entrance: 0x235f47,
-  exit: 0x7d3830,
-  border: 0x4d5945,
-  spawnMark: 0x3d8f70,
-  exitMark: 0x9c5548,
+export const BOARD_THEIRS: BoardPalette = {
+  hue: 98,
+  light: 0.31,
+  spawnGlow: 'rgba(110, 240, 160, 0.95)',
+  exitGlow: 'rgba(250, 120, 90, 0.95)',
+  team: 1,
 }
 
 export interface BoardRows {
   readonly entranceRow: number
   readonly exitRow: number
-  /** Tiles creeps actually enter on. Empty or omitted draws no sub-marker. */
+  /** Tiles creeps actually enter on. Empty or omitted draws no rune and no gap. */
   readonly spawnTiles?: readonly { readonly x: number; readonly y: number }[]
   readonly exitTiles?: readonly { readonly x: number; readonly y: number }[]
 }
 
 /**
- * Heights are small and fixed rather than computed, because everything drawn on
- * top of the board -- hover, selection and range rings, the route lines -- sits
- * at 0.03 and above. Anything here that crept past that would z-fight with the
- * feedback the player is actually reading.
+ * The floor sits at 0 and the overlays the player reads -- hover, selection
+ * and range rings, the route markers -- start at 0.03. Nothing drawn inside the
+ * lane's footprint may creep past that, or it z-fights with the feedback rather
+ * than with scenery. The kerb and posts stand outside the footprint and may be
+ * as tall as they like.
  */
-const Y_TILE = 0
-const Y_END_ROW = 0.004
-const Y_MARK = 0.008
-const Y_GRID = 0.012
+const Y_FLOOR = 0
+/** How far outside the lane the kerb's centre line runs. */
+const KERB_OUT = 0.16
 
+/**
+ * `floorTexture` is injectable for one reason: the default bakes on a 2D
+ * canvas, and the test suite runs in node where there is none. Tests pass a
+ * stub and assert on the geometry, which is the part worth pinning.
+ */
 export function buildBoard(
   lane: LaneLayout,
   palette: BoardPalette,
   rows: BoardRows,
+  floorTexture: (o: LaneTextureOptions) => THREE.Texture = laneTexture,
 ): THREE.Group {
   const group = new THREE.Group()
   group.position.set(lane.originX, 0, lane.originZ)
 
-  // Baked into the geometry so instances only ever carry a translation.
-  const quad = new THREE.PlaneGeometry(lane.tile, lane.tile)
-  quad.rotateX(-Math.PI / 2)
+  const w = lane.width * lane.tile
+  const l = lane.length * lane.tile
 
-  const counts = { light: 0, dark: 0, entrance: 0, exit: 0 }
-  for (let y = 0; y < lane.length; y++) {
-    for (let x = 0; x < lane.width; x++) {
-      if (y === rows.entranceRow) counts.entrance += 1
-      else if (y === rows.exitRow) counts.exit += 1
-      else if ((x + y) % 2 === 0) counts.light += 1
-      else counts.dark += 1
-    }
-  }
+  const floorGeo = new THREE.PlaneGeometry(w, l)
+  floorGeo.rotateX(-Math.PI / 2)
+  const floor = new THREE.Mesh(
+    floorGeo,
+    new THREE.MeshLambertMaterial({
+      map: floorTexture({
+        width: lane.width,
+        length: lane.length,
+        entranceRow: rows.entranceRow,
+        exitRow: rows.exitRow,
+        spawnTiles: rows.spawnTiles ?? [],
+        exitTiles: rows.exitTiles ?? [],
+        hue: palette.hue,
+        light: palette.light,
+        spawnGlow: palette.spawnGlow,
+        exitGlow: palette.exitGlow,
+      }),
+    }),
+  )
+  floor.name = 'floor'
+  floor.position.set(w / 2, Y_FLOOR, l / 2)
+  floor.receiveShadow = true
+  group.add(floor)
 
-  const make = (colour: number, n: number, y: number): THREE.InstancedMesh => {
-    const mesh = new THREE.InstancedMesh(
-      quad,
-      new THREE.MeshBasicMaterial({ color: colour }),
-      Math.max(n, 1),
-    )
-    mesh.count = n
-    mesh.position.y = y
-    group.add(mesh)
-    return mesh
-  }
-
-  const light = make(palette.tileLight, counts.light, Y_TILE)
-  const dark = make(palette.tileDark, counts.dark, Y_TILE)
-  const entrance = make(palette.entrance, counts.entrance, Y_END_ROW)
-  const exit = make(palette.exit, counts.exit, Y_END_ROW)
-
-  const m = new THREE.Matrix4()
-  const n = { light: 0, dark: 0, entrance: 0, exit: 0 }
-  for (let y = 0; y < lane.length; y++) {
-    for (let x = 0; x < lane.width; x++) {
-      m.makeTranslation((x + 0.5) * lane.tile, 0, (y + 0.5) * lane.tile)
-      if (y === rows.entranceRow) entrance.setMatrixAt(n.entrance++, m)
-      else if (y === rows.exitRow) exit.setMatrixAt(n.exit++, m)
-      else if ((x + y) % 2 === 0) light.setMatrixAt(n.light++, m)
-      else dark.setMatrixAt(n.dark++, m)
-    }
-  }
-
-  // The tiles creeps really use, brighter, on top of their row.
-  addMarks(group, quad, lane, rows.spawnTiles, palette.spawnMark)
-  addMarks(group, quad, lane, rows.exitTiles, palette.exitMark)
-
-  group.add(gridLines(lane, palette.border))
+  group.add(kerb(lane, rows))
+  group.add(posts(lane, palette.team))
   return group
 }
 
-function addMarks(
-  group: THREE.Group,
-  quad: THREE.BufferGeometry,
-  lane: LaneLayout,
-  tiles: readonly { readonly x: number; readonly y: number }[] | undefined,
-  colour: number,
-): void {
-  if (!tiles || tiles.length === 0) return
+/**
+ * The kerb, one block per tile of edge, with gaps in front of the tiles creeps
+ * use. The gaps are the only hint the floor does not already give about which
+ * way is in and which is out, and they cost nothing.
+ */
+function kerb(lane: LaneLayout, rows: BoardRows): THREE.InstancedMesh {
+  const w = lane.width
+  const l = lane.length
+  const t = lane.tile
+  const spawnX = new Set((rows.spawnTiles ?? []).filter((p) => p.y === rows.entranceRow).map((p) => p.x))
+  const exitX = new Set((rows.exitTiles ?? []).filter((p) => p.y === rows.exitRow).map((p) => p.x))
+
   const mesh = new THREE.InstancedMesh(
-    quad,
-    new THREE.MeshBasicMaterial({ color: colour }),
-    tiles.length,
+    kerbModel(),
+    new THREE.MeshLambertMaterial({ vertexColors: true }),
+    2 * w + 2 * l,
   )
-  mesh.position.y = Y_MARK
+  mesh.name = 'kerb'
+  mesh.castShadow = true
+  mesh.receiveShadow = true
   const m = new THREE.Matrix4()
-  tiles.forEach((t, i) => {
-    m.makeTranslation((t.x + 0.5) * lane.tile, 0, (t.y + 0.5) * lane.tile)
-    mesh.setMatrixAt(i, m)
-  })
-  group.add(mesh)
+  const q = new THREE.Quaternion()
+  const pos = new THREE.Vector3()
+  const one = new THREE.Vector3(t, 1, 1)
+  const side = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2)
+  let n = 0
+  for (let x = 0; x < w; x++) {
+    if (!spawnX.has(x)) {
+      pos.set((x + 0.5) * t, 0, -KERB_OUT)
+      q.identity()
+      mesh.setMatrixAt(n++, m.compose(pos, q, one))
+    }
+    if (!exitX.has(x)) {
+      pos.set((x + 0.5) * t, 0, l * t + KERB_OUT)
+      q.identity()
+      mesh.setMatrixAt(n++, m.compose(pos, q, one))
+    }
+  }
+  for (let y = 0; y < l; y++) {
+    pos.set(-KERB_OUT, 0, (y + 0.5) * t)
+    mesh.setMatrixAt(n++, m.compose(pos, side, one))
+    pos.set(w * t + KERB_OUT, 0, (y + 0.5) * t)
+    mesh.setMatrixAt(n++, m.compose(pos, side, one))
+  }
+  mesh.count = n
+  mesh.instanceMatrix.needsUpdate = true
+  return mesh
 }
 
-/** Tile grid across the whole lane, in the border colour. */
-function gridLines(lane: LaneLayout, colour: number): THREE.LineSegments {
-  const pts: number[] = []
+function posts(lane: LaneLayout, team: 0 | 1): THREE.InstancedMesh {
   const w = lane.width * lane.tile
   const l = lane.length * lane.tile
-  for (let x = 0; x <= lane.width; x++) pts.push(x * lane.tile, Y_GRID, 0, x * lane.tile, Y_GRID, l)
-  for (let y = 0; y <= lane.length; y++) pts.push(0, Y_GRID, y * lane.tile, w, Y_GRID, y * lane.tile)
-  const geo = new THREE.BufferGeometry()
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3))
-  return new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: colour }))
+  const mesh = new THREE.InstancedMesh(
+    postModel(team),
+    new THREE.MeshLambertMaterial({ vertexColors: true }),
+    4,
+  )
+  mesh.name = 'posts'
+  mesh.castShadow = true
+  mesh.receiveShadow = true
+  const m = new THREE.Matrix4()
+  const corners: [number, number][] = [
+    [-KERB_OUT - 0.1, -KERB_OUT - 0.1],
+    [w + KERB_OUT + 0.1, -KERB_OUT - 0.1],
+    [-KERB_OUT - 0.1, l + KERB_OUT + 0.1],
+    [w + KERB_OUT + 0.1, l + KERB_OUT + 0.1],
+  ]
+  corners.forEach(([x, z], i) => {
+    mesh.setMatrixAt(i, m.makeTranslation(x, 0, z))
+  })
+  mesh.instanceMatrix.needsUpdate = true
+  return mesh
 }

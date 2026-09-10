@@ -116,6 +116,8 @@ export function ensureCapacity<G extends THREE.BufferGeometry, M extends THREE.M
   next.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
   next.frustumCulled = mesh.frustumCulled
   next.renderOrder = mesh.renderOrder
+  next.castShadow = mesh.castShadow
+  next.receiveShadow = mesh.receiveShadow
   parent.remove(mesh)
   parent.add(next)
   mesh.dispose()

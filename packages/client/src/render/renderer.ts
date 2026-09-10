@@ -49,6 +49,11 @@ export function createRenderer(parent: HTMLElement): RendererHost {
     throw new WebGLUnavailable(err)
   }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO))
+  // One sun, one shadow map. Soft PCF because the towers are small and a hard
+  // shadow edge aliases visibly as the camera pans; the cost is a few extra
+  // texture reads per fragment on a scene that is otherwise trivially light.
+  renderer.shadowMap.enabled = true
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap
   parent.appendChild(renderer.domElement)
 
   const listeners = new Set<(w: number, h: number) => void>()

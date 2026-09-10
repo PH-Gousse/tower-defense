@@ -5,7 +5,40 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Line Tower Wars</title>
   <style>
-    :root { color-scheme: dark; }
+    /* ---- the look -----------------------------------------------------------
+
+       Dark oiled wood and worn brass around a parchment face: the chrome of
+       the map this game descends from, without any of its assets. Everything
+       here is CSS gradients and system fonts, for the same reason the board is
+       procedural -- the repository carries no binaries and the look is a diff
+       someone can read.
+
+       Palatino is the closest thing every platform ships to the incised
+       serif of that era's RTS interfaces. The fallbacks are chosen to keep the
+       same weight and x-height so the rails do not change width between
+       machines, which matters because the rail's width is what the camera
+       reserves. */
+    :root {
+      color-scheme: dark;
+      --face: #efe3c8;
+      --muted: #a8926c;
+      --dim: #6e5e45;
+      --gold: #f3c650;
+      --brass: #b08a4a;
+      --brass-dark: #6f5224;
+      --wood: #22190f;
+      --wood-light: #33271a;
+      --red: #e7574a;
+      --blue: #7ab2ec;
+      --green: #7fd68a;
+      --ice: #9fe0ff;
+      --serif: "Palatino Linotype", Palatino, "Book Antiqua", "URW Palladio L", Georgia, serif;
+      --sans: -apple-system, "Segoe UI", system-ui, sans-serif;
+      --panel: linear-gradient(180deg, #2c2217 0%, #1c150e 100%);
+      --frame: 0 0 0 1px #0a0704, inset 0 0 0 1px #4a381f, inset 0 1px 0 #6a5230;
+      --bevel: linear-gradient(180deg, #3b2d1e 0%, #241b12 100%);
+      --bevel-hi: linear-gradient(180deg, #4a3924 0%, #2c2116 100%);
+    }
     * { box-sizing: border-box; }
     /* The `hidden` attribute is a UA rule, so any author `display` beats it.
        Both full-screen overlays set `display: grid` and both are toggled by
@@ -16,15 +49,17 @@
     [hidden] { display: none !important; }
     html, body { margin: 0; height: 100%; background: #0e1013; overflow: hidden; }
     canvas { display: block; }
+
+    /* ---- HUD --------------------------------------------------------------- */
     #hud {
       position: fixed; top: 0; left: 0; right: 0;
       display: flex; gap: 0; align-items: stretch;
-      font: 13px/1.4 -apple-system, "Segoe UI", system-ui, sans-serif;
-      color: #e6e8ea; background: rgba(14,16,19,.82);
-      border-bottom: 1px solid #2a2f36; backdrop-filter: blur(6px);
+      font: 13px/1.4 var(--sans);
+      color: var(--face); background: var(--panel);
+      border-bottom: 2px solid var(--brass-dark); box-shadow: var(--frame);
       pointer-events: none;
     }
-    #hud div { padding: 7px 13px; border-right: 1px solid #23272e; }
+    #hud div { padding: 7px 13px; border-right: 1px solid #0d0906; box-shadow: inset -1px 0 0 #3a2c1c; }
     /* Every cell, not only the last.
 
        The last cell has carried nowrap since the placement message took the HUD
@@ -44,108 +79,162 @@
        board across the screen. Structural reflow (a real resize) still re-frames,
        which is correct; a hover must not. */
     #hud div:last-child {
-      border-right: 0; margin-left: auto; color: #7d858f;
+      border-right: 0; margin-left: auto; color: var(--muted);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      min-width: 0;
+      min-width: 0; box-shadow: none;
     }
-    #note[data-refused] { color: #e0655a; }
-    #lives[data-low] { color: #e0655a; }
+    #hud b { display: block; font: 600 9.5px/1.3 var(--sans); letter-spacing: .1em;
+             text-transform: uppercase; color: var(--muted); }
+    #hud span { font: 15px/1.25 var(--serif); font-variant-numeric: tabular-nums;
+                text-shadow: 0 1px 0 #000; }
+    #hud span::before { display: inline-block; margin-right: 6px; vertical-align: -1px; }
 
+    /* Hierarchy. Eleven cells at identical weight is a debug overlay, not a
+       HUD: the two numbers that decide the match sat in the same typography as
+       the tile coordinate under the cursor. `primary` is what you glance at
+       under pressure; `detail` is what you read when you have a moment. */
+    #hud .primary span { font-size: 22px; }
+    #hud .detail span { font-size: 13px; color: #cdbf9f; }
+    #hud .detail b { font-size: 9px; }
+    /* Small emblems, drawn in CSS, so the four numbers that matter can be
+       found by shape before they are read. */
+    #gold { color: var(--gold); }
+    #gold::before { content: ""; width: 13px; height: 13px; border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #ffe9a0, #d39a1e 60%, #8a5d0c);
+      box-shadow: inset 0 0 0 1.5px #a5741a, 0 0 4px rgba(243,198,80,.4); }
+    #lives::before { content: ""; width: 12px; height: 12px; background: var(--red);
+      clip-path: polygon(50% 100%, 0 38%, 12% 10%, 32% 4%, 50% 18%, 68% 4%, 88% 10%, 100% 38%); }
+    #oppLives::before { content: ""; width: 12px; height: 12px; background: var(--blue);
+      clip-path: polygon(50% 100%, 0 38%, 12% 10%, 32% 4%, 50% 18%, 68% 4%, 88% 10%, 100% 38%); }
+    #note[data-refused] { color: var(--red); }
+    #lives[data-low] { color: var(--red); }
+    #tierLeft[data-none] { color: var(--dim); }
+    #incomeLeft, #tierLeft, #clock { color: #dccfae; }
+
+    /* ---- overlays ------------------------------------------------------------ */
     #over {
       position: fixed; inset: 0; display: grid; place-items: center;
-      background: rgba(8,10,12,.78); backdrop-filter: blur(3px);
-      font: 13px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif; color: #e6e8ea;
+      background: rgba(8,6,4,.72); backdrop-filter: blur(3px);
+      font: 14px/1.5 var(--sans); color: var(--face);
       text-align: center; z-index: 10;
     }
-    #over h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
+    #over > div { background: var(--panel); border: 2px solid var(--brass-dark); box-shadow: var(--frame), 0 20px 60px rgba(0,0,0,.6);
+                  padding: 26px 40px 24px; border-radius: 4px; min-width: 20em; }
+    #over h2 { margin: 0 0 8px; font: 30px/1.1 var(--serif); letter-spacing: .04em; color: var(--gold); text-shadow: 0 2px 0 #000; }
+    #over p { margin: 0; color: var(--muted); }
+    #over button, #desync button, #start button, #panel button {
+      cursor: pointer; font: inherit; color: var(--face); background: var(--bevel);
+      border: 1px solid var(--brass-dark); border-radius: 3px; padding: 8px 14px;
+      box-shadow: inset 0 1px 0 #5a4328, 0 1px 2px #000;
+    }
+    #over button:hover, #desync button:hover, #start button:hover, #panel button:hover:not(:disabled) {
+      background: var(--bevel-hi); border-color: var(--brass);
+    }
 
     #start {
       position: fixed; inset: 0; display: grid; place-items: center; z-index: 15;
-      background: rgba(8,10,12,.88); backdrop-filter: blur(4px);
-      font: 13px/1.55 -apple-system, "Segoe UI", system-ui, sans-serif; color: #e6e8ea;
+      background: radial-gradient(ellipse at center, rgba(8,6,4,.35) 0%, rgba(8,6,4,.78) 100%);
+      font: 13px/1.55 var(--sans); color: var(--face);
     }
-    #start .box { max-width: 30em; text-align: center; }
-    #start h1 { margin: 0 0 4px; font-size: 24px; font-weight: 600; }
-    #start p { margin: 0 0 16px; color: #8b939d; }
+    #start .box {
+      max-width: 34em; text-align: center; padding: 30px 34px 26px;
+      background: var(--panel); border: 2px solid var(--brass-dark); border-radius: 5px;
+      box-shadow: var(--frame), 0 30px 80px rgba(0,0,0,.7);
+      position: relative;
+    }
+    /* Brass corner studs, the cheapest way a panel says it was built rather than drawn. */
+    #start .box::before, #start .box::after, #panel::before, #panel::after {
+      content: ""; position: absolute; width: 7px; height: 7px; border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #e6c27a, #8a6428 70%, #4d3612);
+      box-shadow: 0 1px 1px #000;
+    }
+    #start .box::before, #panel::before { top: 6px; left: 6px; }
+    #start .box::after, #panel::after { top: 6px; right: 6px; }
+    #start h1 {
+      margin: 0 0 6px; font: 40px/1.05 var(--serif); letter-spacing: .06em; color: var(--gold);
+      text-shadow: 0 2px 0 #3a2a08, 0 3px 10px rgba(0,0,0,.8);
+    }
+    #start p { margin: 0 0 18px; color: var(--muted); }
     #start .row { display: flex; gap: 8px; justify-content: center; }
-    #start button {
-      cursor: pointer; font: inherit; text-align: left; min-width: 132px;
-      color: #e6e8ea; background: #191d23; border: 1px solid #333a43;
-      border-radius: 3px; padding: 9px 12px;
-    }
-    #start button:hover { border-color: #4f8cc9; background: #1b2330; }
-    #start button .n { display: block; font-size: 13px; }
-    #start button .c { display: block; font-size: 11px; color: #7d858f; }
+    #start button { text-align: left; min-width: 132px; padding: 9px 12px; }
+    #start button .n { display: block; font: 15px/1.2 var(--serif); }
+    #start button .c { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
     #start .modes { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
-    #start .sep { height: 1px; background: #2a2f36; margin: 18px 0 12px; }
-    #start .label { font-size: 10px; letter-spacing: .07em; text-transform: uppercase;
-                    color: #7d858f; margin-bottom: 8px; }
+    #start .sep { height: 2px; margin: 20px 0 12px;
+      background: linear-gradient(90deg, transparent, var(--brass-dark) 20%, var(--brass) 50%, var(--brass-dark) 80%, transparent); }
+    #start .label, #palette .label { font: 600 10px/1.3 var(--sans); letter-spacing: .14em; text-transform: uppercase;
+                    color: var(--brass); margin-bottom: 8px; }
     #start input {
-      font: inherit; text-transform: uppercase; letter-spacing: .12em; text-align: center;
-      color: #e6e8ea; background: #12161b; border: 1px solid #333a43; border-radius: 3px;
-      padding: 8px 10px; width: 8em;
+      font: 16px/1 var(--serif); text-transform: uppercase; letter-spacing: .16em; text-align: center;
+      color: var(--face); background: #120d08; border: 1px solid var(--brass-dark); border-radius: 3px;
+      padding: 10px 10px; width: 8em; box-shadow: inset 0 2px 4px #000;
     }
     #roomCode {
-      font: 22px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .22em;
-      color: #e6e8ea; margin: 6px 0 2px;
+      font: 24px/1 var(--serif); letter-spacing: .24em;
+      color: var(--gold); margin: 8px 0 2px;
     }
-    #netNote { font-size: 11.5px; color: #8b939d; min-height: 1.4em; }
+    #netNote { font-size: 11.5px; color: var(--muted); min-height: 1.4em; }
 
     #stalled {
       position: fixed; top: 46px; left: 50%; transform: translateX(-50%); z-index: 12;
-      font: 12px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif; color: #f0d9a0;
-      background: rgba(40,32,16,.95); border: 1px solid #6b5a30; border-radius: 3px;
-      padding: 6px 12px;
+      font: 12px/1.5 var(--sans); color: #f0d9a0;
+      background: var(--panel); border: 1px solid var(--brass-dark); border-radius: 3px;
+      padding: 6px 12px; box-shadow: var(--frame);
     }
     #concede {
       position: fixed; right: 16px; bottom: 74px; z-index: 12; cursor: pointer; font: inherit;
-      font-size: 12px; color: #b9a9a6; background: rgba(30,20,20,.9);
-      border: 1px solid #4a3330; border-radius: 3px; padding: 5px 10px;
+      font-size: 12px; color: #d9b8b0; background: var(--bevel);
+      border: 1px solid #5c3f38; border-radius: 3px; padding: 5px 10px;
     }
-    #concede:hover { color: #e6e8ea; border-color: #6b4038; }
+    #concede:hover { color: var(--face); border-color: #8a5a50; }
 
     #desync {
       position: fixed; inset: 0; display: grid; place-items: center; z-index: 18;
       background: rgba(24,10,10,.92); backdrop-filter: blur(3px); text-align: center;
-      font: 13px/1.6 -apple-system, "Segoe UI", system-ui, sans-serif; color: #e6e8ea;
+      font: 13px/1.6 var(--sans); color: var(--face);
       padding: 24px;
     }
-    #desync h2 { margin: 0 0 8px; font-size: 20px; font-weight: 600; color: #e0655a; }
-    #desync p { margin: 0 0 14px; color: #b9a9a6; max-width: 40em; }
-    #desync code { font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color: #e6e8ea; }
-    #desync button {
-      cursor: pointer; font: inherit; color: #e6e8ea; background: #3a2422;
-      border: 1px solid #6b4038; border-radius: 3px; padding: 7px 14px;
-    }
+    #desync h2 { margin: 0 0 8px; font: 24px/1.2 var(--serif); color: var(--red); }
+    #desync p { margin: 0 0 14px; color: #c9b0a8; max-width: 40em; }
+    #desync code { font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--face); }
     #toast {
       position: fixed; left: 50%; bottom: 74px; transform: translateX(-50%); z-index: 19;
-      font: 12px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif; color: #e6e8ea;
-      background: rgba(20,24,29,.96); border: 1px solid #3a424c; border-radius: 3px;
-      padding: 7px 13px;
+      font: 12px/1.5 var(--sans); color: var(--face);
+      background: var(--panel); border: 1px solid var(--brass-dark); border-radius: 3px;
+      padding: 7px 13px; box-shadow: var(--frame);
     }
     #fatal {
       position: fixed; inset: 0; display: grid; place-items: center; z-index: 20;
-      background: #0e1013; color: #e6e8ea; text-align: center; padding: 24px;
-      font: 13px/1.6 -apple-system, "Segoe UI", system-ui, sans-serif;
+      background: #0e1013; color: var(--face); text-align: center; padding: 24px;
+      font: 13px/1.6 var(--sans);
     }
-    #fatal h2 { margin: 0 0 8px; font-size: 20px; font-weight: 600; }
-    #fatal p { margin: 0; color: #8b939d; max-width: 34em; }
-    #over p { margin: 0; color: #8b939d; }
+    #fatal h2 { margin: 0 0 8px; font: 22px/1.2 var(--serif); }
+    #fatal p { margin: 0; color: var(--muted); max-width: 34em; }
 
+    /* ---- palette ------------------------------------------------------------- */
     #palette {
       position: fixed; left: 0; right: 0; bottom: 0;
       display: flex; gap: 7px; align-items: center; padding: 10px 13px;
-      font: 13px/1.4 -apple-system, "Segoe UI", system-ui, sans-serif; color: #e6e8ea;
-      background: rgba(14,16,19,.86); border-top: 1px solid #2a2f36;
-      backdrop-filter: blur(6px);
+      font: 13px/1.4 var(--sans); color: var(--face);
+      background: var(--panel); border-top: 2px solid var(--brass-dark); box-shadow: var(--frame);
     }
-    .tool {
-      display: block; text-align: left; cursor: pointer; font: inherit;
-      color: #e6e8ea; background: #191d23; border: 1px solid #333a43;
-      border-radius: 3px; padding: 6px 10px; min-width: 132px;
+    /* A card: a framed icon, a name, a caption, and its hotkey in the corner,
+       the way a command card lays them out. */
+    .tool, .creep {
+      position: relative; display: grid; grid-template-columns: 40px 1fr; gap: 0 9px; align-items: center;
+      text-align: left; cursor: pointer; font: inherit;
+      color: var(--face); background: var(--bevel); border: 1px solid var(--brass-dark);
+      border-radius: 3px; padding: 5px 8px 5px 5px; min-width: 132px;
+      box-shadow: inset 0 1px 0 #4a3824, 0 1px 2px #000;
     }
-    .tool:hover { border-color: #4a545f; }
-    .tool.selected { border-color: #4f8cc9; background: #1b2330; }
+    .tool:hover, .creep:hover { border-color: var(--brass); background: var(--bevel-hi); }
+    .tool.selected { border-color: var(--gold); box-shadow: inset 0 0 0 1px rgba(243,198,80,.45), 0 0 8px rgba(243,198,80,.35); }
+    .ico {
+      grid-row: 1 / span 2; width: 40px; height: 40px; border-radius: 3px;
+      background: radial-gradient(circle at 50% 40%, #3a3020, #14100a 75%) center / cover no-repeat;
+      border: 1px solid #0c0906; box-shadow: inset 0 0 0 1px #5a4527;
+    }
+    .ico[style] { background-size: 84%, cover; background-repeat: no-repeat; background-position: center; }
     /* Nothing in this bar may wrap.
 
        The palette's height is not cosmetic: main.ts measures it and hands it to
@@ -159,12 +248,20 @@
        Captions are numbers and short phrases; clipping one is a far smaller
        problem than the whole board jumping. */
     .tool .n, .tool .c, .creep .n, .creep .c, #palette .hint { white-space: nowrap; }
-    .tool .n { display: block; font-size: 12.5px; }
-    .tool .c { display: block; font-size: 11px; color: #7d858f; font-variant-numeric: tabular-nums; }
-    .tool[data-broke] { opacity: .45; }
-    #palette .hint { margin-left: auto; font-size: 11px; color: #6b727b; overflow: hidden; }
-    #palette .sep { width: 1px; align-self: stretch; background: #2a2f36; margin: 0 5px; }
-    #palette .label { font-size: 10px; letter-spacing: .07em; text-transform: uppercase; color: #7d858f; }
+    .tool .n, .creep .n { display: block; font: 14px/1.2 var(--serif); align-self: end; }
+    .tool .c, .creep .c { display: block; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; align-self: start; }
+    .tool .c em, .creep .c em { font-style: normal; color: var(--gold); }
+    .tool[data-broke], .creep[data-broke] { opacity: .5; filter: saturate(.4); }
+    .creep[data-locked] { opacity: .55; border-style: dashed; }
+    .creep[data-locked] .c { color: #c48d3a; }
+    .key {
+      position: absolute; top: 3px; right: 4px; font: 600 9px/1 var(--sans); color: #d9c48f;
+      border: 1px solid #5a4527; border-radius: 2px; padding: 2px 3px; background: #14100a;
+    }
+    #palette .hint { margin-left: auto; font-size: 11px; color: var(--dim); overflow: hidden; }
+    #palette .sep { width: 2px; align-self: stretch; margin: 0 5px;
+      background: linear-gradient(180deg, transparent, var(--brass-dark) 25%, var(--brass-dark) 75%, transparent); }
+    #palette .label { margin-bottom: 0; }
     /* The opening build-phase clock. Warm rather than grey, because it is the
        one thing on the bar that is counting down to something.
        `min-width` pins the label so the send cards do not jump sideways when
@@ -172,51 +269,25 @@
        player is reaching for a card. tabular-nums holds the digits still while
        it counts. */
     #sendLabel { display: inline-block; min-width: 6.2em; }
-    #sendLabel.counting { color: #e8b84b; font-variant-numeric: tabular-nums; }
+    #sendLabel.counting { color: var(--gold); font-variant-numeric: tabular-nums; }
     #sendRow { display: flex; gap: 6px; }
-    .creep {
-      display: block; text-align: left; cursor: pointer; font: inherit;
-      color: #e6e8ea; background: #1d1a19; border: 1px solid #43372f;
-      border-radius: 3px; padding: 6px 10px; min-width: 116px;
-    }
-    .creep:hover { border-color: #6b5748; }
-    .creep .n { display: block; font-size: 12.5px; }
-    .creep .c { display: block; font-size: 11px; color: #8a8079; font-variant-numeric: tabular-nums; }
-    .creep[data-broke] { opacity: .45; }
-    .creep[data-locked] { opacity: .5; border-style: dashed; }
-    .creep[data-locked] .c { color: #b8843c; }
-    kbd { border: 1px solid #3a424c; border-radius: 2px; padding: 0 4px; font: inherit; font-size: 10px; }
+    .creep { min-width: 116px; }
+    kbd { border: 1px solid #5a4527; border-radius: 2px; padding: 0 4px; font: inherit; font-size: 10px; background: #14100a; }
 
+    /* ---- selection panel ------------------------------------------------------- */
     #panel {
-      position: fixed; right: 16px; top: 52px; width: 194px;
-      font: 12px/1.45 -apple-system, "Segoe UI", system-ui, sans-serif; color: #e6e8ea;
-      background: rgba(20,24,29,.95); border: 1px solid #3a424c; border-radius: 4px;
-      padding: 10px 11px; backdrop-filter: blur(6px);
+      position: fixed; right: 16px; top: 52px; width: 200px;
+      font: 12px/1.45 var(--sans); color: var(--face);
+      background: var(--panel); border: 2px solid var(--brass-dark); border-radius: 4px;
+      padding: 12px 12px 10px; box-shadow: var(--frame), 0 10px 30px rgba(0,0,0,.5);
     }
-    #panel h3 { margin: 0 0 7px; font-size: 12.5px; font-weight: 600; }
+    #panel h3 { margin: 0 0 8px; font: 15px/1.2 var(--serif); color: var(--gold); text-align: center; }
     #panel table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-    #panel td { padding: 1px 0; color: #7d858f; }
-    #panel td + td { text-align: right; color: #e6e8ea; font-variant-numeric: tabular-nums; }
-    #panel button {
-      display: block; width: 100%; margin-top: 5px; cursor: pointer; font: inherit;
-      color: #e6e8ea; background: #23303f; border: 1px solid #3d5670;
-      border-radius: 3px; padding: 5px;
-    }
+    #panel td { padding: 2px 0; color: var(--muted); }
+    #panel td + td { text-align: right; color: var(--face); font: 13px/1.3 var(--serif); font-variant-numeric: tabular-nums; }
+    #panel button { display: block; width: 100%; margin-top: 5px; padding: 6px; }
     #panel button:disabled { opacity: .4; cursor: default; }
-    #panel button.sell { background: #2e2422; border-color: #5c3f38; }
-    #hud b { display: block; font-size: 9.5px; letter-spacing: .08em;
-             text-transform: uppercase; color: #7d858f; font-weight: 600; }
-    #hud span { font-variant-numeric: tabular-nums; font-size: 15px; }
-
-    /* Hierarchy. Eleven cells at identical weight is a debug overlay, not a
-       HUD: the two numbers that decide the match sat in the same typography as
-       the tile coordinate under the cursor. `primary` is what you glance at
-       under pressure; `detail` is what you read when you have a moment. */
-    #hud .primary span { font-size: 21px; }
-    #hud .detail span { font-size: 13px; color: #aab2bb; }
-    #hud .detail b { font-size: 9px; }
-    #lives[data-low] { color: #e0655a; }
-    #tierLeft[data-none] { color: #6b727b; }
+    #panel button.sell { border-color: #5c3f38; color: #e0bfb6; }
 
     /* ---- rails -------------------------------------------------------------
 
@@ -233,21 +304,22 @@
     body[data-layout="rails"] #hud {
       top: 0; bottom: 0; left: 0; right: auto;
       width: var(--rail); flex-direction: column; align-items: stretch;
-      border-bottom: 0; border-right: 1px solid #2a2f36;
+      border-bottom: 0; border-right: 2px solid var(--brass-dark);
     }
     body[data-layout="rails"] #hud div {
-      border-right: 0; border-bottom: 1px solid #23272e;
+      border-right: 0; border-bottom: 1px solid #0d0906; box-shadow: inset 0 -1px 0 #3a2c1c;
     }
-    body[data-layout="rails"] #hud div:last-child { margin-left: 0; margin-top: auto; border-bottom: 0; }
+    body[data-layout="rails"] #hud div:last-child { margin-left: 0; margin-top: auto; border-bottom: 0; box-shadow: none; }
 
     body[data-layout="rails"] #palette {
       top: 0; bottom: 0; right: 0; left: auto;
       width: var(--rail); flex-direction: column; align-items: stretch;
-      border-top: 0; border-left: 1px solid #2a2f36; gap: 6px;
+      border-top: 0; border-left: 2px solid var(--brass-dark); gap: 6px;
     }
     body[data-layout="rails"] #sendRow { flex-direction: column; gap: 6px; }
     body[data-layout="rails"] #palette .sep {
-      width: auto; height: 1px; align-self: stretch; margin: 4px 0;
+      width: auto; height: 2px; align-self: stretch; margin: 4px 0;
+      background: linear-gradient(90deg, transparent, var(--brass-dark) 25%, var(--brass-dark) 75%, transparent);
     }
     body[data-layout="rails"] #palette .hint {
       margin-left: 0; margin-top: auto; white-space: normal; line-height: 1.7;
@@ -266,12 +338,10 @@
 <body>
   <!-- Ordered by what you look at under pressure, not by what was easy to add.
 
-       The three clocks are new. The game is built on timed beats -- the build
-       phase ends at 0:20, income arrives in a lump every 15s, tiers unlock at
-       5:00 and 10:00 -- and none of them were on screen. "Income 250 /15s" said
-       the rate and never the moment; the only countdown anywhere was buried in a
-       locked send card's caption. Every value here is derived from the tick the
-       stats snapshot already carries, so none of this touches the simulation. -->
+       The three clocks: the game is built on timed beats -- the build phase
+       ends at 0:20, income arrives in a lump every 15s, tiers unlock at 5:00
+       and 10:00 -- and every value here is derived from the tick the stats
+       snapshot already carries, so none of this touches the simulation. -->
   <div id="hud">
     <div class="primary"><b>Time</b><span id="clock">00:00</span></div>
     <div class="primary"><b>Lives</b><span id="lives">20</span></div>
@@ -289,17 +359,19 @@
     <div><b>Placement</b><span id="note">hover a tile</span></div>
   </div>
 
-  <!-- Build palette. Opposite-facing economies get separate palettes later,
-       when Send exists; for now this is the one gold sink. -->
+  <!-- Build palette. Build and Send stay separate palettes on purpose: they
+       are opposite-facing economies, and merging them makes a 250g send one
+       misclick from a 600g tower. The icons are filled in by main.ts from
+       pictures the scene renders of its own models. -->
   <div id="palette">
     <button class="tool selected" data-tower="0">
-      <span class="n">Single-target</span><span class="c"><em id="cost0">60</em>g &middot; anti-tank</span>
+      <span class="ico"></span><span class="n">Guard tower</span><span class="c"><em id="cost0">600</em>g &middot; anti-tank</span><kbd class="key">1</kbd>
     </button>
     <button class="tool" data-tower="1">
-      <span class="n">Splash</span><span class="c"><em id="cost1">110</em>g &middot; anti-swarm</span>
+      <span class="ico"></span><span class="n">Mortar</span><span class="c"><em id="cost1">1100</em>g &middot; anti-swarm</span><kbd class="key">2</kbd>
     </button>
     <button class="tool" data-tower="2">
-      <span class="n">Slow</span><span class="c"><em id="cost2">80</em>g &middot; anti-runner</span>
+      <span class="ico"></span><span class="n">Frost shrine</span><span class="c"><em id="cost2">800</em>g &middot; anti-runner</span><kbd class="key">3</kbd>
     </button>
     <span class="sep"></span>
     <span class="label" id="sendLabel">Send &rarr;</span>
@@ -310,7 +382,7 @@
   <!-- Inline panel on the field: upgrading is the most frequent mid-match
        action after placing, so it lives where your eyes already are. -->
   <div id="panel" hidden>
-    <h3 id="panelTitle">Single-target &middot; Lv 1</h3>
+    <h3 id="panelTitle">Guard tower &middot; Lv 1</h3>
     <table>
       <tr><td>Damage</td><td id="panelDamage">30</td></tr>
       <tr><td>Range</td><td id="panelRange">6.0</td></tr>
@@ -323,8 +395,7 @@
   <!-- Difficulty is picked before the first tick, not mid-match: it changes how
        fast the bot compounds its economy, so switching halfway would compare two
        different games. The labels describe how the bot splits its gold, because
-       that is what differs — a sweep in the harness shows a higher share spent
-       attacking wins monotonically, so it is the honest difficulty axis. -->
+       that is what differs. -->
   <div id="start">
     <div class="box">
       <h1>Line Tower Wars</h1>

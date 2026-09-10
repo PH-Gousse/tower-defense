@@ -26,6 +26,7 @@ Write one through `/decide`. A decision that changes a **game rule** also needs
 | [0012](0012-blocking-refusal-checks-spawn-not-creeps.md) | Sealing is checked against the spawn, not creep positions | Accepted — pending confirmation |
 | [0013](0013-three-tower-archetypes-no-tech-tree.md) | Three tower archetypes, three levels, no tech tree | Accepted |
 | [0014](0014-warcraft3-style-camera.md) | Warcraft 3-style camera: fixed yaw, zoom and pan only | Accepted |
+| [0015](0015-procedural-look-inferred-from-two-ticks.md) | The look is procedural, and every effect is inferred from two ticks | Accepted |
 
 ## Status vocabulary
 
