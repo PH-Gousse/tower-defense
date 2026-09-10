@@ -64,6 +64,8 @@ interface Mismatch {
 
 const mismatches: Mismatch[] = []
 const finals = new Map<string, number[]>()
+/** Seeds whose match ENDED rather than hitting the tick ceiling. */
+const ended = new Set<number>()
 const started = Date.now()
 
 for (let s = 0; s < seeds; s++) {
@@ -102,6 +104,7 @@ for (let s = 0; s < seeds; s++) {
     const seen = finals.get(a.hash) ?? []
     seen.push(s)
     finals.set(a.hash, seen)
+    if (a.ticks < maxTicks) ended.add(s)
   }
 }
 
@@ -118,10 +121,28 @@ const distinctFinals = finals.size
 say()
 say(`  ${seeds} runs produced ${distinctFinals} distinct final state${distinctFinals === 1 ? '' : 's'}.`)
 if (distinctFinals < Math.min(seeds, DISTINCT_CONFIGS)) {
-  say(`  Fewer than the ${Math.min(seeds, DISTINCT_CONFIGS)} configurations available — some play identically`)
-  say(`  at ${maxTicks} ticks. Raise --max-ticks to separate them.`)
+  say(`  Fewer than the ${Math.min(seeds, DISTINCT_CONFIGS)} configurations available.`)
   for (const [hash, group] of finals) {
-    if (group.length > 1) say(`    seeds ${group.join(', ')} all end at ${hash}`)
+    if (group.length <= 1) continue
+    // Two different causes, and telling them apart matters. A group that hit the
+    // tick ceiling has not diverged YET and more ticks would separate it. A group
+    // whose match ENDED is finished: no tick count can separate those, and the
+    // finding is that the configurations genuinely play the same match.
+    //
+    // Saying "raise --max-ticks" for the second kind is advice that cannot work,
+    // and it was the message this tool used to print for every group.
+    const distinctConfigsInGroup = new Set(group.map((g) => g % DISTINCT_CONFIGS)).size
+    if (distinctConfigsInGroup === 1) {
+      say(`    seeds ${group.join(', ')} → ${hash}: the same configuration repeated (expected, ADR-0010)`)
+    } else if (group.every((g) => ended.has(g))) {
+      say(`    seeds ${group.join(', ')} → ${hash}: DIFFERENT configurations playing an IDENTICAL match`)
+      say(`      that ended before the ceiling. More ticks cannot separate these — the bot`)
+      say(`      presets have no observable effect here. That is a bot finding, not a`)
+      say(`      determinism one.`)
+    } else {
+      say(`    seeds ${group.join(', ')} → ${hash}: not yet diverged at ${maxTicks} ticks.`)
+      say(`      Raise --max-ticks to separate them.`)
+    }
   }
 }
 

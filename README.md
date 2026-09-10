@@ -53,8 +53,9 @@ the bot commits to attacking — measured transitive by a round robin, not asser
 
 Determinism is verified, not asserted: the golden fixture replays a committed command log to
 a committed hash on **two different engines** (V8 via node, JavaScriptCore via bun). They
-agree. Every tick's state hash is exchanged between peers, and a divergence writes a dump
-that replays headlessly to find which side was wrong.
+agree. Every tick's state hash is recorded locally into a ring, and a desync dump replays
+headlessly to find which side was wrong — but the peer-to-peer hash **exchange** that would
+detect a live divergence is not wired up yet (issue #30).
 
 **Not built yet:** reconnect (a dropped connection ends the match), spectating, replay URLs,
 and a balance pass on numbers that are still placeholders. See
