@@ -6,6 +6,17 @@ Repo: PH-Gousse/tower-defense (working dir: `Game`)
 Status: APPROVED
 Mode: Builder
 
+> **HISTORICAL — superseded as the rules reference on 2026-09-10.**
+>
+> The authoritative statement of the game's rules is now [`docs/gdd.md`](../gdd.md), and the
+> engineering rules are [`docs/invariants.md`](../invariants.md). Where this document and the
+> GDD disagree, **the GDD wins**.
+>
+> This file is kept, unedited below this banner, because it records *how the project was
+> reasoned into being* — the premises, the approaches considered and rejected, the review
+> transcripts. That reasoning is still worth reading and is cited from the ADRs. It is no
+> longer maintained: do not update it, and do not resolve a disagreement by editing it.
+
 ## Problem Statement
 
 A tower-wars game: tower defence where the enemies aren't scripted waves but creeps the

@@ -8,7 +8,18 @@
     "build": "pnpm --filter @ltw/client build",
     "typecheck": "pnpm -r exec tsc --noEmit",
     "lint": "eslint .",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "headless-match": "pnpm --filter @ltw/harness exec vite-node tools/headless-match.ts --",
+    "determinism-check": "pnpm --filter @ltw/harness exec vite-node tools/determinism-check.ts --",
+    "replay-verify": "pnpm --filter @ltw/harness exec vite-node tools/replay-verify.ts --",
+    "balance-batch": "pnpm --filter @ltw/harness exec vite-node tools/balance-batch.ts --",
+    "banned-api-scan": "pnpm --filter @ltw/harness exec vite-node tools/banned-api-scan.ts --",
+    "bench-scene": "pnpm --filter @ltw/harness exec vite-node tools/bench-scene.ts --",
+    "state-hash": "pnpm --filter @ltw/harness exec vite-node tools/state-hash.ts --",
+    "golden-jsc": "bun run scripts/golden-jsc.ts",
+    "rule-change:begin": ".claude/hooks/rule-change-marker.sh begin",
+    "rule-change:end": ".claude/hooks/rule-change-marker.sh end",
+    "rule-change:status": ".claude/hooks/rule-change-marker.sh status"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

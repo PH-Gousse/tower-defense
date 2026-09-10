@@ -176,6 +176,17 @@ export interface Scene {
   readonly dump: (trigger: 'desync' | 'manual') => DesyncDump
   /** The driver, for the network layer to feed and question. */
   readonly driver: Driver
+  /**
+   * The renderer, exposed read-only so the benchmark scene can read
+   * `renderer.info` (draw calls, triangles, live geometries and textures).
+   *
+   * Nothing in the game reads this. It exists because the alternative was for
+   * the benchmark to stand up a SECOND WebGLRenderer to measure the first,
+   * which means two GL contexts on one page — and browsers cap live contexts,
+   * so the second silently evicts the first on some machines. Measuring the
+   * real renderer is the only way the numbers mean anything.
+   */
+  readonly renderer: THREE.WebGLRenderer
   start: () => void
 }
 
@@ -989,6 +1000,7 @@ export function createScene(
     setBot: (b) => driver.setBot(b),
     dump: (trigger) => driver.dump(trigger, BUILD),
     driver,
+    renderer,
     upgradeSelected: () => {
       if (selected) driver.queueUpgrade(selected.x, selected.y)
     },

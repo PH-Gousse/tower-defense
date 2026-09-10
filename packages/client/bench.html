@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>Render benchmark &middot; Line Tower Wars</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: #11151a; overflow: hidden; }
+    canvas { display: block; touch-action: none; }
+    #benchhud {
+      position: fixed; left: 12px; top: 12px; z-index: 5;
+      white-space: pre; pointer-events: none;
+      font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: #d6dbe0; background: rgba(14,16,19,.85);
+      border: 1px solid #2a3038; border-radius: 4px;
+      padding: 10px 13px; backdrop-filter: blur(6px);
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body>
+  <div id="bench"></div>
+  <!-- The benchmark runs on its own the moment the page loads: warm the sim to
+       a saturated board, sample 300 frames, then print. Results also land on
+       window.__BENCH__ and as a "BENCH_JSON {...}" console line, which is what
+       a headless runner reads. -->
+  <div id="benchhud">starting&hellip;</div>
+  <script type="module" src="/src/demo/benchScene.ts"></script>
+</body>
+</html>

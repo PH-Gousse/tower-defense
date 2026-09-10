@@ -1,0 +1,3432 @@
+{
+  "_comment": "Recorded by headless-match. seed 3 selects \"normal vs hard on \"serpentine\"\" — nothing in the sim consumes a seed, see ADR-0010. Re-verify with: pnpm replay-verify",
+  "seed": 3,
+  "config": "normal vs hard on \"serpentine\"",
+  "ticks": 4000,
+  "commands": [
+    {
+      "at": 0,
+      "player": 0,
+      "kind": "build",
+      "tower": 0,
+      "x": 0,
+      "y": 2
+    },
+    {
+      "at": 0,
+      "player": 1,
+      "kind": "build",
+      "tower": 0,
+      "x": 0,
+      "y": 2
+    },
+    {
+      "at": 10,
+      "player": 0,
+      "kind": "build",
+      "tower": 0,
+      "x": 1,
+      "y": 2
+    },
+    {
+      "at": 10,
+      "player": 1,
+      "kind": "build",
+      "tower": 0,
+      "x": 1,
+      "y": 2
+    },
+    {
+      "at": 20,
+      "player": 0,
+      "kind": "build",
+      "tower": 0,
+      "x": 2,
+      "y": 2
+    },
+    {
+      "at": 20,
+      "player": 1,
+      "kind": "build",
+      "tower": 0,
+      "x": 2,
+      "y": 2
+    },
+    {
+      "at": 30,
+      "player": 0,
+      "kind": "build",
+      "tower": 1,
+      "x": 3,
+      "y": 2
+    },
+    {
+      "at": 30,
+      "player": 1,
+      "kind": "build",
+      "tower": 1,
+      "x": 3,
+      "y": 2
+    },
+    {
+      "at": 40,
+      "player": 0,
+      "kind": "build",
+      "tower": 2,
+      "x": 4,
+      "y": 2
+    },
+    {
+      "at": 40,
+      "player": 1,
+      "kind": "build",
+      "tower": 2,
+      "x": 4,
+      "y": 2
+    },
+    {
+      "at": 50,
+      "player": 0,
+      "kind": "build",
+      "tower": 0,
+      "x": 5,
+      "y": 2
+    },
+    {
+      "at": 50,
+      "player": 1,
+      "kind": "build",
+      "tower": 0,
+      "x": 5,
+      "y": 2
+    },
+    {
+      "at": 60,
+      "player": 0,
+      "kind": "build",
+      "tower": 0,
+      "x": 6,
+      "y": 2
+    },
+    {
+      "at": 60,
+      "player": 1,
+      "kind": "build",
+      "tower": 0,
+      "x": 6,
+      "y": 2
+    },
+    {
+      "at": 70,
+      "player": 0,
+      "kind": "build",
+      "tower": 0,
+      "x": 7,
+      "y": 5
+    },
+    {
+      "at": 70,
+      "player": 1,
+      "kind": "build",
+      "tower": 0,
+      "x": 7,
+      "y": 5
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 410,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 410,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 410,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 410,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 410,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 410,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 430,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 430,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 450,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 450,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 460,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 460,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 520,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 520,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 550,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 550,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 580,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 580,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 730,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 730,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 750,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 750,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 760,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 760,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 800,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 800,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 830,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 830,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1030,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1030,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1050,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1050,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1060,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1060,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1100,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1100,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1130,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1130,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1330,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1330,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1350,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1350,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1360,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1360,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1400,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1430,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1430,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1450,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1450,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1610,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1610,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1610,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1610,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1630,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1630,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1660,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1660,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1670,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1670,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1700,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1720,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1720,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1750,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1750,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1780,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1780,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1900,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1910,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1910,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1910,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1910,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1910,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1910,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1910,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1910,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1910,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1910,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1930,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1930,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1960,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1960,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1980,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1980,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2010,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2010,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2030,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2030,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2060,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2060,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2090,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2090,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 0,
+      "kind": "build",
+      "tower": 0,
+      "x": 4,
+      "y": 5
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "build",
+      "tower": 0,
+      "x": 4,
+      "y": 5
+    },
+    {
+      "at": 2500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2510,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2510,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2510,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2510,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2510,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2510,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2510,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2510,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2510,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2510,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2510,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2510,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2510,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2510,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2510,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2510,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2530,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2530,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2560,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2560,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2570,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2570,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2600,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2620,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2620,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2650,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2650,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2670,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2670,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2690,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2690,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2720,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2720,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2800,
+      "player": 0,
+      "kind": "build",
+      "tower": 0,
+      "x": 3,
+      "y": 5
+    },
+    {
+      "at": 2800,
+      "player": 1,
+      "kind": "build",
+      "tower": 0,
+      "x": 3,
+      "y": 5
+    },
+    {
+      "at": 2810,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2810,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2810,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2810,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2810,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2810,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2820,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2820,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3100,
+      "player": 0,
+      "kind": "build",
+      "tower": 0,
+      "x": 2,
+      "y": 5
+    },
+    {
+      "at": 3100,
+      "player": 1,
+      "kind": "build",
+      "tower": 0,
+      "x": 2,
+      "y": 5
+    },
+    {
+      "at": 3110,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3110,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3110,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3110,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3110,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3110,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3110,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3110,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3120,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3120,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3400,
+      "player": 0,
+      "kind": "build",
+      "tower": 0,
+      "x": 1,
+      "y": 8
+    },
+    {
+      "at": 3400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3400,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3410,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3410,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3410,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3410,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3410,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3410,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3410,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3410,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3410,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3410,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3410,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3410,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3410,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3410,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3410,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3410,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3410,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3410,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3430,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3440,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3450,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3460,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3470,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3500,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3530,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3560,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3590,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3600,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3620,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3700,
+      "player": 0,
+      "kind": "build",
+      "tower": 0,
+      "x": 2,
+      "y": 8
+    },
+    {
+      "at": 3700,
+      "player": 1,
+      "kind": "build",
+      "tower": 0,
+      "x": 1,
+      "y": 8
+    },
+    {
+      "at": 3710,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3710,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3710,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3710,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3710,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3710,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3710,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3710,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3710,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3710,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3710,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3710,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3710,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3720,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3720,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3740,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3770,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3780,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3840,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    }
+  ],
+  "expectedHash": "b8b5b547",
+  "data": {
+    "sellRefund": 0.6,
+    "archetypes": [
+      {
+        "key": "single",
+        "name": "Single-target",
+        "answers": "tanks",
+        "levels": [
+          {
+            "cost": 600,
+            "damage": 30,
+            "range": 3,
+            "cooldownTicks": 25
+          },
+          {
+            "cost": 900,
+            "damage": 55,
+            "range": 3.25,
+            "cooldownTicks": 24
+          },
+          {
+            "cost": 1400,
+            "damage": 84,
+            "range": 3.5,
+            "cooldownTicks": 22
+          }
+        ]
+      },
+      {
+        "key": "splash",
+        "name": "Splash",
+        "answers": "swarms",
+        "splashRadius": 1.2,
+        "levels": [
+          {
+            "cost": 1100,
+            "damage": 12,
+            "range": 1.5,
+            "cooldownTicks": 12
+          },
+          {
+            "cost": 1600,
+            "damage": 20,
+            "range": 1.7,
+            "cooldownTicks": 12
+          },
+          {
+            "cost": 2400,
+            "damage": 32,
+            "range": 1.9,
+            "cooldownTicks": 11
+          }
+        ]
+      },
+      {
+        "key": "slow",
+        "name": "Slow",
+        "answers": "runners",
+        "slowTicks": 20,
+        "levels": [
+          {
+            "cost": 800,
+            "damage": 4,
+            "range": 2.25,
+            "cooldownTicks": 10,
+            "slowPercent": 30
+          },
+          {
+            "cost": 1200,
+            "damage": 6,
+            "range": 2.4,
+            "cooldownTicks": 10,
+            "slowPercent": 40
+          },
+          {
+            "cost": 1800,
+            "damage": 9,
+            "range": 2.6,
+            "cooldownTicks": 10,
+            "slowPercent": 50
+          }
+        ]
+      }
+    ],
+    "unlockEveryTicks": 6000,
+    "sendUnlockTicks": 400,
+    "startingGold": 6000,
+    "startingIncome": 250,
+    "creeps": [
+      {
+        "key": "swarm",
+        "name": "Swarm",
+        "archetype": 0,
+        "tier": 0,
+        "cost": 20,
+        "count": 1,
+        "hp": 20,
+        "speed": 0.075,
+        "incomeBonus": 2,
+        "bounty": 5
+      },
+      {
+        "key": "runner",
+        "name": "Runner",
+        "archetype": 1,
+        "tier": 0,
+        "cost": 250,
+        "count": 1,
+        "hp": 40,
+        "speed": 0.15,
+        "incomeBonus": 20,
+        "bounty": 60
+      },
+      {
+        "key": "tank",
+        "name": "Tank",
+        "archetype": 2,
+        "tier": 0,
+        "cost": 600,
+        "count": 1,
+        "hp": 250,
+        "speed": 0.05,
+        "incomeBonus": 40,
+        "bounty": 150
+      },
+      {
+        "key": "swarm2",
+        "name": "Swarm II",
+        "archetype": 0,
+        "tier": 1,
+        "cost": 100,
+        "count": 1,
+        "hp": 100,
+        "speed": 0.075,
+        "incomeBonus": 10,
+        "bounty": 20
+      },
+      {
+        "key": "runner2",
+        "name": "Runner II",
+        "archetype": 1,
+        "tier": 1,
+        "cost": 1250,
+        "count": 1,
+        "hp": 200,
+        "speed": 0.15,
+        "incomeBonus": 100,
+        "bounty": 240
+      },
+      {
+        "key": "tank2",
+        "name": "Tank II",
+        "archetype": 2,
+        "tier": 1,
+        "cost": 3000,
+        "count": 1,
+        "hp": 1250,
+        "speed": 0.05,
+        "incomeBonus": 200,
+        "bounty": 600
+      },
+      {
+        "key": "swarm3",
+        "name": "Swarm III",
+        "archetype": 0,
+        "tier": 2,
+        "cost": 500,
+        "count": 1,
+        "hp": 500,
+        "speed": 0.075,
+        "incomeBonus": 50,
+        "bounty": 80
+      },
+      {
+        "key": "runner3",
+        "name": "Runner III",
+        "archetype": 1,
+        "tier": 2,
+        "cost": 6250,
+        "count": 1,
+        "hp": 1000,
+        "speed": 0.15,
+        "incomeBonus": 500,
+        "bounty": 960
+      },
+      {
+        "key": "tank3",
+        "name": "Tank III",
+        "archetype": 2,
+        "tier": 2,
+        "cost": 15000,
+        "count": 1,
+        "hp": 6250,
+        "speed": 0.05,
+        "incomeBonus": 1000,
+        "bounty": 2400
+      }
+    ]
+  }
+}

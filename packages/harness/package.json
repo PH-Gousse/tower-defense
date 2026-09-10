@@ -10,7 +10,14 @@
     "roster": "vite-node src/roster-run.ts",
     "replay": "vite-node src/replay-run.ts",
     "live": "vite-node scripts/live-duel.mts",
-    "opening": "vite-node src/opening-run.ts"
+    "opening": "vite-node src/opening-run.ts",
+    "headless-match": "vite-node tools/headless-match.ts",
+    "determinism-check": "vite-node tools/determinism-check.ts",
+    "replay-verify": "vite-node tools/replay-verify.ts",
+    "balance-batch": "vite-node tools/balance-batch.ts",
+    "banned-api-scan": "vite-node tools/banned-api-scan.ts",
+    "bench-scene": "vite-node tools/bench-scene.ts",
+    "state-hash": "vite-node tools/state-hash.ts"
   },
   "dependencies": {
     "@ltw/sim": "workspace:*",

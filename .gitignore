@@ -9,3 +9,13 @@ dist/
 # Local wrangler state: miniflare's SQLite for Durable Objects, caches and D1.
 # Regenerated on every `wrangler dev`, machine-specific, never useful in a diff.
 .wrangler/
+
+# Balance reports are generated, dated and large. The one you care about is the
+# one you just ran; committing a folder of them is noise in every diff.
+reports/
+
+# The constants-guard marker. Session-local, never shared.
+.claude/.rule-change-active
+
+# Hook session state: which files a session touched, and stop-guard attempts.
+.claude/.state/
