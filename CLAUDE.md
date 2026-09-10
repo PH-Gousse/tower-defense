@@ -38,7 +38,8 @@ Every tool prints a human summary and a single line of JSON as its **last** line
 non-zero on failure. Sources in `packages/harness/tools/`.
 
 Older harness entry points: `pnpm --filter @ltw/harness` + `start` (one match) ·
-`gauntlet` (creep vs maze table) · `lap` (HP needed per lap) · `roster` (creep economics) ·
+`gauntlet` (creep vs maze table) · `lap` (HP needed per lap) · `flood` (the bot's leak model
+against a streamed send) · `roster` (creep economics) ·
 `opening` (build-phase sweep) · `replay <dump.json>`.
 
 Requires Node 24 and pnpm 10. `bun` is needed only for the cross-engine check.

@@ -15,6 +15,8 @@ import {
 import { opponentOf, SPAWN_PERIOD, type GameState, type Lane, type Player } from './state'
 import { Kind, Refusal, checkBuild, checkUpgrade, checkSend, type Command } from './step'
 import { templateAt } from './maze'
+import { buildField, createField, spawnsReachable } from './field'
+import { routeOf, waveLeaks, laneThreat, type TowerOverride } from './threat'
 
 /**
  * The AI opponent.
@@ -40,10 +42,11 @@ import { templateAt } from './maze'
  * Difficulty is the spend ratio and the reaction delay, and nothing else — no
  * extra gold, no vision the player lacks, no rule bent in its favour.
  *
- * Known limitation, priced honestly: the templates do not react to what is
- * being sent. The knobs make the bot flood harder and respond sooner; they
- * never make it maze *smarter*. If it reads flat in play, adaptive template
- * selection is the first thing to build after this.
+ * Two things sit in front of that loop when the bot reads the board with the
+ * maze-strength model in `threat.ts`, which it does by default: a wave that
+ * the model says ends the match is sent at once, and a flood the model says
+ * will leak from the bot's own lane is answered before it does. See `Reader`
+ * and `decideByEstimate` for what was measured and what was rejected.
  */
 
 /**
@@ -66,6 +69,20 @@ import { templateAt } from './maze'
  * independent.
  */
 export type AdaptiveMode = 'off' | 'defence' | 'send' | 'both'
+
+/**
+ * HOW the bot reads a board, as distinct from which sides of it (`adaptive`).
+ *
+ * `table` is the original: a maze is summarised as its dominant tower kind and
+ * answered from a three-row lookup, a lane as its dominant creep kind likewise.
+ * `estimate` runs the maze-strength model in `threat.ts` instead -- route
+ * length, towers in reach, levels, fire rates, wave size -- and picks the send
+ * that is predicted to leak most per gold, the fix that is predicted to stop
+ * the most leaks per gold, and the wave that ends the match when one exists.
+ * See the head-to-head figures on DEFAULT_READER before treating either as the
+ * better one.
+ */
+export type Reader = 'table' | 'estimate'
 
 export interface BotConfig {
   /**
@@ -97,6 +114,8 @@ export interface BotConfig {
    * change to this bot that looked obviously better measured backwards.
    */
   readonly adaptive?: AdaptiveMode
+  /** See Reader. */
+  readonly reader?: Reader
   /** Index into MAZE_TEMPLATES. */
   readonly template: number
 }
@@ -173,8 +192,31 @@ const MAX_SAVING_PERIODS = 2
 /** Creeps that must be in the lane before their mix counts as information. */
 const MIN_THREAT_SAMPLE = 3
 
-/** See AdaptiveMode: reading the board pays off on offence only. */
-const DEFAULT_ADAPTIVE: AdaptiveMode = 'send'
+/**
+ * See AdaptiveMode. Under the table reader, reading the board paid off on
+ * offence only and `send` was the default. Under the estimate reader the
+ * defence half is the whole gain -- predicting a flood beats reacting to a
+ * lap -- and `both` is what the figures on DEFAULT_READER were measured with.
+ * `estimate` with `send` alone only draws with the table.
+ */
+const DEFAULT_ADAPTIVE: AdaptiveMode = 'both'
+
+/**
+ * See Reader. Measured before it was chosen, both seats, templates 0 and 1,
+ * 30,000-tick ceiling (template 2 collapses for every bot inside two minutes
+ * and draws, so it measures nothing):
+ *
+ *   estimate vs table, same ratio and template:
+ *     easy    4-0-2     normal  4-0-2     hard  2-0-4 (the hard t0 pair is a
+ *                                               mutual collapse either way)
+ *   estimate on template 1 vs table on template 0 -- the shipped change:
+ *     easy    6-0-0     normal  6-0-0     hard  6-0-0, all 20 lives to 0
+ *   ladder under estimate, template 1:
+ *     hard > normal 6-0, normal > easy 6-0, hard > easy 6-0, mirror 0-0-6
+ *
+ * What the model does NOT do is choose sends; see decideByEstimate.
+ */
+const DEFAULT_READER: Reader = 'estimate'
 
 /**
  * Difficulty is how much of its economy the bot commits to attacking.
@@ -194,9 +236,28 @@ const DEFAULT_ADAPTIVE: AdaptiveMode = 'send'
  * to the more aggressive bot and every mirror is a draw, which also proves the
  * sim gives neither seat an edge.
  */
-export const BOT_EASY: BotConfig = { sendRatio: 0.3, reactionTicks: 10, template: 0 }
-export const BOT_NORMAL: BotConfig = { sendRatio: 0.5, reactionTicks: 10, template: 0 }
-export const BOT_HARD: BotConfig = { sendRatio: 0.75, reactionTicks: 10, template: 0 }
+/**
+ * Template 1, the tight serpentine: a wall every other row, one corridor
+ * between, which is the maze a player actually builds. Template 0 walled
+ * every third row and wasted a row per wall; the full tight serpentine walks
+ * 100 tiles for 77 towers where template 0 walks 72 for 49, and at 45 towers
+ * it deals 13,290 damage a lap to a tank against 11,400 -- 17% more per tower
+ * for the same gold. Head to head the same bot on template 1 beats itself on
+ * template 0 six matches out of six, 20 lives to 0.
+ *
+ * The cost is in the mirror: two equal defenders on a proper maze leak
+ * nothing until the economy outgrows it, so the easy mirror runs 22.7
+ * minutes with the first leak at minute 18 and peaks at 2,620 creeps. That
+ * is issue #8 -- the bounded ladder has no valve -- showing through a better
+ * defence, and the harness pins it as such rather than pinning the bot to a
+ * worse maze.
+ *
+ * Template 2 ("posts") loses 0-6 in under two minutes and stays in the list
+ * only so the harness can keep saying so.
+ */
+export const BOT_EASY: BotConfig = { sendRatio: 0.3, reactionTicks: 10, template: 1 }
+export const BOT_NORMAL: BotConfig = { sendRatio: 0.5, reactionTicks: 10, template: 1 }
+export const BOT_HARD: BotConfig = { sendRatio: 0.75, reactionTicks: 10, template: 1 }
 
 /**
  * One decision. Returns the commands it wants applied this tick, empty when it
@@ -243,6 +304,26 @@ export function botCommand(
     return NONE
   }
 
+  if ((config.reader ?? DEFAULT_READER) === 'estimate') {
+    return decideByEstimate(state, player, lane, me, config, emergency)
+  }
+  return decideByTable(state, player, lane, me, config, emergency)
+}
+
+/**
+ * The decision as the table reader makes it, past the opening: build to the
+ * tier's target, then bank toward the heaviest creep a few income periods
+ * buy, then send it as a burst. Every comment in here records a measurement
+ * that moved it; read them before moving anything.
+ */
+function decideByTable(
+  state: GameState,
+  player: 0 | 1,
+  lane: Lane,
+  me: Player,
+  config: BotConfig,
+  emergency: number,
+): readonly Command[] {
   // The split, applied to GOLD rather than to whichever decision came up.
   //
   // Per-decision looked equivalent and was not. A decision is only a chance to
@@ -587,12 +668,9 @@ function nextTemplateTile(
   lane: Lane,
   config: BotConfig,
   budget: number,
+  threat: CreepArchetypeKind | null = tableThreat(lane, config),
 ): Command | null {
   const template = templateAt(config.template)
-  // Answer what is actually in the lane. With nothing to read -- an empty lane
-  // in the opening -- fall back to the fixed mix, which is at least balanced.
-  const mode = config.adaptive ?? DEFAULT_ADAPTIVE
-  const threat = mode === 'defence' || mode === 'both' ? readThreat(lane) : null
   for (let i = 0; i < template.tiles.length; i++) {
     const t = template.tiles[i] as Tile
     if (lane.blocked[tileIndex(t)] === 1) continue
@@ -606,6 +684,17 @@ function nextTemplateTile(
     return { tick: state.tick, player, kind: Kind.Build, tower, x: t.x, y: t.y }
   }
   return null
+}
+
+/**
+ * What the table reader answers the next tile with: the dominant creep in
+ * the lane, when the mode reads the lane at all. With nothing to read -- an
+ * empty lane in the opening -- null, and the fixed mix applies, which is at
+ * least balanced.
+ */
+function tableThreat(lane: Lane, config: BotConfig): CreepArchetypeKind | null {
+  const mode = config.adaptive ?? DEFAULT_ADAPTIVE
+  return mode === 'defence' || mode === 'both' ? readThreat(lane) : null
 }
 
 /**
@@ -753,6 +842,200 @@ function bestSend(state: GameState, player: 0 | 1, budget: number): number {
 }
 
 export { opponentOf, levelOf }
+
+// ---- the estimating reader ---------------------------------------------------
+
+const KINDS: readonly TowerKind[] = [TowerKind.Single, TowerKind.Splash, TowerKind.Slow]
+const routeA: number[] = []
+const routeB: number[] = []
+const routeC: number[] = []
+const probeBlocked = new Uint8Array(TILE_COUNT)
+const probeField = createField()
+const seen = new Uint8Array(TILE_COUNT)
+
+interface Wave {
+  readonly creep: number
+  readonly count: number
+  readonly leaks: number
+}
+
+/**
+ * The decision, when the bot reads the board with the model in `threat.ts`.
+ *
+ * The table reader's play, with two things put in front of it that the table
+ * cannot do:
+ *
+ *   1. A wave predicted to take the opponent's last lives is sent at once,
+ *      whatever phase the bot is in. Holding a winning hand to finish a maze
+ *      is how a bot loses a match it had won.
+ *   2. A flood predicted to leak from the bot's own lane is answered BEFORE
+ *      it leaks, with whichever build or upgrade is predicted to stop the
+ *      most of it per gold. The table reader only ever reacts to a creep that
+ *      has already lapped, and it answers with the tower that counters the
+ *      lane's dominant creep -- which the model says is the wrong question:
+ *      what stops a flood is splash and a longer route, whatever is in it.
+ *
+ * What it deliberately does NOT do is choose sends by the model. That was
+ * built and measured: picking the wave predicted to leak most, and sending
+ * every decision instead of banking, lost 0-4 to the table's bank-and-burst
+ * rhythm at normal, because it dribbled the cheapest creep between income
+ * lumps where the table waited and sent the heaviest tier as one wave. The
+ * table's send rule stays. Nor does it hold gold for a fix it cannot afford:
+ * that stalled the build branch too, and a hard bot with a thin maze died in
+ * four minutes holding six hundred gold.
+ *
+ * Measured against the table reader, both seats, templates 0 and 1 (template
+ * 2 is a mutual collapse for every bot): see DEFAULT_READER.
+ */
+function decideByEstimate(
+  state: GameState,
+  player: 0 | 1,
+  lane: Lane,
+  me: Player,
+  config: BotConfig,
+  emergency: number,
+): readonly Command[] {
+  const adaptive = config.adaptive ?? DEFAULT_ADAPTIVE
+
+  // 1. Finish it.
+  if (sendsOpen(state) && emergency === -1) {
+    const opp = state.lanes[opponentOf(player)] as Lane
+    const wave = bestWave(state, player, opp, routeOf(opp, routeA), me.gold)
+    if (wave && wave.leaks >= (state.players[opponentOf(player)] as Player).lives) {
+      return sendBurst(state, player, wave.creep, me.gold, wave.count)
+    }
+  }
+
+  // 2. Stop the flood that is coming, before it arrives.
+  if (adaptive === 'defence' || adaptive === 'both') {
+    const fix = shoreUp(state, player, lane, routeOf(lane, routeB), me.gold, config)
+    if (fix) return [fix]
+  }
+
+  // 3. Otherwise play the table's game, reading the lane for the next tile
+  // only as the table would.
+  return decideByTable(state, player, lane, me, config, emergency)
+}
+
+/**
+ * The wave a budget buys that the model predicts leaks most against this
+ * maze, or null when nothing affordable is predicted to leak at all.
+ *
+ * Absolute leaks rather than per gold: a decision may buy at most
+ * MAX_SEND_BURST creeps, so per gold would pick twenty-two of the cheapest
+ * creep and leave a rich bot unable to spend. Used only to ask whether a
+ * wave ends the match; see decideByEstimate for why it does not choose the
+ * ordinary send.
+ */
+function bestWave(
+  state: GameState,
+  player: 0 | 1,
+  opp: Lane,
+  oppRoute: readonly number[],
+  budget: number,
+): Wave | null {
+  let best: Wave | null = null
+  for (let i = 0; i < CREEPS.length; i++) {
+    if (checkSend(state, player, i) !== Refusal.None) continue
+    const spec = creepSpec(i)
+    if (spec.cost <= 0) continue
+    let count = Math.floor(budget / spec.cost)
+    if (count > MAX_SEND_BURST) count = MAX_SEND_BURST
+    if (count < 1) continue
+    const leaks = waveLeaks(opp, oppRoute, i, count)
+    if (leaks >= 1 && (best === null || leaks > best.leaks)) best = { creep: i, count, leaks }
+  }
+  return best
+}
+
+/**
+ * Answer a flood the model says will leak from this lane.
+ *
+ * Returns the affordable build or upgrade predicted to stop the most leaks
+ * per gold, or null when nothing is predicted to leak or nothing affordable
+ * would change that. It never asks the caller to hold gold for a fix it
+ * cannot yet afford: that was tried, and holding also stalled the ordinary
+ * build branch, which is the fix that was actually affordable.
+ *
+ * Candidates are every upgrade of a tower beside the route, and the next
+ * template tile under each tower kind. That is the whole search: a tower off
+ * the route changes nothing, and a tile off the template is a maze the
+ * template did not plan for.
+ */
+function shoreUp(
+  state: GameState,
+  player: 0 | 1,
+  lane: Lane,
+  route: readonly number[],
+  gold: number,
+  config: BotConfig,
+): Command | null {
+  const threat = laneThreat(lane, route)
+  if (threat < 1) return null
+
+  let best: Command | null = null
+  let bestScore = 0
+  const consider = (cmd: Command, cost: number, after: number): void => {
+    const stopped = threat - after
+    if (stopped <= 0 || cost > gold) return
+    const score = stopped / cost
+    if (score > bestScore) {
+      bestScore = score
+      best = cmd
+    }
+  }
+
+  seen.fill(0)
+  for (const tile of route) {
+    for (const n of neighbours(tile)) {
+      if (seen[n] === 1) continue
+      seen[n] = 1
+      const kind = lane.towers.kind[n] as number
+      if (kind === -1) continue
+      const level = lane.towers.level[n] as number
+      if (level >= MAX_LEVEL) continue
+      const cost = levelOf(kind as TowerKind, level + 1).cost
+      if (cost > gold) continue
+      if (checkUpgrade(state, player, tileX(n), tileY(n)) !== Refusal.None) continue
+      const override: TowerOverride = { tile: n, kind: kind as TowerKind, level: level + 1 }
+      const after = laneThreat(lane, route, override)
+      consider({ tick: state.tick, player, kind: Kind.Upgrade, x: tileX(n), y: tileY(n) }, cost, after)
+    }
+  }
+
+  const tile = nextFreeTemplateTile(lane, config)
+  if (tile !== -1) {
+    // The candidate's route, without touching the lane: a copy of the blocked
+    // map with the tile set, and a probe field built from it.
+    probeBlocked.set(lane.blocked)
+    probeBlocked[tile] = 1
+    buildField(probeBlocked, probeField)
+    if (spawnsReachable(probeField)) {
+      const newRoute = pathFrom(probeField, SPAWN_INDICES[0] as number, routeC)
+      for (const kind of KINDS) {
+        if (levelOf(kind, 1).cost > gold) continue
+        const after = laneThreat(lane, newRoute, { tile, kind, level: 1 })
+        consider(
+          { tick: state.tick, player, kind: Kind.Build, tower: kind, x: tileX(tile), y: tileY(tile) },
+          levelOf(kind, 1).cost,
+          after,
+        )
+      }
+    }
+  }
+
+  return best
+}
+
+/** First template tile with nothing on it, regardless of gold or sealing. */
+function nextFreeTemplateTile(lane: Lane, config: BotConfig): number {
+  const template = templateAt(config.template)
+  for (let i = 0; i < template.tiles.length; i++) {
+    const idx = tileIndex(template.tiles[i] as Tile)
+    if (lane.blocked[idx] === 0) return idx
+  }
+  return -1
+}
 
 /** Whether the opening build phase has ended and creeps may be sent. */
 function sendsOpen(state: GameState): boolean {
