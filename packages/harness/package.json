@@ -7,6 +7,7 @@
     "test": "vitest run",
     "gauntlet": "vite-node src/gauntlet-run.ts",
     "lap": "vite-node src/lap-run.ts",
+    "flood": "vite-node src/flood-run.ts",
     "roster": "vite-node src/roster-run.ts",
     "replay": "vite-node src/replay-run.ts",
     "live": "vite-node scripts/live-duel.mts",

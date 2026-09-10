@@ -3,7 +3,7 @@ import { createState, type GameState } from '../src/state'
 import { botCommand, BOT_NORMAL, BOT_HARD } from '../src/bot'
 import { tierUnlockTick } from '../src/data'
 import { MAZE_TEMPLATES, templateAt } from '../src/maze'
-import { step, Kind, Refusal, checkBuild, checkUpgrade, checkSend } from '../src/step'
+import { step, Kind, Refusal, checkBuild, checkUpgrade, checkSend, type Command } from '../src/step'
 import { hashState } from '../src/hash'
 import { GRID_W, GRID_H, tileIndex, SPAWN_INDICES } from '../src/grid'
 import { buildField, spawnsReachable } from '../src/field'
@@ -62,7 +62,10 @@ describe('bot', () => {
     expect(hashState(s)).toBe(before)
   })
 
-  it('only ever emits commands a player could legally submit', () => {
+  it.each([
+    ['estimate', BOT_NORMAL, BOT_HARD],
+    ['table', { ...BOT_NORMAL, reader: 'table' as const }, { ...BOT_HARD, reader: 'table' as const }],
+  ])('only ever emits commands a player could legally submit (%s reader)', (_name, a, b) => {
     // The bot gets no special rules, no extra gold and no bent legality.
     // Double-buffered rather than a fresh state per tick. MAX_CREEPS sizes ten
     // typed arrays per lane, so a state is megabytes now, and allocating one
@@ -72,7 +75,7 @@ describe('bot', () => {
     for (let t = 0; t < 3000; t++) {
       const cmds = []
       for (const p of [0, 1] as const) {
-        for (const c of botCommand(s, p, p === 0 ? BOT_NORMAL : BOT_HARD)) {
+        for (const c of botCommand(s, p, p === 0 ? a : b)) {
           if (c.kind === Kind.Build) {
             expect(checkBuild(s, p, c.x, c.y, c.tower).refusal, `tick ${s.tick} build`).toBe(Refusal.None)
           } else if (c.kind === Kind.Upgrade) {
@@ -197,6 +200,74 @@ describe('bot', () => {
     // difference is invisible -- the test read 45 > 45 and failed for a reason
     // that had nothing to do with the behaviour it names.
     expect(towersAfter(0.1, 3600)).toBeGreaterThan(towersAfter(0.9, 3600))
+  })
+
+  it('sends the wave that ends the match the moment it can, instead of building', () => {
+    // The model says twenty-two tanks walk through a six-tower opening, and
+    // the opponent is on their last life. A bot that keeps building here has
+    // a maze and no match.
+    let s: GameState = createState()
+    let into: GameState = createState()
+    for (let t = 0; t < 400; t++) {
+      const cmds = [...botCommand(s, 0, BOT_NORMAL), ...botCommand(s, 1, BOT_NORMAL)]
+      const out = step(s, cmds, into)
+      into = s
+      s = out
+    }
+    ;(s.players[1] as { lives: number }).lives = 1
+    ;(s.players[0] as { gold: number }).gold = 20_000
+    while (s.tick % BOT_NORMAL.reactionTicks !== 0) {
+      const out = step(s, [], into)
+      into = s
+      s = out
+    }
+    const cmds = botCommand(s, 0, BOT_NORMAL)
+    expect(cmds.length).toBeGreaterThan(0)
+    expect(cmds.every((c) => c.kind === Kind.Send)).toBe(true)
+    // And the same purse with the opponent healthy goes into the maze first.
+    ;(s.players[1] as { lives: number }).lives = 20
+    const calm = botCommand(s, 0, BOT_NORMAL)
+    expect(calm.some((c) => c.kind === Kind.Build || c.kind === Kind.Upgrade)).toBe(true)
+  })
+
+  it('reinforces before a predicted flood leaks, not after', () => {
+    // Sixty tanks land in the bot's lane on one tick. None has lapped, so the
+    // emergency branch is silent; only the model can see what is coming. The
+    // table reader would spend this decision on its template. Both bots play
+    // the warm-up so the opponent has a maze too -- against an empty lane the
+    // lethal branch fires first, and rightly.
+    let s: GameState = createState()
+    let into: GameState = createState()
+    for (let t = 0; t < 400; t++) {
+      const cmds = [...botCommand(s, 0, BOT_NORMAL), ...botCommand(s, 1, BOT_NORMAL)]
+      const out = step(s, cmds, into)
+      into = s
+      s = out
+    }
+    ;(s.players[1] as { gold: number }).gold = 1_000_000
+    const flood: Command[] = []
+    for (let i = 0; i < 60; i++) flood.push({ tick: s.tick, player: 1, kind: Kind.Send, creep: TANK })
+    let out = step(s, flood, into)
+    into = s
+    s = out
+    while (s.tick % BOT_NORMAL.reactionTicks !== 0) {
+      out = step(s, [], into)
+      into = s
+      s = out
+    }
+    ;(s.players[0] as { gold: number }).gold = 5_000
+    // At least the sixty; the opponent's own opening sends may be in the lane
+    // too. None of them has lapped, which is what keeps the emergency branch out.
+    const inLane = s.lanes[0]!.creeps
+    expect(inLane.count).toBeGreaterThanOrEqual(60)
+    for (let i = 0; i < inLane.count; i++) expect(inLane.laps[i]).toBe(0)
+    const cmds = botCommand(s, 0, BOT_NORMAL)
+    expect(cmds).toHaveLength(1)
+    const c = cmds[0]!
+    expect(c.kind === Kind.Build || c.kind === Kind.Upgrade).toBe(true)
+    // Turned off, the same board gets the ordinary decision.
+    const off = botCommand(s, 0, { ...BOT_NORMAL, adaptive: 'send' })
+    expect(off.length).toBeGreaterThan(0)
   })
 
   it('always builds the opening before it sends anything', () => {
