@@ -237,17 +237,27 @@ const DEFAULT_READER: Reader = 'estimate'
  * sim gives neither seat an edge.
  */
 /**
- * Template 1, the tight serpentine, not 0. Measured: a wall every two rows
- * puts every tower beside two passes of the route, and at 45 towers the maze
- * deals 13,290 damage a lap to a tank where the three-row serpentine deals
- * 11,400 -- 17% more per tower for the same gold. Head to head the same bot
- * on template 1 beats itself on template 0 six matches out of six, 20 lives
- * to 0. Template 2 ("posts") loses 0-6 in under two minutes and stays in the
- * list only so the harness can still say so.
+ * Template 1, the tight serpentine: a wall every other row, one corridor
+ * between, which is the maze a player actually builds. Template 0 walled
+ * every third row and wasted a row per wall; the full tight serpentine walks
+ * 100 tiles for 77 towers where template 0 walks 72 for 49, and at 45 towers
+ * it deals 13,290 damage a lap to a tank against 11,400 -- 17% more per tower
+ * for the same gold. Head to head the same bot on template 1 beats itself on
+ * template 0 six matches out of six, 20 lives to 0.
+ *
+ * The cost is in the mirror: two equal defenders on a proper maze leak
+ * nothing until the economy outgrows it, so the easy mirror runs 22.7
+ * minutes with the first leak at minute 18 and peaks at 2,620 creeps. That
+ * is issue #8 -- the bounded ladder has no valve -- showing through a better
+ * defence, and the harness pins it as such rather than pinning the bot to a
+ * worse maze.
+ *
+ * Template 2 ("posts") loses 0-6 in under two minutes and stays in the list
+ * only so the harness can keep saying so.
  */
-export const BOT_EASY: BotConfig = { sendRatio: 0.3, reactionTicks: 10, template: 0 }
-export const BOT_NORMAL: BotConfig = { sendRatio: 0.5, reactionTicks: 10, template: 0 }
-export const BOT_HARD: BotConfig = { sendRatio: 0.75, reactionTicks: 10, template: 0 }
+export const BOT_EASY: BotConfig = { sendRatio: 0.3, reactionTicks: 10, template: 1 }
+export const BOT_NORMAL: BotConfig = { sendRatio: 0.5, reactionTicks: 10, template: 1 }
+export const BOT_HARD: BotConfig = { sendRatio: 0.75, reactionTicks: 10, template: 1 }
 
 /**
  * One decision. Returns the commands it wants applied this tick, empty when it

@@ -41,9 +41,9 @@ The bot uses it in front of its existing loop, as the default `reader: 'estimate
    leaks per gold — costed through an override, without touching state — and otherwise plays
    as before.
 
-The table reader stays selectable (`reader: 'table'`) so the comparison remains runnable.
-The default maze template does **not** change; see the consequences for why the stronger one
-is held back.
+The default template becomes the tight serpentine — a wall every other row, the maze a player
+actually builds. The table reader stays selectable (`reader: 'table'`) so the comparison
+remains runnable.
 
 ## Consequences
 
@@ -52,13 +52,16 @@ is held back.
   collapse for either reader); the estimating bot never loses to the table one. The harness
   round robin still finds the ladder transitive and decisive and every mirror a draw, so
   `sendRatio` still means what ADR-0005 says it means.
-- **The tight serpentine is the better maze and is deliberately not the default.** The same bot
-  on template 1 beats itself on template 0 six matches out of six, 20 lives to 0, and the new
-  reader on template 1 beats the old default 6-0 at every difficulty. But two equal defenders
-  on it stall: the easy mirror runs 22.7 minutes with no life lost until minute 18 and peaks at
-  2,620 creeps, against the harness's 20-minute shape pin and the 500-creep render budget.
-  That is issue #8 — the bounded ladder has no guarantee a match ends — made visible by a
-  better defence. The template can ship the day the ladder has a valve.
+- **The tight serpentine ships, and the mirror shape changes with it.** The same bot on
+  template 1 beats itself on template 0 six matches out of six, 20 lives to 0, and the new
+  reader on template 1 beats the old default 6-0 at every difficulty. Two equal defenders on it
+  leak nothing until the economy outgrows the maze: the easy mirror runs 22.7 minutes with the
+  first leak at minute 18 and peaks at 2,620 creeps, where it used to run 17 minutes and peak
+  near 300. The harness pins were re-cut to that shape rather than pinning the bot to a worse
+  maze — a mirror must still end inside 25 minutes with both sides sending, and the peak must
+  stay under what the renderer was measured against. The stall itself is issue #8 (the bounded
+  ladder has no valve) and the population is issue #14, both made larger by a better defence;
+  the place to fix them is the ladder, not the maze.
 - **Sends are not chosen by the model, and that is a measured rejection.** Picking the wave
   predicted to leak most, sent every decision, lost 0-4 to the table's bank-and-burst rhythm:
   it dribbled the cheapest creep between income lumps where the table waited and sent the
