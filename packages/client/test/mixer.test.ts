@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { Budget, crowdGain, place, pitch, intensity, PENTATONIC, CHORDS } from '../src/audio/mixer'
+import { Budget, crowdGain, place, pitch, intensity, arpeggio, CHORDS, MOTIF, BPM, BEATS_PER_CHORD } from '../src/audio/mixer'
 
 /**
  * The arithmetic under the sound system. Web Audio itself cannot run in node,
@@ -83,17 +83,49 @@ describe('place', () => {
   })
 })
 
-describe('the scale', () => {
+describe('the score', () => {
+  /** A minor with the harmonic minor's raised seventh allowed: A B C D E F G G#. */
+  const KEY = new Set([0, 2, 3, 5, 7, 8, 10, 11])
+  const mod = (n: number) => ((n % 12) + 12) % 12
+
   it('doubles the frequency an octave up', () => {
     expect(pitch(220, 12)).toBeCloseTo(440)
     expect(pitch(220, 0)).toBe(220)
   })
 
-  it('keeps every chord tone on the pentatonic, so a pluck never clashes', () => {
-    const inScale = new Set(PENTATONIC.map((s) => s % 12))
+  it('keeps every chord in the key, voiced low to high', () => {
     for (const chord of CHORDS) {
-      for (const tone of chord) expect(inScale.has(tone % 12), `tone ${tone}`).toBe(true)
+      for (const tone of chord) expect(KEY.has(mod(tone)), `tone ${tone}`).toBe(true)
+      for (let i = 1; i < chord.length; i++) expect(chord[i]!).toBeGreaterThan(chord[i - 1]!)
     }
+  })
+
+  it('arpeggiates only chord tones, so the harp can never clash with the pad', () => {
+    for (const chord of CHORDS) {
+      for (let step = 0; step < BEATS_PER_CHORD * 3; step++) {
+        expect(chord).toContain(arpeggio(chord, step))
+      }
+    }
+  })
+
+  it('runs the arpeggio up and back down rather than jumping', () => {
+    const c = [0, 7, 12, 15, 19]
+    expect([0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => arpeggio(c, i))).toEqual([0, 7, 12, 15, 19, 15, 12, 7, 0])
+  })
+
+  it('keeps the horn on the key and makes the phrase fill the cycle exactly', () => {
+    let beats = 0
+    for (const [s, n] of MOTIF) {
+      if (s !== null) expect(KEY.has(mod(s)), `note ${s}`).toBe(true)
+      expect(n).toBeGreaterThan(0)
+      beats += n
+    }
+    expect(beats).toBe(CHORDS.length * BEATS_PER_CHORD / 2)
+  })
+
+  it('walks, not marches: a slow tempo', () => {
+    expect(BPM).toBeLessThan(80)
+    expect(BPM).toBeGreaterThan(50)
   })
 
   it('saturates intensity at a lane under pressure', () => {

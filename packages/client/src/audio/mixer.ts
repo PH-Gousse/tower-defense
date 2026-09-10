@@ -9,6 +9,10 @@
  * second is PLACE: the camera is fixed and the board is wide, so a sound is
  * panned by where it happens relative to what the camera is looking at, and
  * softened as it leaves the frame.
+ *
+ * The music's material is here too -- the chord cycle, the horn's phrase --
+ * because whether an arpeggio can clash with the chord under it is a fact
+ * about numbers, and worth a test.
  */
 
 /**
@@ -100,21 +104,55 @@ export function place(
   return out
 }
 
-/** A minor pentatonic over two octaves, in semitones above the root. */
-export const PENTATONIC: readonly number[] = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22]
-
 /**
- * The bed's chord cycle, as semitones above the key: i, III, iv and VII, the
- * last two as open fifths. Every tone is on the minor pentatonic, which is
- * what lets a pluck land anywhere on that scale without ever clashing with
- * the chord under it.
+ * The bed's chord cycle, as semitones above the key, one chord per two bars.
+ *
+ * A minor, and the progression that carries most of the era's fantasy scores:
+ * i - VI - VII - i, then iv - VI - V - i, the V borrowed from the harmonic
+ * minor so the phrase leans home. Voiced low to high, root doubled at the
+ * top, the way a string section would lay it.
  */
 export const CHORDS: readonly (readonly number[])[] = [
-  [0, 7, 12, 15], // i
-  [3, 10, 15, 19], // III
-  [5, 12, 17, 24], // iv, open
-  [10, 17, 22, 27], // VII, open
+  [0, 7, 12, 15, 19], // i     A C E
+  [-4, 3, 8, 12, 15], // VI    F A C
+  [-2, 5, 10, 14, 17], // VII  G B D
+  [0, 7, 12, 15, 19], // i
+  [-7, 0, 5, 8, 12], // iv     D A D F A
+  [-4, 3, 8, 12, 15], // VI
+  [-5, 2, 7, 11, 14], // V     E B E G# B
+  [0, 7, 12, 15, 19], // i
 ]
+
+/** Beats per minute. Slow: a march for a funeral, not a parade. */
+export const BPM = 66
+/** Beats per chord. Two bars of four. */
+export const BEATS_PER_CHORD = 8
+
+/**
+ * The horn's phrase, as [semitones above the key, beats], over one full turn
+ * of the cycle. Aeolian, stepwise, ending on the fifth so it never resolves:
+ * the line under every long march across a Warcraft map. A null pitch is a
+ * rest.
+ */
+export const MOTIF: readonly (readonly [number | null, number])[] = [
+  [7, 2], [5, 1], [3, 1], [5, 2], [7, 2],
+  [8, 2], [7, 1], [5, 1], [3, 3], [null, 1],
+  [0, 2], [3, 1], [5, 1], [7, 2], [3, 2],
+  [2, 2], [3, 1], [5, 1], [7, 3], [null, 1],
+]
+
+/**
+ * The harp's note for the `step`th arpeggio beat of `chord`: up through the
+ * chord tones and back down, so it is always consonant with the pad. Returns
+ * semitones above the key.
+ */
+export function arpeggio(chord: readonly number[], step: number): number {
+  const n = chord.length
+  const period = 2 * (n - 1)
+  const i = step % period
+  const idx = i < n ? i : period - i
+  return chord[idx] as number
+}
 
 /** Frequency of `semitones` above a root frequency. */
 export function pitch(root: number, semitones: number): number {

@@ -14,12 +14,23 @@ audio without a user gesture, and a flood produces hundreds of events a second.
 ## Decision
 
 **Every sound is synthesised with Web Audio** (`packages/client/src/audio/audio.ts`):
-oscillators, a shared noise buffer, biquad filters and gain envelopes. That covers the whole
-palette — bow twang, mortar thump, frost chime, three kinds of death, hammer blows, coins, a
-bell for a lost life, a brass call for a tier — and a bed under it: a detuned pad stepping
-round a four-chord minor cycle, plucked notes on the minor pentatonic, wind, birds over a
-quiet field and a drum under a busy one. Every chord tone sits on the pentatonic, so a pluck
-can land anywhere without clashing; the test pins that.
+oscillators, a shared noise buffer, biquad filters and gain envelopes, **in the idiom of the
+map this game descends from**. What makes that idiom is treatment rather than instruments,
+and treatment is all synthesis:
+
+- Everything sits in a hall: one convolution reverb with a synthesised impulse, fed by per-bus
+  sends — a little on effects, a lot on music.
+- A hit is three layers — a click, a body with real low end, a tail. The cannon is a crack, a
+  sub thump and a second of falling rumble, not a sine sweep.
+- Timbres are dark and slightly gritty: filtered saws and shaped noise, a soft clipper on the
+  master, and nothing above what a 22 kHz sample of the era would carry.
+- Nothing repeats exactly: every event is pitch-varied a few percent, as a sound bank with
+  several variants would play.
+- The music is orchestral pastiche at a march's pace: detuned string swells, a formant choir,
+  harp arpeggios on the chord, a solemn horn phrase every other turn, timpani on the changes
+  and war drums once the field is busy. The cycle is i–VI–VII–i, iv–VI–V–i in A minor with the
+  harmonic-minor V; the harp arpeggiates chord tones only, so it can never clash with the pad,
+  and the tests pin the key, the voicing and the phrase length.
 
 **The scene feeds it the events it already infers.** Nothing in the audio reads sim state.
 **No event is added to the sim.**
@@ -41,6 +52,9 @@ mute and volume are the only controls and persist in `localStorage`; `M` toggles
   master compressor keeps the sum from clipping.
 - The arithmetic — budgets, placement, the scale — is tested in node; the synthesis is not,
   because there is no AudioContext there. A broken envelope is found by ear.
-- Synthesis has a ceiling. There will be no orchestral score this way; the bed is a mood, not
-  a soundtrack. If that ceiling is ever the problem, the loader this ADR declined is the next
-  step, and the event plumbing is already in place for it.
+- Synthesis has a ceiling. The bed is a pastiche of an orchestra, not one; there will be no
+  recorded choir this way. If that ceiling is ever the problem, the loader this ADR declined is
+  the next step, and the event plumbing is already in place for it.
+- The mix was tuned by construction and by the numbers, not yet by ear in a live match. The
+  bus levels (`sfx`, `music`, `ambience` and their reverb sends) are the four knobs to move
+  first when it is.
