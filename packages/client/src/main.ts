@@ -4,7 +4,7 @@ import { holdToRepeat } from './hold'
 import { createSender } from './send'
 import { STALL_TICKS } from '@ltw/sim'
 import {
-  TowerKind, ARCHETYPES, levelOf, MAX_LEVEL, TICK_HZ, MatchResult,
+  TowerKind, levelOf, MAX_LEVEL, TICK_HZ, MatchResult,
   CREEPS, tierUnlockTick, SEND_UNLOCK_TICKS, INCOME_EVERY_TICKS,
   BOT_EASY, BOT_NORMAL, BOT_HARD, type BotConfig,
 } from '@ltw/sim'
@@ -26,6 +26,10 @@ try {
   if (!(err instanceof WebGLUnavailable)) throw err
   throw err
 }
+
+// In development the scene is reachable from the console, so a frame can be
+// driven by hand in a tab the browser has stopped animating. Never in a build.
+if (import.meta.env.DEV) (window as unknown as { __ltw: Scene }).__ltw = scene
 
 const el = (id: string) => document.getElementById(id)
 const clock = el('clock')
@@ -83,7 +87,14 @@ if (sendRow) {
     const b = document.createElement('button')
     b.className = 'creep'
     b.dataset.creep = String(slot)
-    b.innerHTML = '<span class="n"></span><span class="c"></span>'
+    b.innerHTML = '<span class="ico"></span><span class="n"></span><span class="c"></span><kbd class="key"></kbd>'
+    // The icon is the archetype's, rendered from the same model that walks
+    // the lane. Slots cycle through the archetypes in roster order.
+    const ico = b.querySelector<HTMLElement>('.ico')
+    const icon = scene.icons.creeps[slot % ARCHETYPE_COUNT]
+    if (ico && icon) ico.style.backgroundImage = `url(${icon})`
+    const key = b.querySelector('.key')
+    if (key) key.textContent = (SEND_KEYS[slot] ?? '').toUpperCase()
     holdStops.push(holdToRepeat(b, () => sendN(slot, 1) > 0, window))
     sendRow.appendChild(b)
     creepButtons.push(b)
@@ -130,9 +141,26 @@ window.addEventListener('keydown', (ev) => {
 
 // --- build palette ---------------------------------------------------------
 
+/**
+ * What a tower is called on screen.
+ *
+ * The sim names its archetypes by what they do -- single-target, splash, slow
+ * -- which is right for a rule book and flat for a card. These are the names
+ * the models were built to, and they are presentation only: nothing in the
+ * sim, the protocol or the GDD reads them.
+ */
+const TOWER_NAME: Record<TowerKind, string> = {
+  [TowerKind.Single]: 'Guard tower',
+  [TowerKind.Splash]: 'Mortar',
+  [TowerKind.Slow]: 'Frost shrine',
+}
+
 for (const kind of [TowerKind.Single, TowerKind.Splash, TowerKind.Slow]) {
   const costEl = el(`cost${kind}`)
   if (costEl) costEl.textContent = String(levelOf(kind, 1).cost)
+  const ico = document.querySelector<HTMLElement>(`.tool[data-tower="${kind}"] .ico`)
+  const icon = scene.icons.towers[kind]
+  if (ico && icon) ico.style.backgroundImage = `url(${icon})`
 }
 
 function selectTool(kind: TowerKind): void {
@@ -164,9 +192,8 @@ scene.onSelect((sel: Selection | null) => {
     return
   }
   panel.hidden = false
-  const arch = ARCHETYPES[sel.tower]
   const spec = levelOf(sel.tower, sel.level)
-  if (panelTitle) panelTitle.textContent = `${arch?.name ?? '?'} · Lv ${sel.level}`
+  if (panelTitle) panelTitle.textContent = `${TOWER_NAME[sel.tower]} · Lv ${sel.level}`
   if (panelDamage) panelDamage.textContent = String(spec.damage)
   if (panelRange) panelRange.textContent = spec.range.toFixed(1)
   // Cooldown is in ticks; shots per second is what a player can reason about.
