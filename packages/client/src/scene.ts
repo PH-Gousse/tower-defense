@@ -59,6 +59,8 @@ import { glowTexture, ringTexture, puffTexture, chevronTexture } from './render/
 import { SpritePool, ProjectilePool, CorpsePool } from './render/effects'
 import { HealthBars } from './render/bars'
 import { renderIcon } from './render/icons'
+import { createAudio, type Audio } from './audio/audio'
+import { intensity } from './audio/mixer'
 
 /**
  * Wire-level refusals, in the player's language.
@@ -195,6 +197,8 @@ export interface Scene {
   readonly driver: Driver
   /** Pictures of the things the palette sells, rendered from the same models. */
   readonly icons: Icons
+  /** Every sound, synthesised. `main.ts` owns its controls; the scene feeds it events. */
+  readonly audio: Audio
   /**
    * The renderer, exposed read-only so the benchmark scene can read
    * `renderer.info` (draw calls, triangles, live geometries and textures).
@@ -582,6 +586,8 @@ export function createScene(
   const puffTex = puffTexture()
   const chevronTex = chevronTexture()
 
+  const audio = createAudio()
+
   const flashes = new SpritePool({ texture: glowTex, capacity: 512, pitchDeg: PITCH })
   const rings = new SpritePool({ texture: ringTex, capacity: 160 })
   const dust = new SpritePool({ texture: puffTex, capacity: 256, pitchDeg: PITCH })
@@ -601,6 +607,7 @@ export function createScene(
   const onHit: ((lane: number, x: number, y: number, z: number, now: number) => void)[] = [
     (_lane, x, y, z, now) => {
       flashes.spawn(x, y, z, 0.25, 0.55, 0xfff1b0, 150, now)
+      audio.hit(TowerKind.Single, x, z)
     },
     (_lane, x, y, z, now) => {
       const radius = (ARCHETYPES[TowerKind.Splash] as TowerArchetype).splashRadius ?? 1
@@ -608,10 +615,12 @@ export function createScene(
       flashes.spawn(x, y + 0.1, z, 0.2, 0.7, 0xfff4d0, 120, now)
       rings.spawn(x, 0.035, z, 0.5, radius * 2.2, 0xffb060, 380, now)
       dust.spawn(x, y + 0.2, z, 0.6, 1.5, 0x6b5a3a, 600, now, 0.6)
+      audio.hit(TowerKind.Splash, x, z)
     },
     (_lane, x, y, z, now) => {
       flashes.spawn(x, y, z, 0.3, 0.9, 0x9fe0ff, 260, now, 0.2)
       rings.spawn(x, 0.035, z, 0.2, 0.9, 0x8fd4ff, 300, now)
+      audio.hit(TowerKind.Slow, x, z)
     },
   ]
 
@@ -824,6 +833,8 @@ export function createScene(
     select(null)
     if (checkBuild(state, me(), t.x, t.y, tool, probeField).refusal === Refusal.None) {
       driver.queueBuild(t.x, t.y, tool)
+    } else {
+      audio.refused()
     }
   })
 
@@ -844,6 +855,7 @@ export function createScene(
     const level = lane.towers.level[i] as number
     const spec = levelOf(kind, level)
 
+    if (!selectRing.visible) audio.select()
     selectRing.position.set(t.x + 0.5, 0.05, t.y + 0.5)
     selectRing.visible = true
     selectRange.position.set(t.x + 0.5, 0.045, t.y + 0.5)
@@ -957,9 +969,12 @@ export function createScene(
             dust.spawn(x + Math.cos(a) * 0.3, 0.15, z + Math.sin(a) * 0.3, 0.5, 1.1, 0x7a6a48, 520, now, 0.35)
           }
           rings.spawn(x, 0.035, z, 0.4, 1.4, 0xd8c8a0, 320, now)
+          audio.build(ck as TowerKind, x, z, lane === me())
         } else if (ck === -1) {
           dust.spawn(x, 0.3, z, 0.7, 1.4, 0x7a6a48, 500, now, 0.4)
+          if (lane === me()) audio.sell(x, z)
         } else {
+          audio.upgrade(x, z, lane === me())
           for (let d = 0; d < 5; d++) {
             const a = (d / 5) * Math.PI * 2 + 0.3
             flashes.spawn(x + Math.cos(a) * 0.25, 0.4 + (d % 2) * 0.4, z + Math.sin(a) * 0.25, 0.15, 0.4, 0xffd86a, 420, now, 0.5)
@@ -1047,6 +1062,7 @@ export function createScene(
           drawZ[lane]![slot] as number,
           now,
         )
+        audio.shot(kind as TowerKind, sx, sz)
         if (kind === TowerKind.Splash) {
           flashes.spawn(sx, sy + 0.15, sz - 0.2, 0.3, 0.7, 0xffb070, 140, now)
           dust.spawn(sx, sy + 0.2, sz - 0.2, 0.3, 0.8, 0x6a6058, 500, now, 0.5)
@@ -1091,6 +1107,7 @@ export function createScene(
           // A lap counter that moved is a leak: the creep is back at the entrance.
           if ((curr.laps[c] as number) > (prev.laps[p] as number)) {
             rings.spawn(dx[c] as number, 0.04, dz[c] as number, 0.3, 1.6, 0xff5040, 420, now)
+            audio.leak(lane === me(), dx[c] as number, dz[c] as number)
             flashes.spawn(dx[c] as number, 0.3, dz[c] as number, 0.4, 1.0, 0xff6a50, 300, now, 0.4)
             const sx = ox + (curr.x[c] as number)
             const sz = curr.y[c] as number
@@ -1113,6 +1130,7 @@ export function createScene(
           const x = dx[p] as number
           const z = dz[p] as number
           set.corpses.add(x, z, face[p] as number, scale, 1, 1, 1, now)
+          audio.death(kind, x, z)
           dust.spawn(x, 0.15 * scale, z, 0.3 * scale, 0.9 * scale, 0x5a4a38, 450, now, 0.3)
           if (kind === CreepArchetypeKind.Tank) {
             rings.spawn(x, 0.035, z, 0.3, 1.5 * scale, 0xc8b898, 350, now)
@@ -1358,6 +1376,7 @@ export function createScene(
     dump: (trigger) => driver.dump(trigger, BUILD),
     driver,
     icons,
+    audio,
     renderer,
     upgradeSelected: () => {
       if (selected) driver.queueUpgrade(selected.x, selected.y)
@@ -1370,6 +1389,9 @@ export function createScene(
     },
     start: () => {
       started = true
+      // A click on the start screen got us here, which is the gesture the
+      // browser wants before it will make a sound.
+      audio.start()
       host.resize()
       renderer.setAnimationLoop(drawFrame)
     },
@@ -1440,6 +1462,16 @@ export function createScene(
       // the tile under a stationary cursor changes when the camera moves.
       rig.update()
       refreshHover()
+      // The listener sits where the camera looks; the frame's half-width in
+      // world units is what a sound at the frame's edge is panned against.
+      rig.getTarget(scratchV)
+      audio.setListener(
+        scratchV.x,
+        scratchV.z,
+        rig.distance * Math.tan((rig.fovDeg * Math.PI) / 360) * camera.aspect,
+      )
+      audio.setIntensity(intensity((state.lanes[me()] as Lane).creeps.count))
+      audio.update()
       renderer.render(scene, camera)
   }
 }
