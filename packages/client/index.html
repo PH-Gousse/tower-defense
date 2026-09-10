@@ -259,6 +259,15 @@
       border: 1px solid #5a4527; border-radius: 2px; padding: 2px 3px; background: #14100a;
     }
     #palette .hint { margin-left: auto; font-size: 11px; color: var(--dim); overflow: hidden; }
+    /* Sound: a mute toggle and one slider, sized so they can never change the
+       bar's height. In rails they sit above the hint at the bottom. */
+    #sound { display: flex; align-items: center; gap: 6px; height: 24px; flex: none; }
+    #audioBtn {
+      cursor: pointer; font: 13px/1 var(--sans); width: 28px; height: 24px; padding: 0;
+      color: var(--face); background: var(--bevel); border: 1px solid var(--brass-dark); border-radius: 3px;
+    }
+    #audioBtn:hover { border-color: var(--brass); }
+    #audioVol { width: 70px; height: 4px; accent-color: var(--gold); cursor: pointer; margin: 0; }
     #palette .sep { width: 2px; align-self: stretch; margin: 0 5px;
       background: linear-gradient(180deg, transparent, var(--brass-dark) 25%, var(--brass-dark) 75%, transparent); }
     #palette .label { margin-bottom: 0; }
@@ -322,8 +331,9 @@
       background: linear-gradient(90deg, transparent, var(--brass-dark) 25%, var(--brass-dark) 75%, transparent);
     }
     body[data-layout="rails"] #palette .hint {
-      margin-left: 0; margin-top: auto; white-space: normal; line-height: 1.7;
+      margin-left: 0; white-space: normal; line-height: 1.7;
     }
+    body[data-layout="rails"] #sound { margin-top: auto; }
     body[data-layout="rails"] .tool,
     body[data-layout="rails"] .creep { min-width: 0; }
     body[data-layout="rails"] #sendLabel { min-width: 0; }
@@ -376,7 +386,8 @@
     <span class="sep"></span>
     <span class="label" id="sendLabel">Send &rarr;</span>
     <span id="sendRow"></span>
-    <span class="hint"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> towers &middot; <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd> send &middot; <kbd>R</kbd><kbd>T</kbd><kbd>Y</kbd> next tier &middot; hold to send more &middot; drag or arrows to move &middot; click a tower to upgrade or sell &middot; <kbd>D</kbd> dump</span>
+    <span id="sound"><button id="audioBtn" type="button" aria-label="Mute">🔊</button><input id="audioVol" type="range" min="0" max="100" value="80" aria-label="Volume" /></span>
+    <span class="hint"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> towers &middot; <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd> send &middot; <kbd>R</kbd><kbd>T</kbd><kbd>Y</kbd> next tier &middot; hold to send more &middot; drag or arrows to move &middot; click a tower to upgrade or sell &middot; <kbd>M</kbd> mute &middot; <kbd>D</kbd> dump</span>
   </div>
 
   <!-- Inline panel on the field: upgrading is the most frequent mid-match

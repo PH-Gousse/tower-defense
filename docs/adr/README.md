@@ -28,6 +28,7 @@ Write one through `/decide`. A decision that changes a **game rule** also needs
 | [0014](0014-warcraft3-style-camera.md) | Warcraft 3-style camera: fixed yaw, zoom and pan only | Accepted |
 | [0015](0015-procedural-look-inferred-from-two-ticks.md) | The look is procedural, and every effect is inferred from two ticks | Accepted |
 | [0016](0016-bot-reads-the-board-with-a-flood-model.md) | The bot reads the board with a flood model, and only for defence | Accepted |
+| [0017](0017-sound-is-synthesised.md) | Sound is synthesised, fed by the same inferred events as the effects | Accepted |
 
 ## Status vocabulary
 

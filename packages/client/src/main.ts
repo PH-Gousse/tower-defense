@@ -80,7 +80,62 @@ const holdStops: Array<() => void> = []
 
 // Every way to send goes through here: click, key, hold, and the ×N buttons
 // when they land. See `send.ts` for why that is one function and not five.
-const sendN = createSender(creepButtons, (creep) => scene.send(creep))
+const sendCreeps = createSender(creepButtons, (creep) => scene.send(creep))
+const audio = scene.audio
+const sendN = (slot: number, n: number): number => {
+  const sent = sendCreeps(slot, n)
+  if (sent > 0) audio.send()
+  else audio.refused()
+  return sent
+}
+
+// --- sound controls ----------------------------------------------------------
+//
+// Mute and volume live in localStorage, because a player who muted once does
+// not want to be greeted by the pad on every reload. `M` toggles, and the
+// slider is the only other control there is: the bed and the effects are
+// mixed in code, not by the player.
+const audioBtn = el('audioBtn') as HTMLButtonElement | null
+const audioVol = el('audioVol') as HTMLInputElement | null
+const AUDIO_KEY = 'ltw.audio'
+try {
+  const saved = JSON.parse(localStorage.getItem(AUDIO_KEY) ?? 'null') as { muted?: boolean; volume?: number } | null
+  if (saved) {
+    if (typeof saved.muted === 'boolean') audio.setMuted(saved.muted)
+    if (typeof saved.volume === 'number') audio.setVolume(saved.volume)
+  }
+} catch {
+  // Storage can be unavailable; defaults are fine.
+}
+function paintAudio(): void {
+  if (audioBtn) {
+    audioBtn.textContent = audio.muted ? '🔇' : '🔊'
+    audioBtn.title = audio.muted ? 'Unmute (M)' : 'Mute (M)'
+    audioBtn.setAttribute('aria-pressed', String(audio.muted))
+  }
+  if (audioVol) audioVol.value = String(Math.round(audio.volume * 100))
+  try {
+    localStorage.setItem(AUDIO_KEY, JSON.stringify({ muted: audio.muted, volume: audio.volume }))
+  } catch {
+    // Same as above.
+  }
+}
+paintAudio()
+audioBtn?.addEventListener('click', () => {
+  audio.setMuted(!audio.muted)
+  paintAudio()
+  if (!audio.muted) audio.click()
+})
+audioVol?.addEventListener('input', () => {
+  audio.setVolume(Number(audioVol.value) / 100)
+  paintAudio()
+})
+window.addEventListener('keydown', (ev) => {
+  if (ev.key.toLowerCase() !== 'm' || ev.metaKey || ev.ctrlKey || ev.altKey) return
+  if (ev.target instanceof HTMLInputElement) return
+  audio.setMuted(!audio.muted)
+  paintAudio()
+})
 
 if (sendRow) {
   for (let slot = 0; slot < ARCHETYPE_COUNT * WINDOW_TIERS; slot++) {
@@ -164,6 +219,7 @@ for (const kind of [TowerKind.Single, TowerKind.Splash, TowerKind.Slow]) {
 }
 
 function selectTool(kind: TowerKind): void {
+  audio.click()
   scene.setTool(kind)
   for (const t of tools) {
     t.classList.toggle('selected', Number(t.dataset.tower) === kind)
@@ -209,7 +265,24 @@ scene.onSelect((sel: Selection | null) => {
 
 // --- stats -----------------------------------------------------------------
 
+// The beats the sound marks: an income landing, a tier opening, the end.
+// Each is read off the tick the stats already carry, exactly as the clocks are.
+let lastIncomeLeft = -1
+let lastTier = -1
+let endSounded = false
+
 scene.onStats((s) => {
+  const incomeLeftNow = ticksUntilIncome(s.tick)
+  if (lastIncomeLeft !== -1 && incomeLeftNow > lastIncomeLeft) audio.income()
+  lastIncomeLeft = incomeLeftNow
+  const tierNow = unlockedTier(s.tick)
+  if (lastTier !== -1 && tierNow > lastTier) audio.tierUnlock()
+  lastTier = tierNow
+  if (s.result !== MatchResult.Playing && !endSounded) {
+    endSounded = true
+    audio.matchEnd(s.winner === mySeat)
+  }
+
   setText(gold, String(s.gold))
   // The interval was spelled "/15s" by hand while INCOME_EVERY_TICKS sat
   // imported and unused three lines above. Correct today and a lie the first
