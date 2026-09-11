@@ -1,6 +1,6 @@
 # Generator reference
 
-*Generated from `art/generators/ltw_art` (version 0.1.8) by `python3 -m ltw_art.docs`. Do not edit.*
+*Generated from `art/generators/ltw_art` (version 0.1.12) by `python3 -m ltw_art.docs`. Do not edit.*
 
 Every name a spec may use: body plans and their parameters, parts and where they attach, rig templates and their bones, animation generators and the clips they produce. `spec-validate` checks specs against the same tables (`registry.json`).
 

@@ -143,7 +143,10 @@ def crystal_emitter(p: dict, rng) -> Layout:
     top0 = _plinth(lay, p["base_size"])
     ped_h = 0.3
     lay.add(Prim("cyl", (0.26, 0.32, ped_h), (0, top0 + ped_h / 2, 0), slot="pedestal", seg=8, bone="base", name="pedestal"))
-    lay.add(Prim("cyl", (0.3, 0.26, 0.05), (0, top0 + ped_h + 0.025, 0), slot="ring", seg=8, bone="turret", name="collar"))
+    # A torus, not a cylinder: a cylinder's top cap is a full disc, and from the
+    # game pitch that disc WAS the top of the tower, so the owner colour read as
+    # the whole pedestal. The rim is the only team-coloured face now.
+    lay.add(Prim("torus", (0.27, 0.05), (0, top0 + ped_h + 0.03, 0), slot="ring", seg=10, bone="turret", name="collar"))
     for sx, sz in ((-1, -1), (1, -1), (-1, 1), (1, 1)):
         lay.add(Prim("sphere", (0.1,), (sx * 0.3, top0, sz * 0.3), scale=(1, 0.4, 1), slot="snow", seg=8, bone="base", smooth=True, name="snow"))
     top = top0 + ped_h + 0.08
@@ -154,7 +157,7 @@ def crystal_emitter(p: dict, rng) -> Layout:
         a = k / max(1, n) * math.tau + 0.4
         h = ch * 0.5
         lay.add(Prim("octa", (0.09,), (math.cos(a) * 0.2, top + h / 2, math.sin(a) * 0.2), (math.cos(a) * 0.35, 0, -math.sin(a) * 0.35), (1, h / 0.18, 1), slot="crystal", seg=1, bone="turret", name=f"shard_{k}"))
-    lay.add(Prim("box", (0.1, 0.12, 0.03), (0, top0 + ped_h * 0.5, -0.33), slot="banner", seg=1, bone="base", name="banner_patch"))
+    lay.add(Prim("box", (0.2, 0.16, 0.03), (0, top0 + ped_h * 0.5, -0.33), slot="banner", seg=1, bone="base", name="banner_patch"))
     muzzle = (0.0, top + ch, 0.0)
     _turret_joints(lay, top0, top, muzzle)
     lay.attach(Attachment("turret_top", (0, top + ch * 0.3, 0), size=0.4, bone="turret"))

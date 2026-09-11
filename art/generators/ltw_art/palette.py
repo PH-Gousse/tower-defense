@@ -21,7 +21,7 @@ COLOURS: dict[str, str] = {
     "danger": "#ff5a3c",
     "violet": "#b48ce0",
     "ice": "#a9e6ff",
-    "ice_deep": "#5cc3ef",
+    "ice_deep": "#4fb8e8",
     "team_blue": "#4f8cc9",
     "team_red": "#d0483c",
 }

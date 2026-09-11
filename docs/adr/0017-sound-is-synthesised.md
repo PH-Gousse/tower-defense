@@ -26,11 +26,11 @@ and treatment is all synthesis:
   master, and nothing above what a 22 kHz sample of the era would carry.
 - Nothing repeats exactly: every event is pitch-varied a few percent, as a sound bank with
   several variants would play.
-- The music is orchestral pastiche at a march's pace: detuned string swells, a formant choir,
-  harp arpeggios on the chord, a solemn horn phrase every other turn, timpani on the changes
-  and war drums once the field is busy. The cycle is i–VI–VII–i, iv–VI–V–i in A minor with the
-  harmonic-minor V; the harp arpeggiates chord tones only, so it can never clash with the pad,
-  and the tests pin the key, the voicing and the phrase length.
+- There is no music and no ambience. Two beds were tried and cut: a slow orchestral march
+  with strings, choir, harp and a solemn horn line, then a war march at 92 BPM with a
+  taiko-and-tom battery, a call to arms in the horns and an army rumble under it. Both wore
+  thin over a long match in a way an event sound never does, and the second competed with
+  the shots and hits for the same low end. The field is silent until something happens.
 
 **The scene feeds it the events it already infers.** Nothing in the audio reads sim state.
 **No event is added to the sim.**

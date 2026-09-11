@@ -64,8 +64,11 @@ for (const id of admitted) {
   if (!existsSync(old)) { changed.push({ id, fraction: 1 }); continue }
   let fraction = 1
   if (have('magick')) {
+    // `compare -metric AE` prints the quantum-scaled value, then the pixel
+    // count in parentheses: "2.59951e+09 (39666)". The count is the number.
     const cmp = spawnSync('magick', ['compare', '-metric', 'AE', '-fuzz', '3%', old, now, 'null:'], { encoding: 'utf8' })
-    const px = Number((cmp.stderr ?? '').trim().split(' ')[0])
+    const m = /\(([\d.e+]+)\)/.exec(cmp.stderr ?? '')
+    const px = Number(m ? m[1] : (cmp.stderr ?? '').trim().split(' ')[0])
     const size = spawnSync('magick', [now, '-format', '%w %h', 'info:'], { encoding: 'utf8' }).stdout.trim().split(' ').map(Number)
     const total = (size[0] ?? 1) * (size[1] ?? 1)
     fraction = Number.isFinite(px) ? px / total : 1

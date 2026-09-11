@@ -7,7 +7,9 @@ level: 1
 body_plan: crystal_emitter
 params: { height: 1.1, crystal_height: 0.5, ring_crystals: 4 }
 palette:
-  primary: stone_blue
+  # Grey stone, not stone_blue: a blue-grey pedestal read as team colour
+  # spread over the whole tower, and the band must be the only blue.
+  primary: stone
   secondary: stone_dark
   accent: ice_deep
   glow: ice

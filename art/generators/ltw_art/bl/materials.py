@@ -50,7 +50,8 @@ SLOT_ROLES: dict[str, str] = {
     "trim": "trim", "spire": "trim",
 }
 
-GLOW_SLOTS = {"eyes", "crystal", "glow", "halo", "rune", "core"}
+# `halo` is the rim round an orb: textured like the body, so its colour differs from the glowing core.
+GLOW_SLOTS = {"eyes", "crystal", "glow", "rune", "core"}
 
 
 def slot_colour(slot: str, pal: dict, overrides: dict[str, str]) -> tuple[float, float, float]:

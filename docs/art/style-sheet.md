@@ -85,7 +85,7 @@ to colours **by name only**; the hex value lives here and in
 | `venom` | `#7ccf5a` | swarm accent, poison, sickly glow |
 | `danger` | `#ff5a3c` | runner accent, eyes, warnings, leak marker |
 | `violet` | `#b48ce0` | tank accent, tier-3 shift |
-| `ice` | `#a9e6ff` | frost glow, slow effect; `ice_deep` `#5cc3ef` is its shadow |
+| `ice` | `#a9e6ff` | frost glow, slow effect; `ice_deep` `#4fb8e8` is its shadow |
 
 Team colours, applied **only** through the team-colour mask (§6), never painted directly:
 
