@@ -17,6 +17,7 @@ what it lacks.
 | `pnpm audio-synth <sfx_id\|all> [--force]` | `art/sounds/<id>.yaml` → synthesised, normalised, `assets/build/sfx/<id>.webm` + `.mp3`, manifest |
 | `pnpm audio-import <file> --as <id> --event <e> --kind <k> --licence <l> …` | an external sound through the same normalisation and manifest |
 | `pnpm manifest-types` | `packages/client/src/assets/manifest.generated.ts`: typed asset and sound ids |
+| `pnpm game-proposal <id\|all>` | the spec's `game:` block as a constants patch, GDD stub and test list in `reports/art/<id>/game-proposal/`; applied only by `/rule-change` |
 
 `lib/` holds what they share: the spec resolver, the GLB reader, the
 budgets (mirroring the style sheet, pinned by a test), the manifest writer,

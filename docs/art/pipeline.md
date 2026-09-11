@@ -66,7 +66,11 @@ request ─▶ spec ─▶ spec-validate ─▶ asset-build ─▶ asset-preview
    auto-fix, no relaxing. On pass: normalise, resample to 24 fps, compress (meshopt),
    KTX2 the textures, write `assets/build/`, update the manifest.
 7. **Wiring.** A row in the client's event binding table; a placeholder sound for every
-   event the asset introduces; a *proposed* game-data entry handed to `/rule-change`.
+   event the asset introduces; and `game-proposal`, which writes the spec's `game:` block as
+   a constants patch, a GDD stub marked `[proposed]` and the Vitest cases that would pin the
+   unit, then stops. `/rule-change` is the only thing that applies any of it. A creep tier
+   has no constants of its own (the roster is base × growth^tier), so a tier spec whose
+   numbers disagree is reported as a question about the growth rule, not patched.
 8. **Review.** The lineup render and the critique are shown for approval. An asset is
    never presented as done without its previews.
 
@@ -97,6 +101,7 @@ request ─▶ spec ─▶ spec-validate ─▶ asset-build ─▶ asset-preview
 | `pnpm asset-report` | the catalogue page |
 | `pnpm audio-synth <sfx_id>` / `pnpm audio-import <file> --as <sfx_id>` | sounds |
 | `pnpm manifest-types` | TypeScript types from the manifest |
+| `pnpm game-proposal <id\|all>` | the `game:` block as a constants patch, a GDD stub and a test list under `reports/art/<id>/game-proposal/`; never applied here |
 
 Every tool prints a human summary and one JSON line last, and exits non-zero on failure.
 Each checks its own dependencies and says how to install what is missing.
