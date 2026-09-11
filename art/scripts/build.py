@@ -43,7 +43,7 @@ def one(spec_path, out, log, preview, blend=None, cache_key=None, spec_hash=None
     result["spec_hash"] = spec_hash
     if log:
         with open(os.path.abspath(log), "w") as f:
-            json.dump(result, f, indent=2)
+            json.dump({k: v for k, v in result.items() if k != "seconds"}, f, indent=2)
     if blend:
         import bpy
 

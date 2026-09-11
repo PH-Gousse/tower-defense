@@ -51,13 +51,14 @@ def shell(p: dict, rng) -> Layout:
 
 @body_plan("orb", "projectile", {"radius": P(0.09, 0.03, 0.25), "stretch": P(1.6, 1.0, 3.0, doc="Length along the flight, as a multiple of the radius.")},
            attachments=[], slots=["core", "halo"], doc="""
-orb -- a frost bolt: a glowing octahedron stretched along its flight.
+orb -- a glowing core with a darker rim round its flight axis: the frost
+bolt when stretched, a hit burst when round.
 """)
 def orb(p: dict, rng) -> Layout:
     lay = Layout()
     r = p["radius"]
-    lay.add(Prim("octa", (r * 0.6,), (0, 0, 0), scale=(1, 1, p["stretch"]), slot="core", seg=1, name="core"))
-    lay.add(Prim("octa", (r,), (0, 0, 0), (0, 0.785, 0), scale=(1, 1, p["stretch"]), slot="halo", seg=1, name="halo"))
+    lay.add(Prim("octa", (r * 0.75,), (0, 0, 0), scale=(1, 1, p["stretch"]), slot="core", seg=1, name="core"))
+    lay.add(Prim("torus", (r * 0.85, r * 0.16), (0, 0, 0), (math.pi / 2, 0, 0), scale=(1, 1, 1), slot="halo", seg=6, name="rim"))
     _centre(lay)
     return lay
 

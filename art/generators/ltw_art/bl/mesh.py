@@ -55,7 +55,7 @@ def _bm_prim(bm: bmesh.types.BMesh, p: Prim) -> None:
         bmesh.ops.create_icosphere(bm, subdivisions=1, radius=d[0])
     elif k == "torus":
         R, r = d
-        seg, rings = p.seg, 6
+        seg, rings = p.seg, 4
         verts = []
         for i in range(seg):
             a = i / seg * math.tau

@@ -3,6 +3,6 @@ id: proj_orb
 class: projectile
 archetype: orb
 body_plan: orb
-params: { radius: 0.14, stretch: 1.0 }
+params: { radius: 0.1, stretch: 1.6 }
 palette: { primary: ice, secondary: ice_deep, accent: ice, glow: ice }
 source: { kind: generated, licence: own, author: asset-factory }

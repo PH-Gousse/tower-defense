@@ -67,5 +67,5 @@ def tri_count(kind: str, seg: int, rings: int = 0) -> int:
     if kind == "dodeca":
         return 36
     if kind == "torus":
-        return seg * (rings or 6) * 2
+        return seg * (rings or 4) * 2
     raise ValueError(kind)

@@ -4,7 +4,7 @@ class: tower
 archetype: splash
 level: 1
 body_plan: cannon
-params: { height: 0.9, drum_radius: 0.36, barrels: 1, barrel_length: 0.3, pitch_deg: 35 }
+params: { height: 0.9, drum_radius: 0.33, barrels: 1, barrel_length: 0.32, pitch_deg: 45 }
 palette:
   primary: stone
   secondary: stone_dark

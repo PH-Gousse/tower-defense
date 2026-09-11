@@ -64,9 +64,9 @@ def turret_on_base(p: dict, rng) -> Layout:
         lay.add(Prim("cone", (r * 1.1, 0.42), (0, top + 0.24 + 0.21, 0), slot="roof", seg=8, bone="turret", name="roof"))
         roof_top = top + 0.66
     elif p["roof"] == "spire":
-        lay.add(Prim("cone", (r * 0.6, 0.55), (0, top + 0.24 + 0.275, 0), slot="roof", seg=8, bone="turret", name="spire"))
-        roof_top = top + 0.79
-    lay.add(Prim("cyl", (r * 1.0, r * 1.02, 0.09), (0, top0 + h * 0.62, 0), slot="banner", seg=12, bone="base", name="team_band"))
+        lay.add(Prim("cone", (r * 0.6, 0.45), (0, top + 0.24 + 0.225, 0), slot="roof", seg=8, bone="turret", name="spire"))
+        roof_top = top + 0.69
+    lay.add(Prim("cyl", (r * 1.0, r * 1.02, 0.18), (0, top0 + h * 0.6, 0), slot="banner", seg=12, bone="base", name="team_band"))
     muzzle = (0.0, top + 0.3, 0.0)
     _turret_joints(lay, top0, top, muzzle)
     lay.attach(Attachment("turret_top", (0, roof_top, 0), size=r * 2, bone="turret"))
@@ -116,7 +116,7 @@ def cannon(p: dict, rng) -> Layout:
             muzzle = (side, cy + math.sin(pitch) * bl * 0.85, math.cos(pitch) * bl * 0.85)
     for (x, z, y) in ((-0.3, -0.3, 0.07), (-0.3, -0.18, 0.07), (-0.24, -0.24, 0.18)):
         lay.add(Prim("sphere", (0.07,), (x, top0 + y, z), slot="shot", seg=8, bone="base", smooth=True, name="shot"))
-    lay.add(Prim("cyl", (r + 0.055, r + 0.055, 0.09), (0, top0 + drum_h * 0.6, 0), slot="banner", seg=14, bone="base", name="team_band"))
+    lay.add(Prim("cyl", (r + 0.055, r + 0.055, 0.14), (0, top0 + drum_h * 0.62, 0), slot="banner", seg=14, bone="base", name="team_band"))
     _turret_joints(lay, top0, top, muzzle)
     lay.attach(Attachment("turret_top", (0, top + 0.08, -r * 0.4), size=r, bone="turret"))
     lay.attach(Attachment("muzzle", muzzle, rot=(pitch - math.pi / 2, 0, 0), size=br * 2, bone="muzzle"))
@@ -143,7 +143,7 @@ def crystal_emitter(p: dict, rng) -> Layout:
     top0 = _plinth(lay, p["base_size"])
     ped_h = 0.3
     lay.add(Prim("cyl", (0.26, 0.32, ped_h), (0, top0 + ped_h / 2, 0), slot="pedestal", seg=8, bone="base", name="pedestal"))
-    lay.add(Prim("cyl", (0.3, 0.26, 0.08), (0, top0 + ped_h + 0.04, 0), slot="ring", seg=8, bone="turret", name="collar"))
+    lay.add(Prim("cyl", (0.3, 0.26, 0.05), (0, top0 + ped_h + 0.025, 0), slot="ring", seg=8, bone="turret", name="collar"))
     for sx, sz in ((-1, -1), (1, -1), (-1, 1), (1, 1)):
         lay.add(Prim("sphere", (0.1,), (sx * 0.3, top0, sz * 0.3), scale=(1, 0.4, 1), slot="snow", seg=8, bone="base", smooth=True, name="snow"))
     top = top0 + ped_h + 0.08

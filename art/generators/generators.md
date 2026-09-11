@@ -1,6 +1,6 @@
 # Generator reference
 
-*Generated from `art/generators/ltw_art` (version 0.1.6) by `python3 -m ltw_art.docs`. Do not edit.*
+*Generated from `art/generators/ltw_art` (version 0.1.8) by `python3 -m ltw_art.docs`. Do not edit.*
 
 Every name a spec may use: body plans and their parameters, parts and where they attach, rig templates and their bones, animation generators and the clips they produce. `spec-validate` checks specs against the same tables (`registry.json`).
 
@@ -147,7 +147,8 @@ the archetype ships in numbers and reads as a texture of moving dots.
 
 ### `orb` — projectile
 
-orb -- a frost bolt: a glowing octahedron stretched along its flight.
+orb -- a glowing core with a darker rim round its flight axis: the frost
+bolt when stretched, a hit burst when round.
 
 **Attachment points:** none  
 **Material slots:** `core`, `halo`

@@ -1,9 +1,10 @@
-# The placement cursor: a plain gold slab under the hovered tile. No glyph,
+# The placement cursor: a plain pale slab under the hovered tile (gold is
+# reserved for tier-3 trim, style sheet §3). No glyph,
 # so it never collides with the leak marker's chevron.
 id: tile_cursor
 class: tile
 archetype: cursor
 body_plan: tile_flat
 params: { inset: 0.04 }
-palette: { primary: gold, secondary: gold, accent: gold, glow: null }
+palette: { primary: bone, secondary: bone, accent: bone, glow: null }
 source: { kind: generated, licence: own, author: asset-factory }

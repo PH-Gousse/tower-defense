@@ -202,6 +202,11 @@ def build(spec: dict, out_glb: str, log_path: str | None = None, preview: str | 
     log["steps"].append({"export": {"glb": os.path.basename(out_glb), "bytes": os.path.getsize(out_glb), "unsupported_options": res["unsupported_options"]}})
     log["seconds"] = round(time.time() - t0, 2)
     if log_path:
+        # Wall-clock timing stays in the console; the committed log must be
+        # identical for identical output, or every rebuild dirties the tree.
+        persisted = {k: v for k, v in log.items() if k != "seconds"}
+        log_path_data = persisted
+
         with open(log_path, "w") as f:
-            json.dump(log, f, indent=2)
+            json.dump(log_path_data, f, indent=2)
     return log

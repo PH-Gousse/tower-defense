@@ -4,7 +4,7 @@ class: tower
 archetype: single
 level: 1
 body_plan: turret_on_base
-params: { height: 1.25, keep_radius: 0.18, merlons: 0, roof: none }
+params: { height: 1.2, keep_radius: 0.2, merlons: 0, roof: none }
 palette:
   primary: stone
   secondary: stone_dark

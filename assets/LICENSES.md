@@ -42,6 +42,7 @@ Own work, part of this repository and covered by its licence.
 - `sfx_build_slow_1` (sound, generated)
 - `sfx_build_splash_1` (sound, generated)
 - `sfx_click_1` (sound, generated)
+- `sfx_click_2` (sound, hand) by asset-factory (import demo)
 - `sfx_death_large_1` (sound, generated)
 - `sfx_death_large_2` (sound, generated)
 - `sfx_death_large_3` (sound, generated)

@@ -44,7 +44,7 @@
       "file": "build/creep_runner_t1.glb",
       "footprint": 1.0346,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
+      "generator_version": "0.1.8",
       "hash": "3de43da7839f5eae",
       "height": 0.6578,
       "source": {
@@ -113,7 +113,7 @@
       "file": "build/creep_runner_t2.glb",
       "footprint": 1.1007,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
+      "generator_version": "0.1.8",
       "hash": "b0ecc7b3be7e3e3a",
       "height": 0.7328,
       "source": {
@@ -144,7 +144,7 @@
         "spawn": "sfx_spawn_medium_1"
       },
       "bones": 16,
-      "bytes": 193428,
+      "bytes": 195412,
       "class": "creep",
       "clips": {
         "Death": {
@@ -182,8 +182,8 @@
       "file": "build/creep_runner_t3.glb",
       "footprint": 1.1007,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
-      "hash": "128034352d2c6e47",
+      "generator_version": "0.1.8",
+      "hash": "f1273c5e4698c189",
       "height": 0.7965,
       "source": {
         "approved_by": "",
@@ -194,7 +194,7 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "162b3dbf8e270683",
+      "spec_hash": "64b0ee22c7f70409",
       "textures": [
         {
           "format": "image/ktx2",
@@ -202,9 +202,9 @@
         }
       ],
       "tier": 3,
-      "triangles": 1302,
-      "version": 4,
-      "vertices": 2266
+      "triangles": 1250,
+      "version": 5,
+      "vertices": 2182
     },
     "creep_swarm_t1": {
       "archetype": "swarm",
@@ -213,15 +213,15 @@
         "spawn": "sfx_spawn_small_1"
       },
       "bones": 12,
-      "bytes": 136196,
+      "bytes": 135876,
       "class": "creep",
       "clips": {
         "Death": {
           "loop": false,
           "markers": {
-            "impact": 0.6
+            "impact": 0.5
           },
-          "seconds": 0.7083
+          "seconds": 0.5833
         },
         "Idle": {
           "loop": true,
@@ -250,8 +250,8 @@
       "file": "build/creep_swarm_t1.glb",
       "footprint": 0.6228,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
-      "hash": "4d81e7ed75b39424",
+      "generator_version": "0.1.8",
+      "hash": "f7a5d574a7cb408f",
       "height": 0.3602,
       "source": {
         "approved_by": "",
@@ -262,7 +262,7 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "c5d610896856329b",
+      "spec_hash": "f5dd8ff3312bb063",
       "textures": [
         {
           "format": "image/ktx2",
@@ -271,7 +271,7 @@
       ],
       "tier": 1,
       "triangles": 740,
-      "version": 3,
+      "version": 4,
       "vertices": 928
     },
     "creep_swarm_t2": {
@@ -281,15 +281,15 @@
         "spawn": "sfx_spawn_small_1"
       },
       "bones": 12,
-      "bytes": 147760,
+      "bytes": 147336,
       "class": "creep",
       "clips": {
         "Death": {
           "loop": false,
           "markers": {
-            "impact": 0.6
+            "impact": 0.5
           },
-          "seconds": 0.7083
+          "seconds": 0.5833
         },
         "Idle": {
           "loop": true,
@@ -319,8 +319,8 @@
       "file": "build/creep_swarm_t2.glb",
       "footprint": 0.6228,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
-      "hash": "2a3cac7df383c703",
+      "generator_version": "0.1.8",
+      "hash": "aff7819f6f4820a8",
       "height": 0.4811,
       "source": {
         "approved_by": "",
@@ -331,7 +331,7 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "f06e89087de3a037",
+      "spec_hash": "ddac2368dcf92b3a",
       "textures": [
         {
           "format": "image/ktx2",
@@ -340,7 +340,7 @@
       ],
       "tier": 2,
       "triangles": 780,
-      "version": 3,
+      "version": 4,
       "vertices": 1018
     },
     "creep_swarm_t3": {
@@ -350,15 +350,15 @@
         "spawn": "sfx_spawn_small_1"
       },
       "bones": 12,
-      "bytes": 161996,
+      "bytes": 161484,
       "class": "creep",
       "clips": {
         "Death": {
           "loop": false,
           "markers": {
-            "impact": 0.6
+            "impact": 0.5
           },
-          "seconds": 0.7083
+          "seconds": 0.5833
         },
         "Idle": {
           "loop": true,
@@ -388,8 +388,8 @@
       "file": "build/creep_swarm_t3.glb",
       "footprint": 0.6228,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
-      "hash": "b232984fb6ffad76",
+      "generator_version": "0.1.8",
+      "hash": "26bc875dd9fad73d",
       "height": 0.5169,
       "source": {
         "approved_by": "",
@@ -400,7 +400,7 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "37b119539eed8abb",
+      "spec_hash": "00078d2a9694d1d1",
       "textures": [
         {
           "format": "image/ktx2",
@@ -409,7 +409,7 @@
       ],
       "tier": 3,
       "triangles": 896,
-      "version": 4,
+      "version": 5,
       "vertices": 1298
     },
     "creep_tank_t1": {
@@ -456,7 +456,7 @@
       "file": "build/creep_tank_t1.glb",
       "footprint": 0.8581,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
+      "generator_version": "0.1.8",
       "hash": "f92b499a3db02c50",
       "height": 1.0166,
       "source": {
@@ -525,7 +525,7 @@
       "file": "build/creep_tank_t2.glb",
       "footprint": 0.8581,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
+      "generator_version": "0.1.8",
       "hash": "8f53bdd0ae21c0c4",
       "height": 1.0188,
       "source": {
@@ -594,7 +594,7 @@
       "file": "build/creep_tank_t3.glb",
       "footprint": 0.8581,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
+      "generator_version": "0.1.8",
       "hash": "c00ec4f284deecac",
       "height": 1.0346,
       "source": {
@@ -622,7 +622,7 @@
       "archetype": "hit_single",
       "audio": {},
       "bones": 0,
-      "bytes": 2424,
+      "bytes": 3072,
       "class": "effect",
       "clips": {},
       "extensions": [
@@ -630,11 +630,11 @@
         "KHR_mesh_quantization"
       ],
       "file": "build/fx_hit_single.glb",
-      "footprint": 0.283,
+      "footprint": 0.4444,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
-      "hash": "f71a0afd0268cf0b",
-      "height": 0.4,
+      "generator_version": "0.1.8",
+      "hash": "441d94347c582647",
+      "height": 0.3849,
       "source": {
         "approved_by": "",
         "attribution": "",
@@ -644,17 +644,17 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "e4fc0d5f6130db86",
+      "spec_hash": "376a1c7f37536a5f",
       "textures": [],
-      "triangles": 16,
-      "version": 2,
-      "vertices": 48
+      "triangles": 56,
+      "version": 3,
+      "vertices": 120
     },
     "fx_hit_slow": {
       "archetype": "hit_slow",
       "audio": {},
       "bones": 0,
-      "bytes": 2420,
+      "bytes": 3060,
       "class": "effect",
       "clips": {},
       "extensions": [
@@ -662,11 +662,11 @@
         "KHR_mesh_quantization"
       ],
       "file": "build/fx_hit_slow.glb",
-      "footprint": 0.2547,
+      "footprint": 0.404,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
-      "hash": "141f6848fa60471a",
-      "height": 0.36,
+      "generator_version": "0.1.8",
+      "hash": "cce093a86464a960",
+      "height": 0.3499,
       "source": {
         "approved_by": "",
         "attribution": "",
@@ -676,17 +676,17 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "78879dc5a48ef7d3",
+      "spec_hash": "f5257a5ea6c382e0",
       "textures": [],
-      "triangles": 16,
-      "version": 2,
-      "vertices": 48
+      "triangles": 56,
+      "version": 3,
+      "vertices": 120
     },
     "fx_hit_splash": {
       "archetype": "hit_splash",
       "audio": {},
       "bones": 0,
-      "bytes": 2424,
+      "bytes": 3064,
       "class": "effect",
       "clips": {},
       "extensions": [
@@ -694,11 +694,11 @@
         "KHR_mesh_quantization"
       ],
       "file": "build/fx_hit_splash.glb",
-      "footprint": 0.3395,
+      "footprint": 0.505,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
-      "hash": "de8066f365508a6b",
-      "height": 0.48,
+      "generator_version": "0.1.8",
+      "hash": "29549ac8758b1d15",
+      "height": 0.4373,
       "source": {
         "approved_by": "",
         "attribution": "",
@@ -708,11 +708,11 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "8c79b431f17f83c3",
+      "spec_hash": "47b9525ef97cfb72",
       "textures": [],
-      "triangles": 16,
-      "version": 2,
-      "vertices": 48
+      "triangles": 56,
+      "version": 3,
+      "vertices": 120
     },
     "proj_bolt": {
       "archetype": "bolt",
@@ -729,7 +729,7 @@
       "file": "build/proj_bolt.glb",
       "footprint": 0.3996,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
+      "generator_version": "0.1.8",
       "hash": "8bd6de2fb067cf65",
       "height": 0.072,
       "source": {
@@ -756,7 +756,7 @@
       "archetype": "orb",
       "audio": {},
       "bones": 0,
-      "bytes": 2372,
+      "bytes": 3000,
       "class": "projectile",
       "clips": {},
       "extensions": [
@@ -764,11 +764,11 @@
         "KHR_mesh_quantization"
       ],
       "file": "build/proj_orb.glb",
-      "footprint": 0.1981,
+      "footprint": 0.24,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
-      "hash": "a554785e9b57de79",
-      "height": 0.28,
+      "generator_version": "0.1.8",
+      "hash": "a2e7aa652b782db8",
+      "height": 0.1749,
       "source": {
         "approved_by": "",
         "attribution": "",
@@ -778,11 +778,11 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "0b5c49769cb949f1",
+      "spec_hash": "9f0122852dec4291",
       "textures": [],
-      "triangles": 16,
-      "version": 2,
-      "vertices": 48
+      "triangles": 56,
+      "version": 3,
+      "vertices": 120
     },
     "proj_shell": {
       "archetype": "shell",
@@ -799,7 +799,7 @@
       "file": "build/proj_shell.glb",
       "footprint": 0.18,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
+      "generator_version": "0.1.8",
       "hash": "376bd56ea5b8301c",
       "height": 0.1627,
       "source": {
@@ -837,7 +837,7 @@
       "file": "build/tile_blocked.glb",
       "footprint": 0.96,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
+      "generator_version": "0.1.8",
       "hash": "a4bd919faa47c405",
       "height": 0.05,
       "source": {
@@ -864,7 +864,7 @@
       "archetype": "cursor",
       "audio": {},
       "bones": 0,
-      "bytes": 6756,
+      "bytes": 6892,
       "class": "tile",
       "clips": {},
       "extensions": [
@@ -875,8 +875,8 @@
       "file": "build/tile_cursor.glb",
       "footprint": 0.92,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
-      "hash": "6c694298b53e882f",
+      "generator_version": "0.1.8",
+      "hash": "62580dbd0b490007",
       "height": 0.02,
       "source": {
         "approved_by": "",
@@ -887,7 +887,7 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "343e50cc1fe3956b",
+      "spec_hash": "d151b5fc94a09253",
       "textures": [
         {
           "format": "image/ktx2",
@@ -895,7 +895,7 @@
         }
       ],
       "triangles": 12,
-      "version": 3,
+      "version": 4,
       "vertices": 24
     },
     "tile_entrance": {
@@ -913,7 +913,7 @@
       "file": "build/tile_entrance.glb",
       "footprint": 0.96,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
+      "generator_version": "0.1.8",
       "hash": "fe14eebf4d15701c",
       "height": 0.05,
       "source": {
@@ -940,7 +940,7 @@
       "archetype": "exit",
       "audio": {},
       "bones": 0,
-      "bytes": 19072,
+      "bytes": 18068,
       "class": "tile",
       "clips": {},
       "extensions": [
@@ -951,9 +951,9 @@
       "file": "build/tile_exit.glb",
       "footprint": 0.96,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
-      "hash": "71fa5c7f34ee4062",
-      "height": 0.048,
+      "generator_version": "0.1.8",
+      "hash": "f6f36421114d1983",
+      "height": 0.05,
       "source": {
         "approved_by": "",
         "attribution": "",
@@ -970,9 +970,9 @@
           "size": 256
         }
       ],
-      "triangles": 132,
-      "version": 2,
-      "vertices": 224
+      "triangles": 92,
+      "version": 3,
+      "vertices": 184
     },
     "tile_leak": {
       "archetype": "leak",
@@ -989,7 +989,7 @@
       "file": "build/tile_leak.glb",
       "footprint": 0.96,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
+      "generator_version": "0.1.8",
       "hash": "9634800b77f836b5",
       "height": 0.05,
       "source": {
@@ -1027,7 +1027,7 @@
       "file": "build/tile_normal.glb",
       "footprint": 0.96,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
+      "generator_version": "0.1.8",
       "hash": "84adf50674770204",
       "height": 0.02,
       "source": {
@@ -1056,7 +1056,7 @@
         "shot": "sfx_shot_single_1"
       },
       "bones": 4,
-      "bytes": 78436,
+      "bytes": 82220,
       "class": "tower",
       "clips": {
         "Attack": {
@@ -1095,13 +1095,13 @@
       "file": "build/tower_single_l1.glb",
       "footprint": 0.84,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
-      "hash": "38476d47ea7327a5",
-      "height": 1.61,
+      "generator_version": "0.1.8",
+      "hash": "98e04e0ccaa09fea",
+      "height": 1.56,
       "level": 1,
       "muzzle": [
         0,
-        1.79,
+        1.74,
         0
       ],
       "source": {
@@ -1113,7 +1113,7 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "7d5b249009e0f219",
+      "spec_hash": "28bfc9e82d776ead",
       "textures": [
         {
           "format": "image/ktx2",
@@ -1121,7 +1121,7 @@
         }
       ],
       "triangles": 396,
-      "version": 3,
+      "version": 4,
       "vertices": 744
     },
     "tower_single_l2": {
@@ -1130,7 +1130,7 @@
         "shot": "sfx_shot_single_1"
       },
       "bones": 4,
-      "bytes": 83876,
+      "bytes": 83176,
       "class": "tower",
       "clips": {
         "Attack": {
@@ -1170,13 +1170,13 @@
       "file": "build/tower_single_l2.glb",
       "footprint": 0.84,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
-      "hash": "5ec4e4639fcb69e2",
-      "height": 2.33,
+      "generator_version": "0.1.8",
+      "hash": "1ecbbef7393bcbc2",
+      "height": 2.25,
       "level": 2,
       "muzzle": [
         0,
-        1.84,
+        1.86,
         0
       ],
       "source": {
@@ -1188,7 +1188,7 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "52e96db9e4147f99",
+      "spec_hash": "d8384d27e0ea7825",
       "textures": [
         {
           "format": "image/ktx2",
@@ -1196,7 +1196,7 @@
         }
       ],
       "triangles": 410,
-      "version": 3,
+      "version": 4,
       "vertices": 776
     },
     "tower_single_l3": {
@@ -1205,7 +1205,7 @@
         "shot": "sfx_shot_single_1"
       },
       "bones": 4,
-      "bytes": 89068,
+      "bytes": 88232,
       "class": "tower",
       "clips": {
         "Attack": {
@@ -1245,13 +1245,13 @@
       "file": "build/tower_single_l3.glb",
       "footprint": 0.84,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
-      "hash": "ffd089dd01b4b9a8",
-      "height": 2.39,
+      "generator_version": "0.1.8",
+      "hash": "60b6d21b2a0facf4",
+      "height": 2.37,
       "level": 3,
       "muzzle": [
         0,
-        1.9,
+        1.98,
         0
       ],
       "source": {
@@ -1263,7 +1263,7 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "3f332b84ca08fc84",
+      "spec_hash": "5c5cb5619ae9e0c1",
       "textures": [
         {
           "format": "image/ktx2",
@@ -1271,7 +1271,7 @@
         }
       ],
       "triangles": 462,
-      "version": 3,
+      "version": 4,
       "vertices": 860
     },
     "tower_slow_l1": {
@@ -1280,7 +1280,7 @@
         "shot": "sfx_shot_slow_1"
       },
       "bones": 4,
-      "bytes": 105792,
+      "bytes": 103044,
       "class": "tower",
       "clips": {
         "Attack": {
@@ -1319,13 +1319,13 @@
       "file": "build/tower_slow_l1.glb",
       "footprint": 0.84,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
-      "hash": "b02d43bd99ff6c98",
-      "height": 1.02,
+      "generator_version": "0.1.8",
+      "hash": "0b293df69ccea16e",
+      "height": 1.12,
       "level": 1,
       "muzzle": [
         0,
-        1.02,
+        1.12,
         0
       ],
       "source": {
@@ -1337,7 +1337,7 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "c9686ce8ef98d534",
+      "spec_hash": "73d5b0e61c7b8eb5",
       "textures": [
         {
           "format": "image/ktx2",
@@ -1345,7 +1345,7 @@
         }
       ],
       "triangles": 644,
-      "version": 3,
+      "version": 4,
       "vertices": 944
     },
     "tower_slow_l2": {
@@ -1354,7 +1354,7 @@
         "shot": "sfx_shot_slow_1"
       },
       "bones": 4,
-      "bytes": 114336,
+      "bytes": 110896,
       "class": "tower",
       "clips": {
         "Attack": {
@@ -1394,8 +1394,8 @@
       "file": "build/tower_slow_l2.glb",
       "footprint": 0.84,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
-      "hash": "18270e9cde71d1b7",
+      "generator_version": "0.1.8",
+      "hash": "7c596d7e4113877f",
       "height": 1.07,
       "level": 2,
       "muzzle": [
@@ -1420,7 +1420,7 @@
         }
       ],
       "triangles": 684,
-      "version": 3,
+      "version": 4,
       "vertices": 1064
     },
     "tower_slow_l3": {
@@ -1429,7 +1429,7 @@
         "shot": "sfx_shot_slow_1"
       },
       "bones": 4,
-      "bytes": 135972,
+      "bytes": 133480,
       "class": "tower",
       "clips": {
         "Attack": {
@@ -1469,8 +1469,8 @@
       "file": "build/tower_slow_l3.glb",
       "footprint": 0.84,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
-      "hash": "60e99dae6484ff54",
+      "generator_version": "0.1.8",
+      "hash": "5996b20045d89931",
       "height": 1.12,
       "level": 3,
       "muzzle": [
@@ -1495,7 +1495,7 @@
         }
       ],
       "triangles": 816,
-      "version": 3,
+      "version": 4,
       "vertices": 1388
     },
     "tower_splash_l1": {
@@ -1504,7 +1504,7 @@
         "shot": "sfx_shot_splash_1"
       },
       "bones": 4,
-      "bytes": 109456,
+      "bytes": 109436,
       "class": "tower",
       "clips": {
         "Attack": {
@@ -1543,14 +1543,14 @@
       "file": "build/tower_splash_l1.glb",
       "footprint": 0.84,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
-      "hash": "d5cc28c808dbcc30",
-      "height": 1.085,
+      "generator_version": "0.1.8",
+      "hash": "0f67721fe50f96bc",
+      "height": 1.1214,
       "level": 1,
       "muzzle": [
         0,
-        0.9863,
-        0.2089
+        1.0323,
+        0.1923
       ],
       "source": {
         "approved_by": "",
@@ -1561,7 +1561,7 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "4fc937c920cab1b5",
+      "spec_hash": "581b93995c31de81",
       "textures": [
         {
           "format": "image/ktx2",
@@ -1569,7 +1569,7 @@
         }
       ],
       "triangles": 884,
-      "version": 3,
+      "version": 4,
       "vertices": 1310
     },
     "tower_splash_l2": {
@@ -1578,7 +1578,7 @@
         "shot": "sfx_shot_splash_1"
       },
       "bones": 4,
-      "bytes": 113472,
+      "bytes": 113528,
       "class": "tower",
       "clips": {
         "Attack": {
@@ -1618,14 +1618,14 @@
       "file": "build/tower_splash_l2.glb",
       "footprint": 0.84,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
-      "hash": "c4a00928bab3840d",
-      "height": 1.1905,
+      "generator_version": "0.1.8",
+      "hash": "8339ce5008155984",
+      "height": 1.2178,
       "level": 2,
       "muzzle": [
         0,
-        1.0909,
-        0.2298
+        1.1283,
+        0.1983
       ],
       "source": {
         "approved_by": "",
@@ -1636,7 +1636,7 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "2ffe06f067f36f52",
+      "spec_hash": "88970e48161f96a9",
       "textures": [
         {
           "format": "image/ktx2",
@@ -1644,7 +1644,7 @@
         }
       ],
       "triangles": 988,
-      "version": 4,
+      "version": 5,
       "vertices": 1478
     },
     "tower_splash_l3": {
@@ -1653,7 +1653,7 @@
         "shot": "sfx_shot_splash_1"
       },
       "bones": 4,
-      "bytes": 121556,
+      "bytes": 122704,
       "class": "tower",
       "clips": {
         "Attack": {
@@ -1693,14 +1693,14 @@
       "file": "build/tower_splash_l3.glb",
       "footprint": 0.84,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.6",
-      "hash": "749d68864a3c5d30",
-      "height": 1.2959,
+      "generator_version": "0.1.8",
+      "hash": "b6e9f145cdbc4330",
+      "height": 1.3269,
       "level": 3,
       "muzzle": [
         -0.08,
-        1.1955,
-        0.2507
+        1.2364,
+        0.2164
       ],
       "source": {
         "approved_by": "",
@@ -1711,7 +1711,7 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "6ac16f7f40a7d090",
+      "spec_hash": "5daae2591472a411",
       "textures": [
         {
           "format": "image/ktx2",
@@ -1719,7 +1719,7 @@
         }
       ],
       "triangles": 1208,
-      "version": 4,
+      "version": 5,
       "vertices": 1788
     }
   },
@@ -1823,6 +1823,31 @@
         "url": ""
       },
       "variant": 1,
+      "version": 1
+    },
+    "sfx_click_2": {
+      "bytes": {
+        "mp3": 3884,
+        "webm": 2613
+      },
+      "event": "click",
+      "files": {
+        "mp3": "build/sfx/sfx_click_2.mp3",
+        "webm": "build/sfx/sfx_click_2.webm"
+      },
+      "hash": "299a5129d9927e81",
+      "lufs": -16.3,
+      "measure": "momentary",
+      "peak_dbtp": -2.1,
+      "seconds": 0.2,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory (import demo)",
+        "kind": "hand",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 2,
       "version": 1
     },
     "sfx_death_large_1": {
