@@ -17,6 +17,8 @@
     "bench-scene": "pnpm --filter @ltw/harness exec vite-node tools/bench-scene.ts --",
     "state-hash": "pnpm --filter @ltw/harness exec vite-node tools/state-hash.ts --",
     "golden-jsc": "bun run scripts/golden-jsc.ts",
+    "spec-validate": "pnpm --filter @ltw/art-tools exec vite-node spec-validate.ts --",
+    "spec-types": "pnpm --filter @ltw/art-tools exec vite-node spec-types.ts --",
     "rule-change:begin": ".claude/hooks/rule-change-marker.sh begin",
     "rule-change:end": ".claude/hooks/rule-change-marker.sh end",
     "rule-change:status": ".claude/hooks/rule-change-marker.sh status"

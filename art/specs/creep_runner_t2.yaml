@@ -1,0 +1,20 @@
+# Runner, tier 2: the same hound, a tenth bigger, shoulder spikes, palette a
+# quarter of the way to the accent. Nothing else changes -- see the style
+# sheet's tier language. Inherits creep_runner_t1.
+id: creep_runner_t2
+class: creep
+archetype: runner
+tier: 2
+derived_from: creep_runner_t1
+params:
+  height: 0.605
+  body_length: 0.55
+  parts: [shoulder_spikes]
+palette:
+  tier_shift: 0.25
+game:
+  hp: 200
+  cost: 1250
+source:
+  kind: generated
+  licence: own

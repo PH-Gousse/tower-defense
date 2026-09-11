@@ -1,0 +1,36 @@
+# The runner: fast, lean, low HP. Answers the slow tower.
+id: creep_runner_t1
+class: creep
+archetype: runner
+tier: 1
+body_plan: quadruped
+params:
+  height: 0.55
+  body_length: 0.5
+  leg_length: 0.24
+  head: hound
+  tail: up
+palette:
+  primary: creep_skin_2
+  secondary: wood_dark
+  accent: danger
+  glow: danger
+  team_mask: [torso_stripe, head_crest]
+rig: quadruped
+animations:
+  Idle:  { gen: idle_breathe, amplitude: 0.02, duration: 1.4 }
+  Walk:  { gen: walk_quadruped, stride: 0.9, cadence: 3.6, gait: trot }
+  Death: { gen: collapse_forward, duration: 0.7, markers: { impact: 0.55 } }
+  Spawn: { gen: rise_from_ground, duration: 0.5, markers: { land: 0.7 } }
+audio:
+  spawn: sfx_spawn_medium_1
+  death: sfx_death_medium_1
+game:
+  # Proposed only. The live values are in packages/sim/data/creeps.json.
+  speed_tiles_per_s: 3.0
+  hp: 40
+  cost: 250
+source:
+  kind: generated
+  licence: own
+  author: asset-factory
