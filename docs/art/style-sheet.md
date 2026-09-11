@@ -108,12 +108,20 @@ an asset whose silhouette could be mistaken for another archetype's.
 | Archetype | Silhouette | Must never |
 |---|---|---|
 | **Swarm** creep | small, low, wide, many-legged; longer than tall | stand upright; be alone in its own lineup render (it is always shown ×5) |
-| **Runner** creep | lean, long, low head, forward-leaning; horizontal line | have a wide body; read as a tank at 32 px |
+| **Runner** creep | lean, long, low head, forward-leaning; horizontal line **from the side** | have a wide body; read as a tank at 32 px |
 | **Tank** creep | wide, heavy, upright; a block with a head, wider at the shoulders than the hips | be lean; have a thin waist |
 | **Single-target** tower | tall and thin; height ≥ 2.5 × width | have a wide top |
 | **Splash** tower | squat and wide; height ≤ 1.2 × width, a barrel pitched at the sky | be tall |
 | **Slow** tower | medium height with a **visible emitter**: a crystal cluster or a spire that glows | look like a plain block |
 | **Projectile** | one readable shape: a bolt is a line, a shell is a dot, an orb is a soft disc | carry detail |
+
+The silhouette test renders the game pitch, the side and the front. A creep walks **away**
+from the fixed camera for most of a lap, so from the game pitch a long runner foreshortens
+into a vertical bar and reads no different from a tall tank at 32 px. That is the camera,
+not the model: the archetype rules above are judged on the side and front tiles, and the
+game-pitch tile is judged for readability (is it a creature, is it moving) rather than
+archetype. Open question: whether the runner archetype needs a top-down signature (a
+colour, a trail, a pip) the silhouette cannot give it. `[proposed]`
 
 Creep heights at tier 1 are those already in the game: swarm 0.36, runner 0.55, tank 1.05
 units. A tower's footprint stays inside 0.84 × 0.84 of its 1 × 1 tile so the maze's
@@ -128,8 +136,13 @@ new thing. The silhouette rule is unchanged; the reading is layered:
 |---|---|---|---|
 | Size | 1.00 | 1.10 | 1.20 |
 | Parts | none | one part from the library on a primary attachment point (shoulder plates, a spike row, a second barrel) | the tier-2 part plus one more, on a secondary point (crest, banner, crystal cluster) |
-| Palette | `primary` | `primary` blended 25 % toward the archetype's `accent` | 50 % toward `accent` |
+| Palette | `primary` | `primary` blended 15 % toward the archetype's `accent` | 30 % toward `accent` |
 | Trim | none | none | `gold` trim on one edge and an emissive strip in the accent colour |
+
+The palette row started at 25 % / 50 % and was brought down after the first catalogue: at
+50 % the tier-3 tank read as a new creature (brown to purple) rather than more of the same
+one, which is the opposite of what the row is for. 15 % / 30 % is what shipped; the runner
+sits at 35 % at tier 3 because its accent is close to its skin. Still `[proposed]`.
 
 The size row replaces the code's current 1 + 0.22 × tier (1.00 / 1.22 / 1.44), which was
 sized to make tiers readable with **no** other tier language; once parts and trim carry the
