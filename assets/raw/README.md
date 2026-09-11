@@ -1,8 +1,3 @@
-# assets/raw
-
-Generator or external output, **exactly as produced**: the `.glb` a body plan exported,
-the `.wav` a synthesiser rendered, the file an importer wrote. Nothing here is normalised,
-compressed or admitted.
-
-`asset-gate` reads from here and writes to `assets/build/`. This directory is regenerable
-from `art/specs/` and `art/generators/` and is gitignored until the LFS decision is made.
+version https://git-lfs.github.com/spec/v1
+oid sha256:a85d2a0540c3e7dc2ef7e0340474e99c8d6c3e95f48ef766123689b5cec25f10
+size 464

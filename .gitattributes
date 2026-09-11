@@ -1,12 +1,19 @@
 # Built assets are binary: no line-ending normalisation, no textual diff, and
-# a merge conflict resolves by rebuilding, never by hand.
+# a merge conflict resolves by rebuilding, never by hand. Committed as plain
+# files (ADR-0018).
 assets/build/**/*.glb   binary -diff
 assets/build/**/*.ktx2  binary -diff
 assets/build/**/*.webm  binary -diff
 assets/build/**/*.mp3   binary -diff
-art/source/*.blend      binary -diff
-art/source/*.psd        binary -diff
-art/source/*.wav        binary -diff
+
+# Source and raw files go through Git LFS: larger than the build, and not
+# needed by a deploy (Vite reads assets/build only).
+art/source/*.blend  filter=lfs diff=lfs merge=lfs -text
+art/source/*.psd    filter=lfs diff=lfs merge=lfs -text
+art/source/*.wav    filter=lfs diff=lfs merge=lfs -text
+art/source/*.png    filter=lfs diff=lfs merge=lfs -text
+assets/raw/**       filter=lfs diff=lfs merge=lfs -text
+
 # Generated; collapsed in GitHub diffs.
 assets/manifest.json    linguist-generated
 assets/LICENSES.md      linguist-generated

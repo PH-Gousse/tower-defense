@@ -23,11 +23,8 @@ reports/art/*
 # Hook session state: which files a session touched, and stop-guard attempts.
 .claude/.state/
 
-# Art pipeline. assets/raw/ is the un-gated generator output, regenerable from
-# art/specs + art/generators; assets/build/ IS committed (ADR-0018). The LFS
-# question for art/source/ and assets/raw/ is open, see docs/art/pipeline.md.
-assets/raw/*
-!assets/raw/README.md
+# Art pipeline. assets/build/ is committed as plain files (ADR-0018);
+# art/source/ and assets/raw/ are committed through Git LFS (.gitattributes).
 art/**/__pycache__/
 art/**/.pytest_cache/
 *.blend1
