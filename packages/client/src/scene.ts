@@ -986,7 +986,7 @@ export function createScene(
             dust.spawn(x + Math.cos(a) * 0.3, 0.15, z + Math.sin(a) * 0.3, 0.5, 1.1, 0x7a6a48, 520, now, 0.35)
           }
           rings.spawn(x, 0.035, z, 0.4, 1.4, 0xd8c8a0, 320, now)
-          if (!assets?.towerBuilt(lane, i)) audio.build(ck as TowerKind, x, z, lane === me())
+          if (!assets?.towerBuilt(lane, i, ck, curr.level[i] as number, x, z)) audio.build(ck as TowerKind, x, z, lane === me())
         } else if (ck === -1) {
           dust.spawn(x, 0.3, z, 0.7, 1.4, 0x7a6a48, 500, now, 0.4)
           if (!assets?.towerSold(lane, i) && lane === me()) audio.sell(x, z)
@@ -1130,7 +1130,7 @@ export function createScene(
           // A lap counter that moved is a leak: the creep is back at the entrance.
           if ((curr.laps[c] as number) > (prev.laps[p] as number)) {
             rings.spawn(dx[c] as number, 0.04, dz[c] as number, 0.3, 1.6, 0xff5040, 420, now)
-            if (!assets?.creepLeaked(lane, cid, dx[c] as number, dz[c] as number)) audio.leak(lane === me(), dx[c] as number, dz[c] as number)
+            if (!assets?.creepLeaked(lane, cid, dx[c] as number, dz[c] as number, lane === me())) audio.leak(lane === me(), dx[c] as number, dz[c] as number)
             flashes.spawn(dx[c] as number, 0.3, dz[c] as number, 0.4, 1.0, 0xff6a50, 300, now, 0.4)
             const sx = ox + (curr.x[c] as number)
             const sz = curr.y[c] as number

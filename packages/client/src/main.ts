@@ -639,7 +639,12 @@ const assetStatus = el('assetStatus')
 const assetsReady: Promise<void> = bootAssets(scene.renderer, import.meta.env.BASE_URL, import.meta.env.DEV, (text) => {
   if (assetStatus) assetStatus.textContent = text
 }).then((r) => {
-  if (r.registry && r.sfx) scene.attachAssets(r.registry, r.sfx, import.meta.env.DEV)
+  if (r.registry && r.sfx) {
+    const layer = scene.attachAssets(r.registry, r.sfx, import.meta.env.DEV)
+    // Dev only: the layer's event trace and playing clips, for checking the
+    // binding table against a real match from the console.
+    if (import.meta.env.DEV) (window as unknown as { __ltwAssets: unknown }).__ltwAssets = layer
+  }
   if (assetStatus) assetStatus.textContent = r.registry ? `${r.loaded} assets ready${r.problems.length ? ` · ${r.problems.length} note(s) in the console` : ''}` : 'procedural models'
 })
 

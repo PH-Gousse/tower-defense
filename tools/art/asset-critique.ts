@@ -61,7 +61,10 @@ function silTile(assetId: string, i: number): string | null {
   const m = spawnSync('magick', [strip, '-crop', `32x32+${i * 32}+0`, '+repage', '-threshold', '50%', '-negate', '-background', 'white', '-gravity', 'center', '-extent', '32x32', out], { encoding: 'utf8' })
   return m.status === 0 ? out : null
 }
-const peers = preview.lineup_order.filter((p) => p !== id && (manifest.assets[p]?.archetype ?? resolveSpec(p, { schema, registry }).spec.archetype) !== spec.archetype)
+// Silhouette distinctness is a creature-and-tower rule (style sheet §4): a
+// tile is a slab and a shell is a dot, and comparing those is noise.
+const judged = spec.class === 'creep' || spec.class === 'tower'
+const peers = judged ? preview.lineup_order.filter((p) => p !== id && (manifest.assets[p]?.archetype ?? resolveSpec(p, { schema, registry }).spec.archetype) !== spec.archetype) : []
 const silhouette: { peer: string; agreement: number }[] = []
 for (const peer of peers) {
   let worst = 0
@@ -100,7 +103,7 @@ const teamA = join(dir, '_team_a.png')
 const teamB = join(dir, '_team_b.png')
 spawnSync('magick', [teamStrip, '-crop', '50%x100%+0+0', '+repage', teamA], { encoding: 'utf8' })
 spawnSync('magick', [teamStrip, '-gravity', 'East', '-crop', '50%x100%+0+0', '+repage', teamB], { encoding: 'utf8' })
-const teamDiff = fx([teamA, teamB, '-compose', 'difference', '-composite', '-colorspace', 'gray', '-threshold', '8%', '-format', '%[fx:mean]', 'info:'])
+const teamDiff = judged ? fx([teamA, teamB, '-compose', 'difference', '-composite', '-colorspace', 'gray', '-threshold', '8%', '-format', '%[fx:mean]', 'info:']) : NaN
 
 // --- tier language -----------------------------------------------------------
 let tier = ''
@@ -124,10 +127,10 @@ const lines = [
   '',
   '| Check | Value | Reads as |',
   '|---|---|---|',
-  `| Readability at game distance | ${preview.on_screen_px} px tall on a 1080p frame at the fitted camera | ${preview.on_screen_px >= 24 ? 'legible' : preview.on_screen_px >= 14 ? 'small; silhouette must carry it' : 'too small to read alone (swarm-class)'} |`,
+  `| Readability at game distance | ${preview.on_screen_px} px tall on a 1080p frame at the fitted camera | ${!judged ? 'n/a (drawn by a pool or the board, not read as a creature)' : preview.on_screen_px >= 24 ? 'legible' : preview.on_screen_px >= 14 ? 'small; silhouette must carry it' : 'too small to read alone (swarm-class)'} |`,
   ...silhouette.map((s) => `| Silhouette vs \`${s.peer}\` | ${(s.agreement * 100).toFixed(0)}% pixel agreement at 32 px | ${s.agreement < 0.75 ? 'distinct' : s.agreement < 0.85 ? 'borderline' : 'TOO SIMILAR'} |`),
   `| Palette compliance | ${Number.isFinite(paletteScore) ? (paletteScore * 100).toFixed(0) + '%' : 'n/a'} of turntable pixels on the palette | ${paletteScore >= 0.9 ? 'pass' : paletteScore >= 0.8 ? 'check shading' : 'FAIL: off-palette colour'} |`,
-  `| Team colour visibility | ${Number.isFinite(teamDiff) ? (teamDiff * 100).toFixed(1) + '%' : 'n/a'} of the view changes between blue and red | ${teamDiff >= 0.02 ? 'visible' : teamDiff >= 0.008 ? 'faint' : 'INVISIBLE'} |`,
+  `| Team colour visibility | ${Number.isFinite(teamDiff) ? (teamDiff * 100).toFixed(1) + '%' : 'n/a'} of the view changes between blue and red | ${!judged ? 'n/a (no team mask on this class)' : teamDiff >= 0.02 ? 'visible' : teamDiff >= 0.008 ? 'faint' : 'INVISIBLE'} |`,
   ...(tier ? [`| Tier language | ${tier} | see style sheet §5 |`] : []),
   '',
   '## Previews',

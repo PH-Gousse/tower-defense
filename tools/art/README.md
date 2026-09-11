@@ -12,6 +12,7 @@ what it lacks.
 | `pnpm asset-build <id\|all> [--force] [--dry-run] [--preview]` | resolved spec → headless Blender → `assets/raw/`; cached by spec hash + generator version |
 | `pnpm asset-gate <id\|all> [--changed]` | budgets and the animation contract; on pass meshopt + KTX2 → `assets/build/`, manifest, `LICENSES.md` |
 | `pnpm asset-preview <id\|all>` | turntable, 32 px silhouettes, clip strips, team A/B, game-distance, lineup → `reports/art/<id>/` |
+| `pnpm asset-preview --lineup <class>` | every admitted asset of a class in one strip at true relative scale → `reports/art/lineup_<class>.png` |
 | `pnpm asset-critique <id>` | the measurable half of the critique plus the scaffold the art-director fills |
 | `pnpm asset-report` | `reports/art/index.html`: catalogue, budgets, staleness, licences |
 | `pnpm audio-synth <sfx_id\|all> [--force]` | `art/sounds/<id>.yaml` → synthesised, normalised, `assets/build/sfx/<id>.webm` + `.mp3`, manifest |

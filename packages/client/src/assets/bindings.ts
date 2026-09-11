@@ -35,7 +35,8 @@ export const CREEP_BINDINGS: Readonly<Record<CreepEvent, Binding>> = {
   moving: { clip: 'Walk', sfx: null, effect: 'none', then: null },
   idle: { clip: 'Idle', sfx: null, effect: 'none', then: null },
   died: { clip: 'Death', sfx: 'death_{size}', effect: 'dust', then: 'hold', at: 'impact' },
-  leaked: { clip: null, sfx: 'leak', effect: 'flash', then: null },
+  /** `{side}` is `mine` or `theirs`: a leak in your lane is a warning, in theirs good news. */
+  leaked: { clip: null, sfx: 'leak_{side}', effect: 'flash', then: null },
   respawned: { clip: 'Spawn', sfx: 'respawn', effect: 'ring', then: 'Walk' },
 }
 
@@ -60,6 +61,6 @@ export const TOWER_FX: Readonly<Record<string, { projectile: string; hit: string
   slow: { projectile: 'proj_orb', hit: 'hit_slow', hitEffect: 'ring' },
 }
 
-export function fillSfx(template: string, archetype: string): string {
-  return template.replace('{size}', SIZE_OF[archetype] ?? 'medium').replace('{archetype}', archetype)
+export function fillSfx(template: string, archetype: string, side: 'mine' | 'theirs' = 'mine'): string {
+  return template.replace('{size}', SIZE_OF[archetype] ?? 'medium').replace('{archetype}', archetype).replace('{side}', side)
 }

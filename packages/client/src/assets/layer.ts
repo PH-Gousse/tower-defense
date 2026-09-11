@@ -49,7 +49,12 @@ interface Tower {
   removeAt: number
 }
 
+/** One line of the layer's event trace, for the dev viewer and for tests: what the binding table did. */
+export interface TraceEntry { t: number; event: string; id: string; clip: string | null; sfx: string | null }
+
 export class AssetLayer {
+  /** The last 200 bound events, newest last. Dev tooling reads it; nothing in the render loop does. */
+  readonly trace: TraceEntry[] = []
   private readonly creeps = new Map<number, Creep>() // key: lane * 2^24 + id
   private readonly towers = new Map<number, Tower>() // key: lane * 4096 + tile
   private readonly missing = new Set<string>()
@@ -119,19 +124,23 @@ export class AssetLayer {
 
   private creepMarker(c: Creep, clip: ClipName, marker: string): void {
     const b = clip === 'Spawn' ? CREEP_BINDINGS.spawned : clip === 'Death' ? CREEP_BINDINGS.died : null
-    if (b && b.at === marker && b.sfx) this.playSfx(c.asset, b, c.archetype, c.model.root.position.x)
+    if (b && b.at === marker && b.sfx) this.playSfx(c.asset, b, c.archetype, c.model.root.position.x, `${clip === 'Spawn' ? 'spawned' : 'died'}@${marker}`)
   }
 
-  private playSfx(asset: AssetId, b: Binding, archetype: string, x: number): boolean {
+  private record(event: string, id: string, clip: string | null, sfx: string | null): void {
+    this.trace.push({ t: this.lastMs, event, id, clip, sfx })
+    if (this.trace.length > 200) this.trace.shift()
+  }
+
+  private playSfx(asset: AssetId, b: Binding, archetype: string, x: number, event = ''): boolean {
     if (!b.sfx) return false
     const entry = this.registry.entry(asset)
     // The asset's own audio block wins; then the convention.
     const own = entry?.audio[b.sfx.split('_')[0] ?? '']
-    if (own && this.registry.sound(own)) {
-      const ev = this.registry.sound(own)!.event
-      return this.sfx.play(ev, x) !== null
-    }
-    return this.sfx.play(fillSfx(b.sfx, archetype), x) !== null
+    const ev = own && this.registry.sound(own) ? this.registry.sound(own)!.event : fillSfx(b.sfx, archetype)
+    const played = this.sfx.play(ev, x)
+    if (event) this.record(event, asset, b.clip, played)
+    return played !== null
   }
 
   /** A creep appeared this tick. Returns true when a file sound will play (so the scene skips its synthesised one). */
@@ -144,7 +153,8 @@ export class AssetLayer {
     if (b.clip) c.model.play(b.clip, { restart: true })
     c.spawning = true
     // The sound plays at the `land` marker unless the binding says now.
-    if (b.sfx && !b.at) return this.playSfx(asset, b, c.archetype, x)
+    if (b.sfx && !b.at) return this.playSfx(asset, b, c.archetype, x, respawn ? 'respawned' : 'spawned')
+    this.record(respawn ? 'respawned' : 'spawned', asset, b.clip, null)
     return b.sfx !== null
   }
 
@@ -181,15 +191,20 @@ export class AssetLayer {
     const b = CREEP_BINDINGS.died
     if (b.clip) c.model.play(b.clip, { restart: true })
     if (!c.model.has('Death')) c.dying = this.lastMs
+    this.record('died', c.asset, b.clip, null)
     return b.sfx !== null
   }
 
-  creepLeaked(lane: number, id: number, x: number, z: number): boolean {
+  /** `mine` is whether the leak cost THIS client a life (the creep is in its lane). */
+  creepLeaked(lane: number, id: number, x: number, z: number, mine: boolean): boolean {
     const c = this.creeps.get(this.key(lane, id))
     if (!c) return false
     const b = CREEP_BINDINGS.leaked
     c.model.root.position.set(x, 0, z)
-    return this.playSfx(c.asset, b, c.archetype, x)
+    if (!b.sfx) return false
+    const played = this.sfx.play(fillSfx(b.sfx, c.archetype, mine ? 'mine' : 'theirs'), x)
+    this.record('leaked', c.asset, b.clip, played)
+    return played !== null
   }
 
   /** After the scene's creep loop: retire models for creeps that are gone and corpses that have lain long enough. */
@@ -232,7 +247,7 @@ export class AssetLayer {
         else if (clip !== 'Idle') t.model.play('Idle')
       },
       onMarker: (clip, marker) => {
-        if (clip === 'Attack' && marker === 'fire') this.playSfx(t.asset, TOWER_BINDINGS.fired, t.archetype, x)
+        if (clip === 'Attack' && marker === 'fire') this.playSfx(t.asset, TOWER_BINDINGS.fired, t.archetype, x, 'fired@fire')
       },
     })
     t.model.play('Idle')
@@ -256,12 +271,17 @@ export class AssetLayer {
     return true
   }
 
-  towerBuilt(lane: number, tile: number): boolean {
+  /**
+   * A tower appeared this tick. The scene infers the build before it syncs
+   * tower placement, so the model may not exist yet: place it here first.
+   */
+  towerBuilt(lane: number, tile: number, kind: number, level: number, x: number, z: number): boolean {
+    if (!this.placeTower(lane, tile, kind, level, x, z)) return false
     const t = this.towers.get(this.tkey(lane, tile))
     if (!t) return false
     const b = TOWER_BINDINGS.built
     if (b.clip) t.model.play(b.clip, { restart: true })
-    return this.playSfx(t.asset, b, t.archetype, t.model.root.position.x)
+    return this.playSfx(t.asset, b, t.archetype, t.model.root.position.x, 'built')
   }
 
   towerUpgraded(lane: number, tile: number): boolean {
@@ -269,7 +289,7 @@ export class AssetLayer {
     if (!t) return false
     const b = TOWER_BINDINGS.upgraded
     if (b.clip) t.model.play(b.clip, { restart: true })
-    return this.playSfx(t.asset, b, t.archetype, t.model.root.position.x)
+    return this.playSfx(t.asset, b, t.archetype, t.model.root.position.x, 'upgraded')
   }
 
   /** Returns the muzzle in world space, or null when the tower is not asset-backed. */
@@ -278,6 +298,7 @@ export class AssetLayer {
     if (!t) return false
     const b = TOWER_BINDINGS.fired
     if (b.clip) t.model.play(b.clip, { restart: true })
+    this.record('fired', t.asset, b.clip, null)
     const m = this.registry.entry(t.asset)?.muzzle
     out.set(t.model.root.position.x + (m?.[0] ?? 0), m?.[1] ?? 1, t.model.root.position.z + (m?.[2] ?? 0))
     return true
@@ -296,7 +317,7 @@ export class AssetLayer {
     const b = TOWER_BINDINGS.sold
     if (b.clip && t.model.has('Sell')) t.model.play(b.clip, { restart: true })
     else this.removeTower(lane, tile)
-    return this.playSfx(t.asset, b, t.archetype, t.model.root.position.x)
+    return this.playSfx(t.asset, b, t.archetype, t.model.root.position.x, 'sold')
   }
 
   private removeTower(lane: number, tile: number): void {
@@ -335,6 +356,15 @@ export class AssetLayer {
       const taken = crowd.draw(this.crowdBuffer)
       for (const c of this.creeps.values()) c.model.root.visible = !taken.has(c.id)
     }
+  }
+
+  /** What every model is playing right now. Dev tooling only. */
+  playing(): { creeps: Record<string, string | null>; towers: Record<string, string | null> } {
+    const creeps: Record<string, string | null> = {}
+    for (const c of this.creeps.values()) creeps[`${c.lane}:${c.id}`] = c.model.playing
+    const towers: Record<string, string | null> = {}
+    for (const t of this.towers.values()) towers[`${t.lane}:${t.tile}`] = t.model.playing
+    return { creeps, towers }
   }
 
   stats(): { creeps: number; towers: number; drawCalls: number } {
