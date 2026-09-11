@@ -1,0 +1,12 @@
+# Built assets are binary: no line-ending normalisation, no textual diff, and
+# a merge conflict resolves by rebuilding, never by hand.
+assets/build/**/*.glb   binary -diff
+assets/build/**/*.ktx2  binary -diff
+assets/build/**/*.webm  binary -diff
+assets/build/**/*.mp3   binary -diff
+art/source/*.blend      binary -diff
+art/source/*.psd        binary -diff
+art/source/*.wav        binary -diff
+# Generated; collapsed in GitHub diffs.
+assets/manifest.json    linguist-generated
+assets/LICENSES.md      linguist-generated

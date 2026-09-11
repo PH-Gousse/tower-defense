@@ -12,10 +12,25 @@ dist/
 
 # Balance reports are generated, dated and large. The one you care about is the
 # one you just ran; committing a folder of them is noise in every diff.
-reports/
+reports/*
+!reports/art/
+reports/art/*
+!reports/art/README.md
 
 # The constants-guard marker. Session-local, never shared.
 .claude/.rule-change-active
 
 # Hook session state: which files a session touched, and stop-guard attempts.
 .claude/.state/
+
+# Art pipeline. assets/raw/ is the un-gated generator output, regenerable from
+# art/specs + art/generators; assets/build/ IS committed (ADR-0018). The LFS
+# question for art/source/ and assets/raw/ is open, see docs/art/pipeline.md.
+assets/raw/*
+!assets/raw/README.md
+art/**/__pycache__/
+art/**/.pytest_cache/
+*.blend1
+*.blend2
+# Blender's per-machine state written next to a .blend when saved.
+art/source/*.blend@
