@@ -18,6 +18,6 @@ alters the bytes a spec produces; a spec whose build predates the bump is
 "stale" in `asset-report`.
 """
 
-GENERATOR_VERSION = "0.1.2"
+GENERATOR_VERSION = "0.1.3"
 
 from . import palette, rng, mathx, frame, layout, params, registry  # noqa: E402,F401

@@ -1,6 +1,7 @@
 import { execFileSync, spawnSync } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 import { GENERATORS, SCRIPTS } from './paths'
 
 /**
@@ -39,18 +40,33 @@ export function generatorVersion(): string {
   return m[1] as string
 }
 
-/** Run a script under art/scripts headlessly. Returns the last JSON line. */
+/**
+ * Run a script under art/scripts headlessly. The result JSON is read from a
+ * file the script writes (`--result`), not from stdout: Blender's render
+ * log writes to the same stdout from C while Python is printing a 75 KB
+ * JSON line, and the two interleave (measured: a corrupted line at byte
+ * 75299 after a full catalogue render). stdout parsing is the fallback.
+ */
 export function runBlender(blender: string, script: string, args: string[], timeoutMs = 600_000): { ok: boolean; json: Record<string, unknown> | null; output: string } {
   const path = join(SCRIPTS, script)
   if (!existsSync(path)) throw new Error(`no such script ${path}`)
-  const r = spawnSync(blender, ['--background', '--factory-startup', '--python', path, '--', ...args], {
+  const resultFile = join(tmpdir(), `ltw-blender-${process.pid}-${Date.now()}.json`)
+  const r = spawnSync(blender, ['--background', '--factory-startup', '--python', path, '--', ...args, '--result', resultFile], {
     encoding: 'utf8',
     timeout: timeoutMs,
     maxBuffer: 64 * 1024 * 1024,
   })
   const output = (r.stdout ?? '') + (r.stderr ?? '')
-  const lines = (r.stdout ?? '').trim().split('\n')
   let json: Record<string, unknown> | null = null
+  if (existsSync(resultFile)) {
+    try {
+      json = JSON.parse(readFileSync(resultFile, 'utf8')) as Record<string, unknown>
+    } catch {
+      /* fall through to stdout */
+    }
+    rmSync(resultFile, { force: true })
+  }
+  const lines = json ? [] : (r.stdout ?? '').trim().split('\n')
   for (let i = lines.length - 1; i >= 0; i--) {
     const l = (lines[i] ?? '').trim()
     if (l.startsWith('{') && l.endsWith('}')) {

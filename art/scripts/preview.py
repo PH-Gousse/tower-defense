@@ -36,6 +36,7 @@ from ltw_art.bl import render as R, scene as S  # noqa: E402
 argv = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else []
 ap = argparse.ArgumentParser()
 ap.add_argument("--batch", required=True)
+ap.add_argument("--result", help="write the JSON result here as well as to stdout: Blender's own render log interleaves with a long stdout line and corrupts it")
 args = ap.parse_args(argv)
 
 TEAM = {"blue": palette.linear(palette.rgb("team_blue")), "red": palette.linear(palette.rgb("team_red"))}
@@ -161,6 +162,8 @@ def render_asset(entry: dict) -> dict:
     out_dir = entry["out_dir"]
     os.makedirs(out_dir, exist_ok=True)
     written = {}
+    if entry.get("lineup_only"):
+        return {"lineup": render_lineup(entry["siblings"], out_dir, wide=True)}
     clear()
     arm, meshes = load_glb(entry["glb"])
     if not meshes:
@@ -233,29 +236,39 @@ def render_asset(entry: dict) -> dict:
     # Lineup: siblings side by side at true relative scale.
     sib = entry.get("siblings", [])
     if sib:
-        clear()
-        items = []
-        x = 0.0
-        tallest = 0.0
-        for s in sib:
+        written["lineup"] = render_lineup(sib, out_dir)
+    return written
+
+
+def render_lineup(sib: list, out_dir: str, wide: bool = False) -> dict:
+    """Every model in `sib` in a row at true relative scale, from a low
+    front-quarter angle so heights compare, plus the game pitch for the
+    silhouettes as they will be read. Swarm-class assets are shown ×3."""
+    clear()
+    items = []
+    x = 0.0
+    tallest = 0.0
+    for s in sib:
+        copies = 3 if "swarm" in s["id"] else 1
+        for c in range(copies):
             a, ms = load_glb(s["glb"])
             R.solo_clip(a, None)
             l2, h2 = bounds_of(ms)
             w = float(max(h2.x - l2.x, h2.y - l2.y))
-            x += w / 2 + 0.15
+            x += w / 2 + (0.05 if copies > 1 else 0.2)
             for o in ms + ([a] if a else []):
                 if o.parent is None:
                     o.location.x += x
-            x += w / 2 + 0.15
+            x += w / 2 + (0.05 if copies > 1 else 0.2)
             tallest = max(tallest, float(h2.z - l2.z))
-            items.append(s["id"])
             toon_materials(ms, team="blue")
-        total = x
-        R.camera((total / 2 - 0.15 * 0, tallest * 0.4, 0), max(tallest, total * 0.6), yaw_deg=0, fill=0.85, aspect=2.0)
-        p = os.path.join(out_dir, "lineup.png")
-        R.snapshot(p, 1200, 480)
-        written["lineup"] = {"png": p, "order": items}
-    return written
+        items.append(s["id"])
+    total = x
+    width = 2400 if wide else 1200
+    R.camera((total / 2, tallest * 0.4, 0), max(tallest * 1.1, total * (0.35 if wide else 0.6)), yaw_deg=10, pitch_deg=22, fill=0.9, aspect=width / 480)
+    p = os.path.join(out_dir, "lineup.png")
+    R.snapshot(p, width, 480)
+    return {"png": p, "order": items}
 
 
 with open(args.batch) as f:
@@ -269,5 +282,9 @@ for entry in batch:
         traceback.print_exc()
         ok = False
         results.append({"id": entry["id"], "ok": False, "error": f"{type(e).__name__}: {e}"})
-print(json.dumps({"tool": "preview.py", "ok": ok, "results": results}))
+result = {"tool": "preview.py", "ok": ok, "results": results}
+if args.result:
+    with open(args.result, "w") as f:
+        json.dump(result, f)
+print(json.dumps(result))
 sys.exit(0 if ok else 1)

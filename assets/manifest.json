@@ -44,7 +44,7 @@
       "file": "build/creep_runner_t1.glb",
       "footprint": 0.9544,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
+      "generator_version": "0.1.3",
       "hash": "f6becdde056f4a43",
       "height": 0.679,
       "source": {
@@ -113,7 +113,7 @@
       "file": "build/creep_runner_t2.glb",
       "footprint": 1.0205,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
+      "generator_version": "0.1.3",
       "hash": "5a28a2078aa72b72",
       "height": 0.7542,
       "source": {
@@ -182,7 +182,7 @@
       "file": "build/creep_runner_t3.glb",
       "footprint": 1.0205,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
+      "generator_version": "0.1.3",
       "hash": "a282f5c7cb9cfaf8",
       "height": 0.8088,
       "source": {
@@ -250,7 +250,7 @@
       "file": "build/creep_swarm_t1.glb",
       "footprint": 0.7414,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
+      "generator_version": "0.1.3",
       "hash": "d0d8b0482093f576",
       "height": 0.3606,
       "source": {
@@ -319,7 +319,7 @@
       "file": "build/creep_swarm_t2.glb",
       "footprint": 0.7414,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
+      "generator_version": "0.1.3",
       "hash": "9922147280a37877",
       "height": 0.4976,
       "source": {
@@ -388,7 +388,7 @@
       "file": "build/creep_swarm_t3.glb",
       "footprint": 0.7414,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
+      "generator_version": "0.1.3",
       "hash": "d3dbcdc6b22796ad",
       "height": 0.5335,
       "source": {
@@ -456,7 +456,7 @@
       "file": "build/creep_tank_t1.glb",
       "footprint": 0.8581,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
+      "generator_version": "0.1.3",
       "hash": "5d691153d814ebb6",
       "height": 1.0166,
       "source": {
@@ -525,7 +525,7 @@
       "file": "build/creep_tank_t2.glb",
       "footprint": 0.8581,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
+      "generator_version": "0.1.3",
       "hash": "7960e76814416189",
       "height": 1.0188,
       "source": {
@@ -594,7 +594,7 @@
       "file": "build/creep_tank_t3.glb",
       "footprint": 0.8581,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
+      "generator_version": "0.1.3",
       "hash": "b28dcf45effba91c",
       "height": 1.0346,
       "source": {
@@ -632,7 +632,7 @@
       "file": "build/fx_hit_single.glb",
       "footprint": 0.24,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
+      "generator_version": "0.1.3",
       "hash": "c787719e50936cb6",
       "height": 0.24,
       "source": {
@@ -664,7 +664,7 @@
       "file": "build/fx_hit_slow.glb",
       "footprint": 0.24,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
+      "generator_version": "0.1.3",
       "hash": "277a0cb1f18a7dcc",
       "height": 0.24,
       "source": {
@@ -696,7 +696,7 @@
       "file": "build/fx_hit_splash.glb",
       "footprint": 0.24,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
+      "generator_version": "0.1.3",
       "hash": "596cd943fd4e2b3f",
       "height": 0.24,
       "source": {
@@ -729,7 +729,7 @@
       "file": "build/proj_bolt.glb",
       "footprint": 0.3996,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
+      "generator_version": "0.1.3",
       "hash": "c7e23b6066e8cf51",
       "height": 0.072,
       "source": {
@@ -766,7 +766,7 @@
       "file": "build/proj_orb.glb",
       "footprint": 0.288,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
+      "generator_version": "0.1.3",
       "hash": "11582728a7a45393",
       "height": 0.18,
       "source": {
@@ -799,7 +799,7 @@
       "file": "build/proj_shell.glb",
       "footprint": 0.18,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
+      "generator_version": "0.1.3",
       "hash": "f34089afe5372521",
       "height": 0.1627,
       "source": {
@@ -837,7 +837,7 @@
       "file": "build/tile_blocked.glb",
       "footprint": 0.96,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
+      "generator_version": "0.1.3",
       "hash": "07b414d3b048a531",
       "height": 0.05,
       "source": {
@@ -875,7 +875,7 @@
       "file": "build/tile_cursor.glb",
       "footprint": 0.96,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
+      "generator_version": "0.1.3",
       "hash": "81b5e5ec1706ede7",
       "height": 0.04,
       "source": {
@@ -913,7 +913,7 @@
       "file": "build/tile_entrance.glb",
       "footprint": 0.96,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
+      "generator_version": "0.1.3",
       "hash": "2279c66098a207d1",
       "height": 0.05,
       "source": {
@@ -951,7 +951,7 @@
       "file": "build/tile_exit.glb",
       "footprint": 0.96,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
+      "generator_version": "0.1.3",
       "hash": "d1b5f834c632682b",
       "height": 0.048,
       "source": {
@@ -989,7 +989,7 @@
       "file": "build/tile_leak.glb",
       "footprint": 0.96,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
+      "generator_version": "0.1.3",
       "hash": "fd9d1c290a3ffcab",
       "height": 0.05,
       "source": {
@@ -1027,7 +1027,7 @@
       "file": "build/tile_normal.glb",
       "footprint": 0.96,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
+      "generator_version": "0.1.3",
       "hash": "f48601a50ea3a7d7",
       "height": 0.02,
       "source": {
@@ -1056,7 +1056,7 @@
         "shot": "sfx_shot_single_1"
       },
       "bones": 4,
-      "bytes": 99896,
+      "bytes": 97400,
       "class": "tower",
       "clips": {
         "Attack": {
@@ -1095,8 +1095,8 @@
       "file": "build/tower_single_l1.glb",
       "footprint": 0.84,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
-      "hash": "7854093c5b27f443",
+      "generator_version": "0.1.3",
+      "hash": "950e67772cd2577b",
       "height": 1.68,
       "level": 1,
       "muzzle": [
@@ -1113,7 +1113,7 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "faa204758e89a2a9",
+      "spec_hash": "da7bb7bdab56c7e8",
       "textures": [
         {
           "format": "image/ktx2",
@@ -1121,7 +1121,7 @@
         }
       ],
       "triangles": 436,
-      "version": 1,
+      "version": 2,
       "vertices": 840
     },
     "tower_single_l2": {
@@ -1130,7 +1130,7 @@
         "shot": "sfx_shot_single_1"
       },
       "bones": 4,
-      "bytes": 98348,
+      "bytes": 97364,
       "class": "tower",
       "clips": {
         "Attack": {
@@ -1170,8 +1170,8 @@
       "file": "build/tower_single_l2.glb",
       "footprint": 0.84,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
-      "hash": "62fe327fb8b3fb89",
+      "generator_version": "0.1.3",
+      "hash": "8bfdc5d3c055c87c",
       "height": 2.22,
       "level": 2,
       "muzzle": [
@@ -1188,7 +1188,7 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "ad02aa7ef913bd67",
+      "spec_hash": "9e69e3c4b0ae0a2e",
       "textures": [
         {
           "format": "image/ktx2",
@@ -1196,7 +1196,7 @@
         }
       ],
       "triangles": 450,
-      "version": 1,
+      "version": 2,
       "vertices": 872
     },
     "tower_single_l3": {
@@ -1205,7 +1205,7 @@
         "shot": "sfx_shot_single_1"
       },
       "bones": 4,
-      "bytes": 107720,
+      "bytes": 106472,
       "class": "tower",
       "clips": {
         "Attack": {
@@ -1245,8 +1245,8 @@
       "file": "build/tower_single_l3.glb",
       "footprint": 0.84,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
-      "hash": "0ebe932397ebcf24",
+      "generator_version": "0.1.3",
+      "hash": "e3532c5917d02627",
       "height": 2.35,
       "level": 3,
       "muzzle": [
@@ -1263,7 +1263,7 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "5265df2f9c1b4d10",
+      "spec_hash": "3b8e8b9ed42a318b",
       "textures": [
         {
           "format": "image/ktx2",
@@ -1271,7 +1271,7 @@
         }
       ],
       "triangles": 502,
-      "version": 1,
+      "version": 2,
       "vertices": 956
     },
     "tower_slow_l1": {
@@ -1280,7 +1280,7 @@
         "shot": "sfx_shot_slow_1"
       },
       "bones": 4,
-      "bytes": 105724,
+      "bytes": 105852,
       "class": "tower",
       "clips": {
         "Attack": {
@@ -1319,8 +1319,8 @@
       "file": "build/tower_slow_l1.glb",
       "footprint": 0.84,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
-      "hash": "71f851686e54e176",
+      "generator_version": "0.1.3",
+      "hash": "85c7d5d8931ba8c0",
       "height": 1.17,
       "level": 1,
       "muzzle": [
@@ -1337,7 +1337,7 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "c9019fd5ff03b0be",
+      "spec_hash": "e6c25872c58ff11d",
       "textures": [
         {
           "format": "image/ktx2",
@@ -1345,7 +1345,7 @@
         }
       ],
       "triangles": 628,
-      "version": 1,
+      "version": 2,
       "vertices": 896
     },
     "tower_slow_l2": {
@@ -1354,7 +1354,7 @@
         "shot": "sfx_shot_slow_1"
       },
       "bones": 4,
-      "bytes": 115008,
+      "bytes": 118228,
       "class": "tower",
       "clips": {
         "Attack": {
@@ -1394,8 +1394,8 @@
       "file": "build/tower_slow_l2.glb",
       "footprint": 0.84,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
-      "hash": "517f13f1ce953e73",
+      "generator_version": "0.1.3",
+      "hash": "b396eeefb13888c1",
       "height": 1.24,
       "level": 2,
       "muzzle": [
@@ -1412,7 +1412,7 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "e0c911f7d60ab1b9",
+      "spec_hash": "be294aebf2c9e14e",
       "textures": [
         {
           "format": "image/ktx2",
@@ -1420,7 +1420,7 @@
         }
       ],
       "triangles": 668,
-      "version": 1,
+      "version": 2,
       "vertices": 1016
     },
     "tower_slow_l3": {
@@ -1429,7 +1429,7 @@
         "shot": "sfx_shot_slow_1"
       },
       "bones": 4,
-      "bytes": 141632,
+      "bytes": 142712,
       "class": "tower",
       "clips": {
         "Attack": {
@@ -1469,8 +1469,8 @@
       "file": "build/tower_slow_l3.glb",
       "footprint": 0.84,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
-      "hash": "340198b9670838aa",
+      "generator_version": "0.1.3",
+      "hash": "58aa9bda28306da1",
       "height": 1.32,
       "level": 3,
       "muzzle": [
@@ -1487,7 +1487,7 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "b532a90947304e2a",
+      "spec_hash": "cc2f09a2aa82e8a8",
       "textures": [
         {
           "format": "image/ktx2",
@@ -1495,7 +1495,7 @@
         }
       ],
       "triangles": 800,
-      "version": 1,
+      "version": 2,
       "vertices": 1340
     },
     "tower_splash_l1": {
@@ -1504,7 +1504,7 @@
         "shot": "sfx_shot_splash_1"
       },
       "bones": 4,
-      "bytes": 121840,
+      "bytes": 120704,
       "class": "tower",
       "clips": {
         "Attack": {
@@ -1543,8 +1543,8 @@
       "file": "build/tower_splash_l1.glb",
       "footprint": 0.84,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
-      "hash": "96da4498c5eff5a4",
+      "generator_version": "0.1.3",
+      "hash": "8f7cf95f47f4be67",
       "height": 1.2127,
       "level": 1,
       "muzzle": [
@@ -1561,7 +1561,7 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "a36f915260d5979f",
+      "spec_hash": "dbaef345cd506dd4",
       "textures": [
         {
           "format": "image/ktx2",
@@ -1569,7 +1569,7 @@
         }
       ],
       "triangles": 884,
-      "version": 1,
+      "version": 2,
       "vertices": 1310
     },
     "tower_splash_l2": {
@@ -1578,7 +1578,7 @@
         "shot": "sfx_shot_splash_1"
       },
       "bones": 4,
-      "bytes": 126584,
+      "bytes": 126776,
       "class": "tower",
       "clips": {
         "Attack": {
@@ -1618,8 +1618,8 @@
       "file": "build/tower_splash_l2.glb",
       "footprint": 0.84,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
-      "hash": "c8663faa56297386",
+      "generator_version": "0.1.3",
+      "hash": "e5629a5fe48188d5",
       "height": 1.3396,
       "level": 2,
       "muzzle": [
@@ -1636,7 +1636,7 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "795f889cda5ab15f",
+      "spec_hash": "a89b16e39973c8f9",
       "textures": [
         {
           "format": "image/ktx2",
@@ -1644,7 +1644,7 @@
         }
       ],
       "triangles": 988,
-      "version": 2,
+      "version": 3,
       "vertices": 1478
     },
     "tower_splash_l3": {
@@ -1653,7 +1653,7 @@
         "shot": "sfx_shot_splash_1"
       },
       "bones": 4,
-      "bytes": 143140,
+      "bytes": 143764,
       "class": "tower",
       "clips": {
         "Attack": {
@@ -1693,8 +1693,8 @@
       "file": "build/tower_splash_l3.glb",
       "footprint": 0.84,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.2",
-      "hash": "abef0574d0335f3a",
+      "generator_version": "0.1.3",
+      "hash": "b4e98722d661539b",
       "height": 1.4517,
       "level": 3,
       "muzzle": [
@@ -1711,7 +1711,7 @@
         "service": "",
         "url": ""
       },
-      "spec_hash": "0cb5f6f6c38c4068",
+      "spec_hash": "750d90e0b588cb14",
       "textures": [
         {
           "format": "image/ktx2",
@@ -1719,7 +1719,7 @@
         }
       ],
       "triangles": 1208,
-      "version": 2,
+      "version": 3,
       "vertices": 1788
     }
   },

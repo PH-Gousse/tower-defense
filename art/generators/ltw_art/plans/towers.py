@@ -51,7 +51,7 @@ def turret_on_base(p: dict, rng) -> Layout:
     h, r = p["height"], p["keep_radius"]
     lay.add(Prim("cyl", (r * 0.85, r, h), (0, top0 + h / 2, 0), slot="keep", seg=12, bone="base", blend="turret", name="keep"))
     top = top0 + h
-    lay.add(Prim("cyl", (r * 1.2, r * 1.0, 0.12), (0, top + 0.06, 0), slot="parapet", seg=12, bone="turret", name="parapet"))
+    lay.add(Prim("cyl", (r * 1.2, r * 1.0, 0.12), (0, top + 0.06, 0), slot="trim", seg=12, bone="turret", name="parapet_ring"))
     n = int(p["merlons"])
     for k in range(n):
         a = k / n * math.tau

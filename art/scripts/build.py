@@ -29,6 +29,7 @@ ap.add_argument("--log")
 ap.add_argument("--preview")
 ap.add_argument("--blend", help="also save the built scene as a .blend, for inspection")
 ap.add_argument("--batch")
+ap.add_argument("--result", help="write the JSON result here as well as to stdout")
 args = ap.parse_args(argv)
 
 from ltw_art.build import build  # noqa: E402
@@ -63,7 +64,11 @@ if args.batch:
             traceback.print_exc()
             all_ok = False
             results.append({"id": entry["id"], "ok": False, "error": f"{type(e).__name__}: {e}"})
-    print(json.dumps({"tool": "build.py", "ok": all_ok, "results": results}))
+    result = {"tool": "build.py", "ok": all_ok, "results": results}
+    if args.result:
+        with open(args.result, "w") as f:
+            json.dump(result, f)
+    print(json.dumps(result))
     sys.exit(0 if all_ok else 1)
 
 if not (args.spec and args.out):

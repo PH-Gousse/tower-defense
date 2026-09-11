@@ -8,7 +8,7 @@ params: { height: 1.2, keep_radius: 0.27, merlons: 6, roof: none }
 palette:
   primary: stone
   secondary: stone_dark
-  accent: team_blue
+  accent: bronze
   glow: gold
   team_mask: [banner, parapet]
 rig: turret

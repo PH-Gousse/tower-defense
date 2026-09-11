@@ -120,6 +120,14 @@ for (const res of results) {
   const id = String(res['id'])
   const dir = join(REPORTS, id)
   if (res['ok'] !== true) { say(`FAILED   ${id}  ${String(res['error'])}`); done.push({ id, ok: false, error: res['error'] }); continue }
+  if (lineupClass) {
+    const lu = res['lineup'] as { png: string; order: string[] } | undefined
+    const out = join(REPORTS, `lineup_${lineupClass}.png`)
+    if (lu) magick([lu.png, out])
+    say(`lineup   ${lineupClass}: ${lu?.order.length ?? 0} assets → ${rel(out)}`)
+    done.push({ ok: true, id, lineup: rel(out), order: lu?.order ?? [] })
+    continue
+  }
   const tt = res['turntable'] as string[]
   magick([...tt, '+append', join(dir, 'turntable.png')])
   const sil = res['silhouette'] as string[]
@@ -134,13 +142,6 @@ for (const res of results) {
   // Tidy the frame files.
   for (const p of [...tt, ...sil, ...small, ...big, ...team, ...Object.values(clipFrames).flat()]) rmSync(p, { force: true })
   const lineup = res['lineup'] as { png: string; order: string[] } | undefined
-  if (lineupClass) {
-    const out = join(REPORTS, `lineup_${lineupClass}.png`)
-    if (lineup) magick([lineup.png, out])
-    say(`lineup   ${lineupClass}: ${lineup?.order.length ?? 0} assets → ${rel(out)}`)
-    done.push({ ok: true, id, lineup: rel(out), order: lineup?.order ?? [] })
-    continue
-  }
   const info = {
     id,
     glb: rel(batch.find((b) => b.id === id)!.glb),

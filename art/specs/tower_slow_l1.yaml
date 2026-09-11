@@ -9,7 +9,7 @@ params: { height: 1.1, crystal_height: 0.55, ring_crystals: 2 }
 palette:
   primary: stone_blue
   secondary: stone_dark
-  accent: team_blue
+  accent: ice_deep
   glow: ice
   team_mask: [banner, ring]
 rig: turret

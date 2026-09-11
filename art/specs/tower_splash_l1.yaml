@@ -8,7 +8,7 @@ params: { height: 0.9, drum_radius: 0.34, barrels: 1, barrel_length: 0.42, pitch
 palette:
   primary: stone
   secondary: stone_dark
-  accent: team_blue
+  accent: bronze
   glow: danger
   team_mask: [banner]
 rig: turret
