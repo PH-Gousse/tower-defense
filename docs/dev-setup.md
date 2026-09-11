@@ -86,6 +86,78 @@ pnpm --filter @ltw/harness live            # two real lockstep clients through i
 
 ---
 
+## 7. Art: the asset factory
+
+Everything art is generated from `art/specs/<id>.yaml` by a Blender Python library and
+admitted by a gate (ADR-0018, [`docs/art/pipeline.md`](art/pipeline.md)). A clone runs the
+game without any of this: `assets/build/` is committed. You need the tools only to change
+an asset.
+
+| Tool | Version here | Install |
+|---|---|---|
+| Blender | 5.2.1 LTS (4.2+ works) | `brew install --cask blender` — the `blender` wrapper lands on PATH |
+| KTX-Software (`ktx`, `toktx`) | 4.4.2 | not in Homebrew. Download the macOS `.pkg` from <https://github.com/KhronosGroup/KTX-Software/releases>; either install it, or expand it without sudo: `pkgutil --expand-full KTX-Software-*.pkg ktx && cp -R ktx/*-tools.pkg/Payload/usr/local/. ~/.local/opt/ktx/ && cp -R ktx/*-library.pkg/Payload/usr/local/. ~/.local/opt/ktx/ && ln -s ~/.local/opt/ktx/bin/ktx ~/.local/bin/ktx`. The gate looks in `~/.local/bin` as well as PATH. |
+| ffmpeg | 8.0 | `brew install ffmpeg` |
+| ImageMagick (`magick`) | 7.1 | `brew install imagemagick` |
+| Python 3 with numpy, pyyaml, pytest | 3.13 | for the generator unit tests outside Blender; Blender brings its own Python |
+| Git LFS | any | `brew install git-lfs && git lfs install` — `art/source/` and `assets/raw/` are LFS-tracked. The repo's pre-push hook is gstack-managed; the LFS hook is chained through `.git/hooks/pre-push.local`. |
+
+`pnpm install` brings gltf-transform and meshoptimizer.
+
+### Prove it works
+
+```sh
+pnpm spec-validate all           # < 1 s, no Blender
+pnpm asset-build all --dry-run   # the pure half: layouts and triangle estimates
+pnpm asset-build all             # ~9 s for the catalogue, one Blender process
+pnpm asset-gate all              # every asset admitted, or every violation listed
+cd art/generators && python3 -m pytest tests -q
+```
+
+### Add an asset in one command
+
+```
+/asset new creep jelly "a hovering jellyfish that drifts down the lane, bell the size of a runner's head"
+```
+
+The skill writes the spec, validates, builds, previews, critiques (the art-director
+subagent looks at the pictures), iterates on parameters up to four times, gates, registers,
+binds, synthesises placeholder sounds, writes the game-data proposal and stops for your
+approval with the lineup render. `/asset evolve creep_jelly_t1 "tier 2"` derives the next tier.
+
+### Review an asset
+
+```
+/asset review creep_jelly_t1     # fresh previews and critique
+/asset status                     # the catalogue: stale, missing clips, awaiting approval
+pnpm dev  →  http://localhost:5173/tower-defense/assets   # the dev viewer: any id, any clip, team and wireframe toggles, budget numbers, a regenerate button
+```
+
+Previews live under `reports/art/<id>/` (gitignored); `reports/art/index.html` is the
+catalogue page.
+
+### Interactive Blender, and the Blender MCP
+
+Headless is the default and the only path that produces a build. For sculpting a reference
+or debugging a rig by eye, open Blender interactively; a `.blend` you save goes under
+`art/source/` and enters the catalogue through `/asset import <file> --as <id>`, never
+straight into `assets/build/` (a hook refuses).
+
+To let Claude drive an interactive Blender session, the community `blender-mcp` server
+works with this repo and is **not installed here**:
+
+```sh
+# in Blender: Edit → Preferences → Add-ons → install addon.py from
+#   https://github.com/ahujasid/blender-mcp, then start its server from the sidebar (N panel)
+claude mcp add blender -- uvx blender-mcp
+```
+
+Anything it makes still goes through `import`. The build stays reproducible from
+`art/specs/` and `art/generators/` at a commit, which a hand-edited `.blend` is not; the
+import records the file as the source and the gate treats it like any other.
+
+---
+
 ## Connections
 
 ### GitHub — connected, via the `gh` CLI
@@ -200,6 +272,9 @@ the skill and hook files themselves.
 | `/perf` | render cost. Currently blocked on the browser runner. |
 | `/ship` | releasing. Stops at the first failed gate; asks before deploying. |
 | `/slice` | building an issue end to end. |
+| `/asset` | anything art: `new`, `evolve`, `import`, `source`, `review`, `regen`, `retire`, `audio`, `status`. Stops for approval with previews. |
+| `/style-sheet` | a confirmed change to the art style sheet, propagated to budgets, palette and generator defaults, then regenerated. |
+| `/asset-gate` | the admission gate, every rejection explained. |
 
 > `/ship` also exists as a gstack skill in `~/.claude/skills/`. The project one wins.
 
@@ -207,7 +282,8 @@ the skill and hook files themselves.
 
 `sim-reviewer` · `render-reviewer` · `netcode-reviewer` (read-only reviewers) ·
 `balance-analyst` (owns large outputs) · `test-author` (tests only) · `docs-keeper`
-(docs only).
+(docs only) · `art-director` (looks at previews, writes critiques) · `asset-builder` (the
+only writer of specs) · `art-librarian` (the catalogue's state).
 
 ### Hooks — `.claude/settings.json`, scripts in `.claude/hooks/`
 
@@ -218,6 +294,9 @@ the skill and hook files themselves.
 | post-edit checks | after any edit | `eslint --fix`, package typecheck, that file's test (~3.5s) |
 | stop guard | before the turn ends | if `packages/sim` changed: full sim suite + `determinism-check`, and blocks "done" on failure |
 | invariants injector | session start, pre-compaction | injects `docs/invariants.md` verbatim |
+| assets guard | before any edit | refuses hand edits to `assets/build/`, the manifest, `LICENSES.md` and every generated file, naming the command that regenerates it |
+| art post-edit | after any edit | `spec-validate` after a spec edit; the generator tests (with the registry and `generators.md` sync tests) after a generator edit |
+| art stop guard | before the turn ends | if the catalogue changed: `asset-gate --changed` and `asset-report` must pass, `LICENSES.md` regenerated; blocks "done" otherwise |
 
 **The constants guard, and the one way to get it wrong.** It reads a marker file,
 `.claude/.rule-change-active` — a file rather than an environment variable because a hook

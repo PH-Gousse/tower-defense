@@ -1,6 +1,6 @@
 # Generator reference
 
-*Generated from `art/generators/ltw_art` (version 0.1.3) by `python3 -m ltw_art.docs`. Do not edit.*
+*Generated from `art/generators/ltw_art` (version 0.1.6) by `python3 -m ltw_art.docs`. Do not edit.*
 
 Every name a spec may use: body plans and their parameters, parts and where they attach, rig templates and their bones, animation generators and the clips they produce. `spec-validate` checks specs against the same tables (`registry.json`).
 
@@ -263,7 +263,7 @@ A part is placed at an attachment point and scales with it. `triangles` is the p
 | `crystal_shards` | `back`, `shoulders`, `turret_top` | `back` | `crystal` | 24 | Three small crystal shards, a lighter touch than the cluster. |
 | `emissive_trim` | `base_ring`, `torso_stripe`, `back` | `base_ring` | `glow` | 48 | Six small glowing studs in a ring: the tier-3 emissive strip. Octahedra, not spheres: 8 triangles each instead of 60, which is the difference between a tier-3 creep fitting its budget and not. |
 | `extra_barrel` | `turret_top` | `turret_top` | `barrel` | 56 | A second, shorter barrel beside the first, pitched the same way. The level-3 part for the mortar. |
-| `gold_ring` | `base_ring`, `turret_top` | `base_ring` | `trim` | 44 | A thin ring of trim around the body: gold at level 3, otherwise a dark band. The cheapest level-3 signal there is. |
+| `gold_ring` | `base_ring`, `turret_top`, `hips`, `abdomen` | `base_ring` | `trim` | 44 | A thin ring of trim around the body: gold at level 3, otherwise a dark band. The cheapest level-3 signal there is; on a creep it is a belt at the hips (or round a beetle's abdomen). |
 | `head_crest` | `head` | `head` | `crest` | 36 | A fin-like crest on the head, three thin fins fanning back. Accent colour and team-maskable. |
 | `horns` | `head` | `head` | `horn` | 16 | Two curved-looking horns (two cones each) sweeping up and out. |
 | `iron_bands` | `base_ring` | `base_ring` | `band` | 56 | Two iron bands around the body, a little apart. |

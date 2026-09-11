@@ -11,6 +11,6 @@ params:
     - { part: club, at: hand_r }
     - shoulder_plates
 palette:
-  tier_shift: 0.25
+  tier_shift: 0.15
   trim: false
 source: { kind: generated, licence: own, author: asset-factory }

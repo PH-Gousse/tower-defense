@@ -163,9 +163,10 @@ def spire(size: float, rng) -> Layout:
     return lay
 
 
-@part("gold_ring", attaches=["base_ring", "turret_top"], default_at="base_ring", slots=["trim"], triangles=12 * 2 + 20, doc="""
+@part("gold_ring", attaches=["base_ring", "turret_top", "hips", "abdomen"], default_at="base_ring", slots=["trim"], triangles=12 * 2 + 20, doc="""
 A thin ring of trim around the body: gold at level 3, otherwise a dark
-band. The cheapest level-3 signal there is.
+band. The cheapest level-3 signal there is; on a creep it is a belt at
+the hips (or round a beetle's abdomen).
 """)
 def gold_ring(size: float, rng) -> Layout:
     lay = Layout()

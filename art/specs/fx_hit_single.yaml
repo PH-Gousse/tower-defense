@@ -4,6 +4,6 @@ id: fx_hit_single
 class: effect
 archetype: hit_single
 body_plan: orb
-params: { radius: 0.12, stretch: 1.0 }
-palette: { primary: gold, secondary: gold, accent: gold, glow: gold }
+params: { radius: 0.2, stretch: 1.0 }
+palette: { primary: danger, secondary: bone, accent: danger, glow: danger }
 source: { kind: generated, licence: own, author: asset-factory }

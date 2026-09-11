@@ -28,7 +28,7 @@ from .. import palette
 # turning the sampled term off without editing code.
 BAKE_SAMPLES = int(os.environ.get("LTW_BAKE_SAMPLES", "16"))
 BAKE_MARGIN = int(os.environ.get("LTW_BAKE_MARGIN", "4"))
-AO_STRENGTH = float(os.environ.get("LTW_AO", "0.55"))
+AO_STRENGTH = float(os.environ.get("LTW_AO", "0.35"))
 
 # Slot → role or fixed palette colour. A part may override the role for its
 # own slots through the spec (`palette:` on the part entry).
@@ -45,7 +45,7 @@ SLOT_ROLES: dict[str, str] = {
     "spike": "iron", "horn": "bone", "tusk": "bone", "bone": "bone", "tail": "primary", "fletching": "bone",
     "head": "iron",
     # glow
-    "eyes": "glow", "crystal": "glow", "glow": "glow", "halo": "glow", "rune": "glow",
+    "eyes": "glow", "crystal": "glow", "glow": "glow", "halo": "secondary", "rune": "glow",
     # trim
     "trim": "trim", "spire": "trim",
 }
@@ -144,7 +144,7 @@ def _bake(ob: bpy.types.Object, image: bpy.types.Image, samples: int) -> None:
             mat.node_tree.nodes.remove(n)
 
 
-def bake_albedo(ob: bpy.types.Object, pal: dict, overrides: dict[str, str], team_slots: list[str], size: int, height: float, out_png: str, gradient: float = 0.18, ao_strength: float = AO_STRENGTH) -> dict:
+def bake_albedo(ob: bpy.types.Object, pal: dict, overrides: dict[str, str], team_slots: list[str], size: int, height: float, out_png: str, gradient: float = 0.10, ao_strength: float = AO_STRENGTH) -> dict:
     """Two EMIT bakes (colour, mask) composed into one RGBA PNG. Returns the
     slot → colour table for the build log."""
     colours: dict[str, tuple[float, float, float]] = {}

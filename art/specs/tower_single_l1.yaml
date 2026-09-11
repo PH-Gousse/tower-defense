@@ -4,13 +4,13 @@ class: tower
 archetype: single
 level: 1
 body_plan: turret_on_base
-params: { height: 1.2, keep_radius: 0.27, merlons: 6, roof: none }
+params: { height: 1.25, keep_radius: 0.18, merlons: 0, roof: none }
 palette:
   primary: stone
   secondary: stone_dark
   accent: bronze
   glow: gold
-  team_mask: [banner, parapet]
+  team_mask: [banner]
 rig: turret
 animations:
   Build:   { gen: build_up, duration: 0.8 }

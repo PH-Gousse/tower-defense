@@ -11,7 +11,8 @@ params:
     - shoulder_spikes
     - { part: head_crest, at: head }
     - { part: emissive_trim, at: back }
+    - { part: gold_ring, at: hips }
 palette:
-  tier_shift: 0.5
+  tier_shift: 0.35
   trim: true
 source: { kind: generated, licence: own, author: asset-factory }

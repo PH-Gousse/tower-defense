@@ -32,7 +32,7 @@ def build(p: dict, rng) -> Layout:
     rx = L * 0.3
     lay.add(Prim("sphere", (rx,), (0, cy, -L * 0.1), scale=(1.0, ry / rx, L * 0.55 / rx), slot="shell", seg=12, bone="abdomen", smooth=True, name="abdomen"))
     lay.add(Prim("sphere", (rx * 0.8,), (0, cy * 0.95, L * 0.28), scale=(1.0, ry * 0.85 / (rx * 0.8), 0.9), slot="shell", seg=10, bone="thorax", smooth=True, name="thorax"))
-    lay.add(Prim("box", (rx * 0.5, ry * 0.3, L * 0.5), (0, cy + ry * 0.75, -L * 0.05), slot="torso_stripe", seg=1, bone="abdomen", name="stripe"))
+    lay.add(Prim("box", (rx * 0.95, ry * 0.3, L * 0.55), (0, cy + ry * 0.78, -L * 0.05), slot="torso_stripe", seg=1, bone="abdomen", name="stripe"))
     lay.add(Prim("box", (rx * 1.6, ry * 0.5, L * 0.6), (0, cy - ry * 0.7, -L * 0.05), slot="belly", seg=1, bone="abdomen", name="belly"))
     hr = rx * 0.5
     head = (0, cy * 0.8, L * 0.5 + hr * 0.6)

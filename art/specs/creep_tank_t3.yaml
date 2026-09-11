@@ -12,7 +12,8 @@ params:
     - shoulder_plates
     - back_plates
     - { part: emissive_trim, at: back }
+    - { part: gold_ring, at: hips }
 palette:
-  tier_shift: 0.5
+  tier_shift: 0.3
   trim: true
 source: { kind: generated, licence: own, author: asset-factory }

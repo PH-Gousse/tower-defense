@@ -11,6 +11,7 @@ params:
     - spike_row
     - { part: horns, at: head }
     - { part: emissive_trim, at: back }
+    - { part: gold_ring, at: abdomen }
 palette:
   tier_shift: 0.5
   trim: true

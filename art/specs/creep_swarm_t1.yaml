@@ -7,9 +7,9 @@ tier: 1
 body_plan: insect
 params:
   height: 0.36
-  body_length: 0.5
-  legs: 6
-  shell_ratio: 0.7
+  body_length: 0.42
+  legs: 8
+  shell_ratio: 0.85
   mandibles: true
 palette:
   primary: creep_skin_1
@@ -21,7 +21,7 @@ rig: insect
 animations:
   Idle:  { gen: idle_breathe, amplitude: 0.01, duration: 1.0 }
   Walk:  { gen: scuttle, stride: 0.4, cadence: 7.0, sway: 0.08 }
-  Death: { gen: crumble, duration: 0.5, impact: 0.4 }
+  Death: { gen: crumble, duration: 0.7, impact: 0.6 }
   Spawn: { gen: rise_from_ground, duration: 0.4, land: 0.7 }
 audio:
   spawn: sfx_spawn_small_1

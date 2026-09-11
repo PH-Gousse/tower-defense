@@ -56,7 +56,8 @@ orb -- a frost bolt: a glowing octahedron stretched along its flight.
 def orb(p: dict, rng) -> Layout:
     lay = Layout()
     r = p["radius"]
-    lay.add(Prim("octa", (r,), (0, 0, 0), scale=(1, 1, p["stretch"]), slot="core", seg=1, name="core"))
+    lay.add(Prim("octa", (r * 0.6,), (0, 0, 0), scale=(1, 1, p["stretch"]), slot="core", seg=1, name="core"))
+    lay.add(Prim("octa", (r,), (0, 0, 0), (0, 0.785, 0), scale=(1, 1, p["stretch"]), slot="halo", seg=1, name="halo"))
     _centre(lay)
     return lay
 
