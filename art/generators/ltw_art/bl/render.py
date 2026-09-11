@@ -22,14 +22,17 @@ FOV_DEG = 18.0
 PITCH_DEG = 70.0
 
 
-def _ensure_world() -> None:
+BACKGROUND = (0.42, 0.5, 0.58)
+
+
+def _ensure_world(colour=BACKGROUND) -> None:
     sc = bpy.context.scene
     if sc.world is None:
         sc.world = bpy.data.worlds.new("world")
     sc.world.use_nodes = True
     bg = sc.world.node_tree.nodes.get("Background")
     if bg:
-        bg.inputs[0].default_value = (0.42, 0.5, 0.58, 1.0)
+        bg.inputs[0].default_value = (*colour, 1.0)
         bg.inputs[1].default_value = 1.0
 
 
@@ -111,9 +114,9 @@ def solo_clip(arm: bpy.types.Object | None, clip: str | None) -> None:
         t.is_solo = False
 
 
-def snapshot(path: str, width: int, height: int, frame_no: int = 0, transparent: bool = False) -> None:
+def snapshot(path: str, width: int, height: int, frame_no: int = 0, transparent: bool = False, background=BACKGROUND) -> None:
     sc = bpy.context.scene
-    _ensure_world()
+    _ensure_world(background)
     _light()
     sc.render.engine = "BLENDER_EEVEE"
     sc.render.resolution_x = width

@@ -124,7 +124,16 @@ def build(spec: dict, out_glb: str, log_path: str | None = None, preview: str | 
     else:
         lay, overrides = lay_out(spec)
         ob = bl_mesh.realise(lay, name)
-        log = {"id": name, "generator_version": GENERATOR_VERSION, "dry_run": dry_run(spec), "steps": []}
+        # The layout's bounds are approximate (rotated corner boxes); the
+        # mesh's are exact. Re-centre both by the exact delta so the gate's
+        # origin check sees 0.000, not 0.015, and the rig lands on the mesh.
+        delta = bl_mesh.recentre(ob, projectile=(spec["class"] == "projectile"))
+        if any(abs(d) > 1e-6 for d in delta):
+            moved = lay.placed(delta)
+            lay.prims, lay.attachments, lay.joints = moved.prims, moved.attachments, moved.joints
+            if lay.muzzle is not None:
+                lay.muzzle = (lay.muzzle[0] + delta[0], lay.muzzle[1] + delta[1], lay.muzzle[2] + delta[2])
+        log = {"id": name, "generator_version": GENERATOR_VERSION, "dry_run": dry_run(spec), "recentred": [round(d, 5) for d in delta], "steps": []}
     log["steps"].append({"mesh": {"vertices": len(ob.data.vertices), "polygons": len(ob.data.polygons)}})
 
     pal = spec.get("palette", {})

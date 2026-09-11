@@ -12,6 +12,11 @@ def reset(fps: int = 24) -> None:
     sc = bpy.context.scene
     sc.render.fps = fps
     sc.render.fps_base = 1.0
+    # Clips are keyed from frame 0 and the exporter clamps to the scene
+    # range, whose default start is 1: with the default, every exported clip
+    # lost its first frame and no loop closed (the gate caught it).
+    sc.frame_start = 0
+    sc.frame_end = 2000
     sc.unit_settings.system = "METRIC"
     sc.unit_settings.scale_length = 1.0
     # The palette's numbers are what should reach the screen.

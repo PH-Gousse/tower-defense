@@ -1,0 +1,194 @@
+{
+  "assets": {
+    "creep_runner_t1": {
+      "archetype": "runner",
+      "audio": {
+        "death": "sfx_death_medium_1",
+        "spawn": "sfx_spawn_medium_1"
+      },
+      "bones": 16,
+      "bytes": 184208,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.55
+          },
+          "seconds": 0.7083
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 1.4167
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.5
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 0.2917,
+          "stride": 0.9
+        }
+      },
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_runner_t1.glb",
+      "footprint": 0.9544,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.0",
+      "hash": "76478fb78e7a781c",
+      "height": 0.679,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "b43c18e10c07d894",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 1,
+      "triangles": 1114,
+      "version": 1,
+      "vertices": 1816
+    },
+    "creep_runner_t2": {
+      "archetype": "runner",
+      "audio": {
+        "death": "sfx_death_medium_1",
+        "spawn": "sfx_spawn_medium_1"
+      },
+      "bones": 16,
+      "bytes": 196200,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.55
+          },
+          "seconds": 0.7083
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 1.4167
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.5
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 0.2917,
+          "stride": 0.9
+        }
+      },
+      "derived_from": "creep_runner_t1",
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_runner_t2.glb",
+      "footprint": 1.0205,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.0",
+      "hash": "987f0175afb97cb0",
+      "height": 0.7542,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "d9868b3501058321",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 2,
+      "triangles": 1178,
+      "version": 1,
+      "vertices": 1976
+    }
+  },
+  "manifest_version": 1,
+  "sounds": {
+    "sfx_death_medium_1": {
+      "bytes": {
+        "mp3": 10412,
+        "webm": 4950
+      },
+      "event": "death_medium",
+      "files": {
+        "mp3": "build/sfx/sfx_death_medium_1.mp3",
+        "webm": "build/sfx/sfx_death_medium_1.webm"
+      },
+      "hash": "8f5ae82060378619",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -5.1,
+      "seconds": 0.6,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_shot_single_1": {
+      "bytes": {
+        "mp3": 6188,
+        "webm": 3369
+      },
+      "event": "shot_single",
+      "files": {
+        "mp3": "build/sfx/sfx_shot_single_1.mp3",
+        "webm": "build/sfx/sfx_shot_single_1.webm"
+      },
+      "hash": "4aca18d1710af8a6",
+      "lufs": -16.5,
+      "measure": "momentary",
+      "peak_dbtp": -1.5,
+      "seconds": 0.35,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    }
+  }
+}

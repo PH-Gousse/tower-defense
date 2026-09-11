@@ -1,0 +1,11 @@
+# A runner dies: a yelp that falls, a thud.
+id: sfx_death_medium_1
+event: death_medium
+variant: 1
+duration: 0.6
+layers:
+  - { wave: saw, freq: 620, freq_end: 180, attack: 0.01, decay: 0.18, release: 0.08, gain: 0.45, filter: { type: lowpass, freq: 2400, freq_end: 600, q: 1.1 }, vibrato: [22, 60], drive: 0.3 }
+  - { wave: sine, freq: 140, freq_end: 45, delay: 0.12, attack: 0.003, decay: 0.16, release: 0.1, gain: 0.7 }
+  - { wave: noise, delay: 0.12, attack: 0.002, decay: 0.08, release: 0.05, gain: 0.3, filter: { type: lowpass, freq: 900, freq_end: 200 } }
+reverb: 0.2
+source: { kind: generated, licence: own }

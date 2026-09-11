@@ -131,6 +131,27 @@ def realise(lay: Layout, name: str) -> bpy.types.Object:
     return ob
 
 
+def recentre(ob: bpy.types.Object, projectile: bool = False) -> tuple[float, float, float]:
+    """Move the mesh so its exact bounds are centred in x/z and its lowest
+    point is on y = 0 (a projectile is centred in y too). Returns the delta
+    in the GAME frame so the layout can follow."""
+    me = ob.data
+    co = np.empty(len(me.vertices) * 3, dtype=np.float32)
+    me.vertices.foreach_get("co", co)
+    co = co.reshape(-1, 3)
+    lo, hi = co.min(axis=0), co.max(axis=0)
+    # Blender frame: x, y (= -forward), z (= up).
+    dx = -(lo[0] + hi[0]) / 2
+    dy = -(lo[1] + hi[1]) / 2
+    dz = -(lo[2] + hi[2]) / 2 if projectile else -lo[2]
+    if abs(dx) < 1e-7 and abs(dy) < 1e-7 and abs(dz) < 1e-7:
+        return (0.0, 0.0, 0.0)
+    co += np.array([dx, dy, dz], dtype=np.float32)
+    me.vertices.foreach_set("co", co.ravel())
+    me.update()
+    return frame.to_game((float(dx), float(dy), float(dz)))
+
+
 def _bind(ob: bpy.types.Object, p: Prim) -> None:
     """Vertex groups from the prim's binding. `blend` splits the weight along
     the prim's own long axis between `bone` and `blend`."""

@@ -8,10 +8,15 @@
     "spec-types": "vite-node spec-types.ts"
   },
   "devDependencies": {
+    "@gltf-transform/cli": "^4.5.0",
+    "@gltf-transform/core": "^4.5.0",
+    "@gltf-transform/extensions": "^4.5.0",
+    "@gltf-transform/functions": "^4.5.0",
     "@types/node": "^24.0.0",
     "ajv": "^8.17.0",
     "ajv-formats": "^3.0.1",
     "json-schema-to-typescript": "^15.0.0",
+    "meshoptimizer": "^1.2.0",
     "typescript": "^5.9.0",
     "vite-node": "^3.2.0",
     "vitest": "^3.2.0",

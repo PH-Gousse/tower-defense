@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SoundSpec",
+  "description": "A synthesised placeholder sound: layers of a waveform through an envelope and a filter, mixed and normalised to the audio targets in docs/art/audio.md. Everything is deterministic from the id.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "event", "layers", "source"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^sfx_[a-z0-9_]+_[0-9]+$" },
+    "event": { "description": "The game event, from the table in docs/art/audio.md.", "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "variant": { "type": "integer", "minimum": 1, "default": 1 },
+    "duration": { "description": "Seconds of rendered audio before silence trimming.", "type": "number", "minimum": 0.05, "maximum": 4, "default": 0.5 },
+    "stereo": { "type": "boolean", "default": false },
+    "layers": {
+      "type": "array", "minItems": 1, "maxItems": 8,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["wave"],
+        "properties": {
+          "wave": { "type": "string", "enum": ["sine", "triangle", "saw", "square", "noise"] },
+          "freq": { "description": "Start frequency, Hz. Ignored by noise.", "type": "number", "minimum": 10, "maximum": 20000, "default": 440 },
+          "freq_end": { "description": "End frequency for a glide; the start frequency when omitted.", "type": ["number", "null"], "minimum": 10, "maximum": 20000, "default": null },
+          "glide": { "description": "Glide curve: linear or exponential.", "type": "string", "enum": ["linear", "exp"], "default": "exp" },
+          "attack": { "type": "number", "minimum": 0, "maximum": 2, "default": 0.005 },
+          "decay": { "type": "number", "minimum": 0, "maximum": 4, "default": 0.1 },
+          "sustain": { "description": "Level 0..1 held after the decay until the release.", "type": "number", "minimum": 0, "maximum": 1, "default": 0 },
+          "hold": { "description": "Seconds the sustain level is held.", "type": "number", "minimum": 0, "maximum": 4, "default": 0 },
+          "release": { "type": "number", "minimum": 0, "maximum": 4, "default": 0.05 },
+          "gain": { "type": "number", "minimum": 0, "maximum": 2, "default": 0.5 },
+          "delay": { "description": "Start offset, seconds.", "type": "number", "minimum": 0, "maximum": 4, "default": 0 },
+          "filter": {
+            "type": ["object", "null"], "default": null, "additionalProperties": false,
+            "properties": {
+              "type": { "type": "string", "enum": ["lowpass", "highpass", "bandpass"], "default": "lowpass" },
+              "freq": { "type": "number", "minimum": 20, "maximum": 20000, "default": 2000 },
+              "freq_end": { "type": ["number", "null"], "minimum": 20, "maximum": 20000, "default": null },
+              "q": { "type": "number", "minimum": 0.1, "maximum": 20, "default": 0.8 }
+            }
+          },
+          "vibrato": { "description": "[rate Hz, depth in cents], or null.", "type": ["array", "null"], "default": null, "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+          "pan": { "description": "Stereo only: -1 left .. 1 right.", "type": "number", "minimum": -1, "maximum": 1, "default": 0 },
+          "drive": { "description": "Soft clipping amount, 0 = clean.", "type": "number", "minimum": 0, "maximum": 1, "default": 0 }
+        }
+      }
+    },
+    "reverb": { "description": "Wet mix of a short synthesised hall, 0 = dry.", "type": "number", "minimum": 0, "maximum": 1, "default": 0.15 },
+    "source": {
+      "type": "object", "additionalProperties": false, "required": ["kind", "licence"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["generated", "pack", "ai", "freelance", "hand"] },
+        "licence": { "type": "string", "enum": ["own", "cc0", "cc-by", "other"] },
+        "author": { "type": "string", "default": "asset-factory" },
+        "url": { "type": "string", "default": "" },
+        "attribution": { "type": "string", "default": "" },
+        "approved_by": { "type": "string", "default": "" },
+        "notes": { "type": "string", "default": "" }
+      }
+    }
+  }
+}
