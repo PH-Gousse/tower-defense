@@ -1,0 +1,12 @@
+# Income paid: three coins.
+id: sfx_income_1
+event: income
+variant: 1
+duration: 0.6
+stereo: false
+layers:
+  - { wave: triangle, freq: 1320, attack: 0.005, decay: 0.15, release: 0.1, gain: 0.3 }
+  - { wave: triangle, freq: 1760, delay: 0.08, attack: 0.005, decay: 0.2, release: 0.1, gain: 0.3 }
+  - { wave: triangle, freq: 2200, delay: 0.16, attack: 0.005, decay: 0.25, release: 0.15, gain: 0.25 }
+reverb: 0.3
+source: { kind: generated, licence: own }

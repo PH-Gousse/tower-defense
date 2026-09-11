@@ -1,0 +1,12 @@
+# A tier unlocks: a horn fifth over a drum.
+id: sfx_tier_unlock_1
+event: tier_unlock
+variant: 1
+duration: 2.5
+stereo: true
+layers:
+  - { wave: saw, freq: 220, hold: 0.8, attack: 0.05, decay: 0.3, sustain: 0.6, release: 0.8, gain: 0.35, filter: { type: lowpass, freq: 1500, q: 1.1 }, vibrato: [5, 15] }
+  - { wave: saw, freq: 330, hold: 0.8, delay: 0.3, attack: 0.05, decay: 0.3, sustain: 0.6, release: 0.8, gain: 0.3, filter: { type: lowpass, freq: 1800 } }
+  - { wave: noise, delay: 0.05, attack: 0.01, decay: 0.6, release: 0.3, gain: 0.25, filter: { type: lowpass, freq: 600, freq_end: 80 } }
+reverb: 0.45
+source: { kind: generated, licence: own }

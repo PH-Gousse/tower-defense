@@ -235,6 +235,20 @@ export function deliver(wav: string, outBase: string, target: { lufs: number; pe
   // about a decibel higher, so the cap is set 1.2 dB under the ceiling.
   const n = ffmpeg(['-i', trimmed, '-af', `volume=${gainDb.toFixed(2)}dB,alimiter=limit=${Math.pow(10, (target.peak - 1.2) / 20).toFixed(4)}:attack=0.5:release=15:level=false`, '-ar', String(SAMPLE_RATE), '-ac', stereo ? '2' : '1', '-c:a', 'pcm_s24le', norm])
   log += n.out
+  // The limiter caps sample peaks; a sharp transient can still leave a TRUE
+  // peak above the ceiling (measured: -0.6 dBTP on one bolt with the cap at
+  // -2.2 dBFS). Measure, and if it overshoots, pull the whole file down by
+  // the excess plus 0.1 dB. That costs the same fraction of loudness, which is
+  // inside the ±1.5 LU tolerance for anything that got this far.
+  const check = measure(norm)
+  if (Number.isFinite(check.peak) && check.peak > target.peak) {
+    const fixed = `${outBase}.norm2.wav`
+    const f = ffmpeg(['-i', norm, '-af', `volume=${(target.peak - check.peak - 0.1).toFixed(2)}dB`, '-c:a', 'pcm_s24le', fixed])
+    log += f.out
+    if (f.ok) {
+      ffmpeg(['-i', fixed, '-c:a', 'pcm_s24le', norm])
+    }
+  }
   const webm = `${outBase}.webm`
   const mp3 = `${outBase}.mp3`
   const w = ffmpeg(['-i', norm, '-c:a', 'libopus', '-b:a', stereo ? '96k' : '64k', '-vbr', 'on', '-application', 'audio', webm])

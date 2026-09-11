@@ -1,0 +1,8 @@
+# The mortar's shot: an iron ball.
+id: proj_shell
+class: projectile
+archetype: shell
+body_plan: shell
+params: { radius: 0.09 }
+palette: { primary: iron, secondary: iron, accent: iron, glow: null }
+source: { kind: generated, licence: own, author: asset-factory }

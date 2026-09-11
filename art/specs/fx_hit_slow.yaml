@@ -1,0 +1,9 @@
+# The hit effect for the slow tower: a small glowing burst the pool
+# scales up and fades. Same plan as the frost bolt, glow only.
+id: fx_hit_slow
+class: effect
+archetype: hit_slow
+body_plan: orb
+params: { radius: 0.12, stretch: 1.0 }
+palette: { primary: ice, secondary: ice, accent: ice, glow: ice }
+source: { kind: generated, licence: own, author: asset-factory }

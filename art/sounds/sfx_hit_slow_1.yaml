@@ -1,0 +1,11 @@
+# Frost hit 1: a crackle of ice.
+id: sfx_hit_slow_1
+event: hit_slow
+variant: 1
+duration: 0.4
+stereo: false
+layers:
+  - { wave: noise, attack: 0.002, decay: 0.15, release: 0.1, gain: 0.5, filter: { type: highpass, freq: 3220.0, q: 0.8 } }
+  - { wave: sine, freq: 2392.0, freq_end: 3400, attack: 0.005, decay: 0.2, release: 0.1, gain: 0.25 }
+reverb: 0.25
+source: { kind: generated, licence: own }

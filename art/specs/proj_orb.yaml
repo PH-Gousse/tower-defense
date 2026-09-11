@@ -1,0 +1,8 @@
+# The frost shrine's bolt: a glowing shard stretched along its flight.
+id: proj_orb
+class: projectile
+archetype: orb
+body_plan: orb
+params: { radius: 0.09, stretch: 1.6 }
+palette: { primary: ice, secondary: ice_deep, accent: ice, glow: ice }
+source: { kind: generated, licence: own, author: asset-factory }

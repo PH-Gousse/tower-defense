@@ -1,0 +1,13 @@
+# Frost shrine shot 1: a rising shimmer and two ice ticks.
+id: sfx_shot_slow_1
+event: shot_slow
+variant: 1
+duration: 0.45
+stereo: false
+layers:
+  - { wave: sine, freq: 1380.0, freq_end: 2300, attack: 0.04, decay: 0.25, release: 0.1, gain: 0.35, vibrato: [9, 30] }
+  - { wave: noise, attack: 0.05, decay: 0.3, release: 0.05, gain: 0.15, filter: { type: bandpass, freq: 1400, freq_end: 3200, q: 2.5 } }
+  - { wave: sine, freq: 3864.0, delay: 0.12, attack: 0.002, decay: 0.05, release: 0.02, gain: 0.12 }
+  - { wave: sine, freq: 4692.0, delay: 0.19, attack: 0.002, decay: 0.05, release: 0.02, gain: 0.1 }
+reverb: 0.3
+source: { kind: generated, licence: own }

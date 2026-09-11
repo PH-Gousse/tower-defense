@@ -10,7 +10,11 @@ import { readGlb, clips as readClips } from './lib/glb'
 import { FPS } from './lib/budgets'
 
 /**
- * asset-preview <id|all>
+ * asset-preview <id|all> [--lineup <class>]
+ *
+ * --lineup <class> renders one strip of EVERY admitted asset of that class
+ * side by side at true relative scale (reports/art/lineup_<class>.png):
+ * the "all creeps" and "all towers" renders the catalogue is reviewed on.
  *
  * Renders, into reports/art/<id>/:
  *   turntable.png      eight yaws at the game pitch
@@ -32,9 +36,10 @@ import { FPS } from './lib/budgets'
  */
 
 const argv = process.argv.slice(2)
-parseArgs(argv)
-const ids = selectIds(argv, listSpecIds)
-if (ids.length === 0) fail('no specs selected')
+const args = parseArgs(argv)
+const lineupClass = typeof args['lineup'] === 'string' ? args['lineup'] : null
+const ids = lineupClass ? [] : selectIds(argv, listSpecIds)
+if (ids.length === 0 && !lineupClass) fail('no specs selected')
 
 const blender = findBlender()
 if (!blender) {
@@ -81,6 +86,12 @@ for (const id of ids) {
   siblings.sort((a, b) => (a.id === id ? -1 : b.id === id ? 1 : a.id.localeCompare(b.id)))
   batch.push({ id, glb, out_dir: join(REPORTS, id), class: r.spec.class, clips, height: 0, siblings })
 }
+if (lineupClass) {
+  const members = allIds.filter((o) => { const r = resolveSpec(o, { schema, registry }); return !r.problems.length && r.spec.class === lineupClass && glbFor(o) })
+  members.sort()
+  if (members.length === 0) fail(`no built assets of class ${lineupClass}`)
+  batch.push({ id: `lineup_${lineupClass}`, glb: glbFor(members[0]!)!, out_dir: join(REPORTS, `lineup_${lineupClass}`), class: lineupClass, clips: {}, height: 0, siblings: members.map((m) => ({ id: m, glb: glbFor(m)!, label: m })), lineup_only: true } as Entry & { lineup_only: boolean })
+}
 for (const m of missing) say(`skip     ${m}`)
 if (batch.length === 0) emit('asset-preview', false, 'nothing to render', { missing })
 
@@ -123,6 +134,13 @@ for (const res of results) {
   // Tidy the frame files.
   for (const p of [...tt, ...sil, ...small, ...big, ...team, ...Object.values(clipFrames).flat()]) rmSync(p, { force: true })
   const lineup = res['lineup'] as { png: string; order: string[] } | undefined
+  if (lineupClass) {
+    const out = join(REPORTS, `lineup_${lineupClass}.png`)
+    if (lineup) magick([lineup.png, out])
+    say(`lineup   ${lineupClass}: ${lineup?.order.length ?? 0} assets → ${rel(out)}`)
+    done.push({ ok: true, id, lineup: rel(out), order: lineup?.order ?? [] })
+    continue
+  }
   const info = {
     id,
     glb: rel(batch.find((b) => b.id === id)!.glb),

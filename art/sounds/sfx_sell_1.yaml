@@ -1,0 +1,11 @@
+# A tower sold: a falling note, coins.
+id: sfx_sell_1
+event: sell
+variant: 1
+duration: 0.6
+stereo: false
+layers:
+  - { wave: triangle, freq: 520, freq_end: 260, attack: 0.01, decay: 0.3, release: 0.15, gain: 0.35 }
+  - { wave: noise, delay: 0.15, attack: 0.02, decay: 0.2, release: 0.1, gain: 0.25, filter: { type: lowpass, freq: 1500, freq_end: 400 } }
+reverb: 0.2
+source: { kind: generated, licence: own }

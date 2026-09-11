@@ -1,0 +1,9 @@
+# The hit effect for the single tower: a small glowing burst the pool
+# scales up and fades. Same plan as the frost bolt, glow only.
+id: fx_hit_single
+class: effect
+archetype: hit_single
+body_plan: orb
+params: { radius: 0.12, stretch: 1.0 }
+palette: { primary: gold, secondary: gold, accent: gold, glow: gold }
+source: { kind: generated, licence: own, author: asset-factory }

@@ -172,7 +172,9 @@ export function registryProblems(spec: AssetSpec, reg: Registry): Problem[] {
   if (!plan) {
     out.push({ path: '/body_plan', message: `unknown body plan "${planName}"; registry has ${Object.keys(reg.body_plans).join(', ')}` })
   } else {
-    if (plan.class !== 'any' && plan.class !== spec.class) {
+    // An effect is a projectile-shaped thing the pool animates, so projectile plans fit it too.
+    const fits = plan.class === 'any' || plan.class === spec.class || (spec.class === 'effect' && plan.class === 'projectile')
+    if (!fits) {
       out.push({ path: '/body_plan', message: `"${spec.body_plan}" is a ${plan.class} plan, and this is a ${spec.class}` })
     }
     const params: Record<string, unknown> = spec.params ?? {}

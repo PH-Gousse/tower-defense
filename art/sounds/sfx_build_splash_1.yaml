@@ -1,0 +1,12 @@
+# A splash tower is built: stone set down.
+id: sfx_build_splash_1
+event: build_splash
+variant: 1
+duration: 0.9
+stereo: false
+layers:
+  - { wave: noise, attack: 0.005, decay: 0.3, release: 0.2, gain: 0.5, filter: { type: lowpass, freq: 720, freq_end: 240 } }
+  - { wave: sine, freq: 120, freq_end: 72.0, attack: 0.01, decay: 0.4, release: 0.2, gain: 0.5 }
+  - { wave: triangle, freq: 240, delay: 0.25, attack: 0.01, decay: 0.2, release: 0.1, gain: 0.25 }
+reverb: 0.25
+source: { kind: generated, licence: own }

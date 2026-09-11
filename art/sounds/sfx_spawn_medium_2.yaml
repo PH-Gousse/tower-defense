@@ -1,0 +1,11 @@
+# A medium creep spawns (2): a rising growl and a puff of earth.
+id: sfx_spawn_medium_2
+event: spawn_medium
+variant: 2
+duration: 0.55
+stereo: false
+layers:
+  - { wave: saw, freq: 210.0, freq_end: 420.0, attack: 0.02, decay: 0.21, release: 0.1, gain: 0.35, filter: { type: lowpass, freq: 1260, q: 1.2 }, drive: 0.2 }
+  - { wave: noise, attack: 0.01, decay: 0.13999999999999999, release: 0.08, gain: 0.25, filter: { type: lowpass, freq: 840, freq_end: 210.0 } }
+reverb: 0.2
+source: { kind: generated, licence: own }

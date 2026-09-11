@@ -1,0 +1,10 @@
+# A command refused: a dull buzz.
+id: sfx_refused_1
+event: refused
+variant: 1
+duration: 0.25
+stereo: false
+layers:
+  - { wave: square, freq: 200, freq_end: 150, attack: 0.002, decay: 0.12, release: 0.05, gain: 0.3, filter: { type: lowpass, freq: 1200 } }
+reverb: 0.05
+source: { kind: generated, licence: own }

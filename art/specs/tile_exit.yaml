@@ -1,0 +1,8 @@
+# The exit marker: a slab with a raised ring in the glow material.
+id: tile_exit
+class: tile
+archetype: exit
+body_plan: tile_marker
+params: { rune: ring, height: 0.03 }
+palette: { primary: stone_dark, secondary: stone_dark, accent: danger, glow: danger }
+source: { kind: generated, licence: own, author: asset-factory }

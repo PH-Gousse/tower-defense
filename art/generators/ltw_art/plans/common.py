@@ -41,7 +41,7 @@ def eyes(lay: Layout, pos, spacing: float, r: float, bone: str, forward: float =
     """Two glowing spheres in the `eyes` slot, always the glow material."""
     x, y, z = pos
     for side in (-1, 1):
-        lay.add(Prim("sphere", (r,), (x + side * spacing, y, z + forward), slot="eyes", seg=6, bone=bone, smooth=True))
+        lay.add(Prim("sphere", (r,), (x + side * spacing, y, z + forward), slot="eyes", seg=5, bone=bone, smooth=True))
 
 
 def ground(lay: Layout) -> None:

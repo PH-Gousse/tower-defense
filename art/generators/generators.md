@@ -1,6 +1,6 @@
 # Generator reference
 
-*Generated from `art/generators/ltw_art` (version 0.1.0) by `python3 -m ltw_art.docs`. Do not edit.*
+*Generated from `art/generators/ltw_art` (version 0.1.2) by `python3 -m ltw_art.docs`. Do not edit.*
 
 Every name a spec may use: body plans and their parameters, parts and where they attach, rig templates and their bones, animation generators and the clips they produce. `spec-validate` checks specs against the same tables (`registry.json`).
 
@@ -261,14 +261,14 @@ A part is placed at an attachment point and scales with it. `triangles` is the p
 | `club` | `hand_l`, `hand_r` | `hand_r` | `club` | 46 | A wooden club with a knob, held in a hand, resting over the shoulder. |
 | `crystal_cluster` | `back`, `head`, `turret_top`, `top` | `back` | `crystal` | 40 | Five glowing crystal shards of different heights, leaning outward. The level-3 part for the frost shrine; a tier-3 part for creeps. |
 | `crystal_shards` | `back`, `shoulders`, `turret_top` | `back` | `crystal` | 24 | Three small crystal shards, a lighter touch than the cluster. |
-| `emissive_trim` | `base_ring`, `torso_stripe`, `back` | `base_ring` | `glow` | 48 | Six small glowing studs in a ring: the tier-3 emissive strip. |
+| `emissive_trim` | `base_ring`, `torso_stripe`, `back` | `base_ring` | `glow` | 48 | Six small glowing studs in a ring: the tier-3 emissive strip. Octahedra, not spheres: 8 triangles each instead of 60, which is the difference between a tier-3 creep fitting its budget and not. |
 | `extra_barrel` | `turret_top` | `turret_top` | `barrel` | 56 | A second, shorter barrel beside the first, pitched the same way. The level-3 part for the mortar. |
 | `gold_ring` | `base_ring`, `turret_top` | `base_ring` | `trim` | 44 | A thin ring of trim around the body: gold at level 3, otherwise a dark band. The cheapest level-3 signal there is. |
 | `head_crest` | `head` | `head` | `crest` | 36 | A fin-like crest on the head, three thin fins fanning back. Accent colour and team-maskable. |
 | `horns` | `head` | `head` | `horn` | 16 | Two curved-looking horns (two cones each) sweeping up and out. |
 | `iron_bands` | `base_ring` | `base_ring` | `band` | 56 | Two iron bands around the body, a little apart. |
 | `roof_cone` | `turret_top` | `turret_top` | `roof` | 16 | A conical wooden roof with a small finial. The level-2 part for the keep. |
-| `shoulder_plates` | `shoulders`, `shoulder_l`, `shoulder_r` | `shoulders` | `plate` | 48 | Two armour plates over the shoulders, angled down and out. The tier-2 part for heavy creeps. |
+| `shoulder_plates` | `shoulders`, `shoulder_l`, `shoulder_r` | `shoulders` | `plate` | 24 | One armour plate over each shoulder, angled down and out. The tier-2 part for heavy creeps. Plain boxes: at this size a bevel is invisible and costs four times the triangles. |
 | `shoulder_spikes` | `shoulders`, `shoulder_l`, `shoulder_r` | `shoulders` | `spike` | 40 | A row of four spikes over each shoulder, angled outward and back. The tier-2 signature part for creeps: a silhouette change with no new body plan. |
 | `spike_row` | `back`, `abdomen` | `back` | `spike` | 40 | A row of five spikes along the spine, tallest in the middle. |
 | `spire` | `turret_top` | `turret_top` | `spire` | 13 | A tall thin spire in the trim colour: gold at level 3. |

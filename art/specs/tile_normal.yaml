@@ -1,0 +1,8 @@
+# A plain lane tile: the slab under a tower footprint preview.
+id: tile_normal
+class: tile
+archetype: normal
+body_plan: tile_flat
+params: { inset: 0.02 }
+palette: { primary: stone, secondary: stone_dark, accent: stone, glow: null }
+source: { kind: generated, licence: own, author: asset-factory }

@@ -1,0 +1,11 @@
+# A small creep spawns (1): a rising growl and a puff of earth.
+id: sfx_spawn_small_1
+event: spawn_small
+variant: 1
+duration: 0.4
+stereo: false
+layers:
+  - { wave: saw, freq: 414.0, freq_end: 828.0, attack: 0.02, decay: 0.12, release: 0.1, gain: 0.35, filter: { type: lowpass, freq: 2700, q: 1.2 }, drive: 0.2 }
+  - { wave: noise, attack: 0.01, decay: 0.08000000000000002, release: 0.08, gain: 0.25, filter: { type: lowpass, freq: 1800, freq_end: 450.0 } }
+reverb: 0.2
+source: { kind: generated, licence: own }

@@ -1,0 +1,8 @@
+# The leak marker: a slab with a raised chevron in the glow material.
+id: tile_leak
+class: tile
+archetype: leak
+body_plan: tile_marker
+params: { rune: chevron, height: 0.03 }
+palette: { primary: stone_dark, secondary: stone_dark, accent: danger, glow: danger }
+source: { kind: generated, licence: own, author: asset-factory }

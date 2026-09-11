@@ -1,0 +1,13 @@
+# A button click.
+id: sfx_click_1
+event: click
+variant: 1
+duration: 0.2
+stereo: false
+layers:
+  # A 15 ms burst cannot reach -16 LUFS momentary (400 ms window) without
+  # clipping; a short body under the click gives the meter something to hear.
+  - { wave: noise, attack: 0.001, decay: 0.03, release: 0.02, gain: 0.4, filter: { type: bandpass, freq: 3000, q: 1.5 } }
+  - { wave: sine, freq: 900, freq_end: 500, attack: 0.001, decay: 0.09, release: 0.04, gain: 0.5 }
+reverb: 0.02
+source: { kind: generated, licence: own }

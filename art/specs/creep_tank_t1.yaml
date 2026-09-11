@@ -1,0 +1,38 @@
+# The tank: an ogre. Wide, slow, very high HP; answers the guard tower.
+# The club is its identity from tier 1; the tiers add plates, not weapons.
+id: creep_tank_t1
+class: creep
+archetype: tank
+tier: 1
+body_plan: biped_heavy
+params:
+  height: 1.05
+  shoulder_width: 0.62
+  hip_width: 0.34
+  arm_thickness: 0.13
+  leg_length: 0.3
+  head: brute
+  parts:
+    - { part: club, at: hand_r }
+palette:
+  primary: creep_skin_3
+  secondary: wood_dark
+  accent: violet
+  glow: danger
+  team_mask: [torso_stripe, head_crest, cloth]
+rig: biped_large
+animations:
+  Idle:  { gen: idle_breathe, amplitude: 0.025, duration: 2.2 }
+  Walk:  { gen: walk_biped, stride: 0.8, cadence: 1.7, bob: 0.04, swing: 0.5, arm_swing: 0.3 }
+  Death: { gen: collapse_forward, duration: 1.0, impact: 0.6, roll: 0.7 }
+  Spawn: { gen: rise_from_ground, duration: 0.7, land: 0.7 }
+audio:
+  spawn: sfx_spawn_large_1
+  death: sfx_death_large_1
+game:
+  speed_tiles_per_s: 1.0
+  hp: 250
+  cost: 600
+  income: 40
+  bounty: 150
+source: { kind: generated, licence: own, author: asset-factory }

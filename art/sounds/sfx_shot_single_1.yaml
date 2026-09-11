@@ -1,12 +1,12 @@
-# The guard tower's shot: a bowstring snap and the bolt leaving. A click,
-# a short body, a hiss. Placeholder, synthesised (docs/art/audio.md §4).
+# Guard tower shot 1: a bowstring snap, the bolt leaving.
 id: sfx_shot_single_1
 event: shot_single
 variant: 1
 duration: 0.35
+stereo: false
 layers:
-  - { wave: noise, attack: 0.001, decay: 0.03, release: 0.02, gain: 0.7, filter: { type: bandpass, freq: 3200, freq_end: 900, q: 1.4 } }
-  - { wave: triangle, freq: 220, freq_end: 90, attack: 0.002, decay: 0.06, release: 0.03, gain: 0.5, filter: { type: lowpass, freq: 1200 } }
+  - { wave: noise, attack: 0.001, decay: 0.028, release: 0.02, gain: 0.7, filter: { type: bandpass, freq: 2944.0, freq_end: 900, q: 1.4 } }
+  - { wave: triangle, freq: 202.4, freq_end: 90, attack: 0.002, decay: 0.06, release: 0.03, gain: 0.5, filter: { type: lowpass, freq: 1200 } }
   - { wave: noise, delay: 0.02, attack: 0.005, decay: 0.12, release: 0.05, gain: 0.25, filter: { type: highpass, freq: 4000, freq_end: 1500, q: 0.7 } }
 reverb: 0.12
 source: { kind: generated, licence: own }

@@ -1,0 +1,12 @@
+# Shell burst 1: the loudest hit; one voices many.
+id: sfx_hit_splash_1
+event: hit_splash
+variant: 1
+duration: 1.4
+stereo: false
+layers:
+  - { wave: noise, attack: 0.001, decay: 0.04, release: 0.03, gain: 1.0, filter: { type: highpass, freq: 900 }, drive: 0.6 }
+  - { wave: sine, freq: 87.4, freq_end: 28, attack: 0.003, decay: 0.7, release: 0.2, gain: 1.0 }
+  - { wave: noise, delay: 0.02, attack: 0.02, decay: 1.2, release: 0.2, gain: 0.4, filter: { type: lowpass, freq: 1100, freq_end: 70 } }
+reverb: 0.3
+source: { kind: generated, licence: own }

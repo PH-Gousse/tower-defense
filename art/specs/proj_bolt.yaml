@@ -1,0 +1,8 @@
+# The guard tower's bolt. Points along +Z; the pool orients it.
+id: proj_bolt
+class: projectile
+archetype: bolt
+body_plan: bolt
+params: { length: 0.36, radius: 0.012 }
+palette: { primary: wood, secondary: iron, accent: bone, glow: null }
+source: { kind: generated, licence: own, author: asset-factory }

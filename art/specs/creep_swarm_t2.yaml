@@ -1,0 +1,15 @@
+# Tier 2 of swarm: the style sheet's tier language (§5) and nothing
+# else. Size ×1.10, one part, palette 25% toward the accent.
+id: creep_swarm_t2
+class: creep
+archetype: swarm
+tier: 2
+derived_from: creep_swarm_t1
+params:
+  height: 0.396
+  parts:
+    - spike_row
+palette:
+  tier_shift: 0.25
+  trim: false
+source: { kind: generated, licence: own, author: asset-factory }

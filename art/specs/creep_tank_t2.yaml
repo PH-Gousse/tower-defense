@@ -1,0 +1,16 @@
+# Tier 2 of tank: the style sheet's tier language (§5) and nothing
+# else. Size ×1.10, one part, palette 25% toward the accent.
+id: creep_tank_t2
+class: creep
+archetype: tank
+tier: 2
+derived_from: creep_tank_t1
+params:
+  height: 1.155
+  parts:
+    - { part: club, at: hand_r }
+    - shoulder_plates
+palette:
+  tier_shift: 0.25
+  trim: false
+source: { kind: generated, licence: own, author: asset-factory }

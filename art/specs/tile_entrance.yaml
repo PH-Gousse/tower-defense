@@ -1,0 +1,8 @@
+# The entrance marker: a slab with a raised arrow in the glow material.
+id: tile_entrance
+class: tile
+archetype: entrance
+body_plan: tile_marker
+params: { rune: arrow, height: 0.03 }
+palette: { primary: stone_dark, secondary: stone_dark, accent: venom, glow: venom }
+source: { kind: generated, licence: own, author: asset-factory }

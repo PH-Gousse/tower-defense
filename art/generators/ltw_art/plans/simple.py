@@ -68,7 +68,7 @@ the blocked-placement preview. Colour comes from the palette role.
 def tile_flat(p: dict, rng) -> Layout:
     lay = Layout()
     s = 1.0 - 2 * p["inset"]
-    lay.add(Prim("box", (s, 0.02, s), (0, 0.01, 0), slot="face", seg=1, bevel=0.005, name="face"))
+    lay.add(Prim("box", (s, 0.02, s), (0, 0.01, 0), slot="face", seg=1, name="face"))
     lay.height = 0.02
     lay.footprint = s
     return lay
@@ -85,7 +85,7 @@ marker. The glyph is the glow material so it reads on any turf.
 def tile_marker(p: dict, rng) -> Layout:
     lay = Layout()
     h = p["height"]
-    lay.add(Prim("box", (0.96, 0.02, 0.96), (0, 0.01, 0), slot="face", seg=1, bevel=0.005, name="face"))
+    lay.add(Prim("box", (0.96, 0.02, 0.96), (0, 0.01, 0), slot="face", seg=1, name="face"))
     k = p["rune"]
     if k == "arrow":
         lay.add(Prim("box", (0.12, h, 0.4), (0, 0.02 + h / 2, -0.1), slot="rune", seg=1, name="stem"))
@@ -95,7 +95,7 @@ def tile_marker(p: dict, rng) -> Layout:
         for a in (0.785, -0.785):
             lay.add(Prim("box", (0.12, h, 0.7), (0, 0.02 + h / 2, 0), (0, a, 0), slot="rune", seg=1, name="bar"))
     elif k == "ring":
-        lay.add(Prim("torus", (0.28, 0.05), (0, 0.02 + h / 2, 0), scale=(1, h / 0.1, 1), slot="rune", seg=16, name="ring"))
+        lay.add(Prim("torus", (0.28, 0.05), (0, 0.02 + h / 2, 0), scale=(1, h / 0.1, 1), slot="rune", seg=10, name="ring"))
     else:  # chevron
         for side in (-1, 1):
             lay.add(Prim("box", (0.1, h, 0.45), (side * 0.15, 0.02 + h / 2, 0), (0, side * 0.6, 0), slot="rune", seg=1, name="arm"))

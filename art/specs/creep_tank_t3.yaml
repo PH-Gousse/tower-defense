@@ -1,0 +1,18 @@
+# Tier 3 of tank: the style sheet's tier language (§5) and nothing
+# else. Size ×1.20, two parts, palette 50% toward the accent, gold trim and an emissive strip.
+id: creep_tank_t3
+class: creep
+archetype: tank
+tier: 3
+derived_from: creep_tank_t2
+params:
+  height: 1.26
+  parts:
+    - { part: club, at: hand_r }
+    - shoulder_plates
+    - back_plates
+    - { part: emissive_trim, at: back }
+palette:
+  tier_shift: 0.5
+  trim: true
+source: { kind: generated, licence: own, author: asset-factory }

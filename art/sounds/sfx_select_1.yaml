@@ -1,0 +1,10 @@
+# A tower selected.
+id: sfx_select_1
+event: select
+variant: 1
+duration: 0.15
+stereo: false
+layers:
+  - { wave: sine, freq: 1200, attack: 0.002, decay: 0.05, release: 0.03, gain: 0.25 }
+reverb: 0.05
+source: { kind: generated, licence: own }

@@ -13,15 +13,15 @@ from ..layout import Layout, Prim
 from ..registry import part
 
 
-@part("shoulder_plates", attaches=["shoulders", "shoulder_l", "shoulder_r"], default_at="shoulders", slots=["plate"], triangles=2 * 12 * 2, doc="""
-Two armour plates over the shoulders, angled down and out. The tier-2 part
-for heavy creeps.
+@part("shoulder_plates", attaches=["shoulders", "shoulder_l", "shoulder_r"], default_at="shoulders", slots=["plate"], triangles=2 * 12, doc="""
+One armour plate over each shoulder, angled down and out. The tier-2 part
+for heavy creeps. Plain boxes: at this size a bevel is invisible and costs
+four times the triangles.
 """)
 def shoulder_plates(size: float, rng) -> Layout:
     lay = Layout()
     for side in (-1, 1):
-        lay.add(Prim("box", (size * 0.5, size * 0.12, size * 0.6), (side * size * 0.45, size * 0.05, 0), (0, 0, -side * 0.5), slot="plate", seg=1, bevel=0.01, name=f"plate_{side}"))
-        lay.add(Prim("box", (size * 0.35, size * 0.1, size * 0.45), (side * size * 0.6, -size * 0.12, 0), (0, 0, -side * 0.8), slot="plate", seg=1, bevel=0.01, name=f"plate2_{side}"))
+        lay.add(Prim("box", (size * 0.55, size * 0.12, size * 0.65), (side * size * 0.5, size * 0.02, 0), (0, 0, -side * 0.6), slot="plate", seg=1, name=f"plate_{side}"))
     return lay
 
 
@@ -32,7 +32,7 @@ def back_plates(size: float, rng) -> Layout:
     lay = Layout()
     for i in range(3):
         z = (1 - i) * size * 0.45
-        lay.add(Prim("box", (size * 0.7 - i * size * 0.08, size * 0.1, size * 0.5), (0, size * 0.04, z), (-0.15, 0, 0), slot="plate", seg=1, bevel=0.01, name=f"plate_{i}"))
+        lay.add(Prim("box", (size * 0.7 - i * size * 0.08, size * 0.1, size * 0.5), (0, size * 0.04, z), (-0.15, 0, 0), slot="plate", seg=1, name=f"plate_{i}"))
     return lay
 
 
@@ -174,13 +174,15 @@ def gold_ring(size: float, rng) -> Layout:
 
 
 @part("emissive_trim", attaches=["base_ring", "torso_stripe", "back"], default_at="base_ring", slots=["glow"], triangles=6 * 8, doc="""
-Six small glowing studs in a ring: the tier-3 emissive strip.
+Six small glowing studs in a ring: the tier-3 emissive strip. Octahedra, not
+spheres: 8 triangles each instead of 60, which is the difference between a
+tier-3 creep fitting its budget and not.
 """)
 def emissive_trim(size: float, rng) -> Layout:
     lay = Layout()
     for k in range(6):
         a = k / 6 * math.tau
-        lay.add(Prim("sphere", (size * 0.06,), (math.cos(a) * size * 0.55, size * 0.03, math.sin(a) * size * 0.55), slot="glow", seg=6, smooth=True, name=f"stud_{k}"))
+        lay.add(Prim("octa", (size * 0.07,), (math.cos(a) * size * 0.48, size * 0.03, math.sin(a) * size * 0.48), slot="glow", seg=1, name=f"stud_{k}"))
     return lay
 
 
@@ -200,5 +202,5 @@ A wooden club with a knob, held in a hand, resting over the shoulder.
 def club(size: float, rng) -> Layout:
     lay = Layout()
     lay.add(Prim("cyl", (size * 0.09, size * 0.14, size * 1.6), (0, size * 0.7, -size * 0.3), (0.5, 0, 0.3), slot="club", seg=7, name="shaft"))
-    lay.add(Prim("sphere", (size * 0.3,), (-size * 0.2, size * 1.45, -size * 0.65), slot="club", seg=8, smooth=True, name="knob"))
+    lay.add(Prim("sphere", (size * 0.3,), (-size * 0.2, size * 1.45, -size * 0.65), slot="club", seg=6, smooth=True, name="knob"))
     return lay

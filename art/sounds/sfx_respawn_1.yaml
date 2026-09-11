@@ -1,0 +1,11 @@
+# A creep back at the entrance after a leak.
+id: sfx_respawn_1
+event: respawn
+variant: 1
+duration: 0.5
+stereo: false
+layers:
+  - { wave: saw, freq: 300, freq_end: 600, attack: 0.02, decay: 0.25, release: 0.1, gain: 0.3, filter: { type: lowpass, freq: 1800 } }
+  - { wave: noise, attack: 0.01, decay: 0.2, release: 0.05, gain: 0.2, filter: { type: lowpass, freq: 1200, freq_end: 300 } }
+reverb: 0.2
+source: { kind: generated, licence: own }

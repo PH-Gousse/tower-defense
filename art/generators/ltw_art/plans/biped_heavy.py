@@ -42,14 +42,14 @@ def build(p: dict, rng) -> Layout:
     for name in ("l", "r"):
         side = -1 if name == "l" else 1
         sx = side * sw * 0.42
-        lay.add(Prim("sphere", (sw * 0.2,), (sx, chest_y - sw * 0.05, 0), slot="skin", seg=10, bone=f"upper_arm_{name}", smooth=True, name=f"shoulder_{name}"))
+        lay.add(Prim("sphere", (sw * 0.2,), (sx, chest_y - sw * 0.05, 0), slot="skin", seg=8, bone=f"upper_arm_{name}", smooth=True, name=f"shoulder_{name}"))
         # Arm: hangs down and slightly forward, ends in a fist.
         sh = (sx, chest_y - sw * 0.1, 0.0)
         elbow = (sx + side * 0.03, sh[1] - torso_h * 0.45, 0.05)
         hand = (sx + side * 0.04, hip_y + torso_h * 0.05, 0.12)
         for seg_name, a, b, ra, rb in (("upper_arm", sh, elbow, at, at * 0.9), ("forearm", elbow, hand, at * 0.9, at * 0.8)):
             lay.add(_seg(a, b, ra, rb, "skin", f"{seg_name}_{name}"))
-        lay.add(Prim("sphere", (at * 1.1,), hand, slot="limbs", seg=8, bone=f"hand_{name}", smooth=True, name=f"fist_{name}"))
+        lay.add(Prim("sphere", (at * 1.1,), hand, slot="limbs", seg=6, bone=f"hand_{name}", smooth=True, name=f"fist_{name}"))
         lay.joint(f"shoulder_{name}", sh)
         lay.joint(f"elbow_{name}", elbow)
         lay.joint(f"hand_{name}", hand)
@@ -59,7 +59,7 @@ def build(p: dict, rng) -> Layout:
     # Head: small, sunk between the shoulders.
     hr = sw * 0.16
     head = (0.0, chest_y + hr * 0.9, hw * 0.15)
-    lay.add(Prim("sphere", (hr,), head, slot="skin", seg=10, bone="head", smooth=True, name="head"))
+    lay.add(Prim("sphere", (hr,), head, slot="skin", seg=8, bone="head", smooth=True, name="head"))
     kind = p["head"]
     if kind == "brute":
         lay.add(Prim("box", (hr * 1.2, hr * 0.5, hr * 0.9), (0, head[1] - hr * 0.5, head[2] + hr * 0.6), slot="belly", seg=1, bone="head", name="jaw"))
@@ -80,8 +80,8 @@ def build(p: dict, rng) -> Layout:
         top = (lx, hip_y, 0.0)
         knee = (lx, hip_y * 0.5, 0.03)
         foot = (lx, 0.0, 0.0)
-        leg(lay, name, top, knee, foot, hw * 0.2, hw * 0.18, "limbs", seg=7)
-        lay.add(Prim("box", (hw * 0.4, hw * 0.16, hw * 0.55), (lx, hw * 0.08, hw * 0.12), slot="limbs", seg=1, bone=f"shin_{name}", bevel=0.01, name=f"foot_{name}"))
+        leg(lay, name, top, knee, foot, hw * 0.2, hw * 0.18, "limbs", seg=6)
+        lay.add(Prim("box", (hw * 0.4, hw * 0.16, hw * 0.55), (lx, hw * 0.08, hw * 0.12), slot="limbs", seg=1, bone=f"shin_{name}", name=f"foot_{name}"))
     lay.joint("hips", (0.0, hip_y, 0.0))
     lay.joint("spine", (0.0, hip_y + torso_h * 0.45, 0.0))
     lay.joint("chest", (0.0, chest_y - torso_h * 0.15, 0.0))
@@ -99,4 +99,4 @@ def build(p: dict, rng) -> Layout:
 def _seg(a, b, ra, rb, slot, bone):
     from .common import _segment
 
-    return _segment(a, b, ra, rb, slot, 7, bone, 0.0)
+    return _segment(a, b, ra, rb, slot, 6, bone, 0.0)

@@ -1,0 +1,36 @@
+# The swarm: a beetle. Cheap, many, low HP; answers the mortar. Small on
+# purpose and always shown ×5 in a lineup (style sheet §4).
+id: creep_swarm_t1
+class: creep
+archetype: swarm
+tier: 1
+body_plan: insect
+params:
+  height: 0.36
+  body_length: 0.5
+  legs: 6
+  shell_ratio: 0.7
+  mandibles: true
+palette:
+  primary: creep_skin_1
+  secondary: iron
+  accent: venom
+  glow: venom
+  team_mask: [torso_stripe, head_crest]
+rig: insect
+animations:
+  Idle:  { gen: idle_breathe, amplitude: 0.01, duration: 1.0 }
+  Walk:  { gen: scuttle, stride: 0.4, cadence: 7.0, sway: 0.08 }
+  Death: { gen: crumble, duration: 0.5, impact: 0.4 }
+  Spawn: { gen: rise_from_ground, duration: 0.4, land: 0.7 }
+audio:
+  spawn: sfx_spawn_small_1
+  death: sfx_death_small_1
+game:
+  # The live roster's numbers (packages/sim/data/creeps.json); nothing proposed.
+  speed_tiles_per_s: 1.5
+  hp: 20
+  cost: 20
+  income: 2
+  bounty: 5
+source: { kind: generated, licence: own, author: asset-factory }

@@ -1,0 +1,17 @@
+# Tier 3 of swarm: the style sheet's tier language (§5) and nothing
+# else. Size ×1.20, two parts, palette 50% toward the accent, gold trim and an emissive strip.
+id: creep_swarm_t3
+class: creep
+archetype: swarm
+tier: 3
+derived_from: creep_swarm_t2
+params:
+  height: 0.432
+  parts:
+    - spike_row
+    - { part: horns, at: head }
+    - { part: emissive_trim, at: back }
+palette:
+  tier_shift: 0.5
+  trim: true
+source: { kind: generated, licence: own, author: asset-factory }

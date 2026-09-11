@@ -1,0 +1,9 @@
+# The hit effect for the splash tower: a small glowing burst the pool
+# scales up and fades. Same plan as the frost bolt, glow only.
+id: fx_hit_splash
+class: effect
+archetype: hit_splash
+body_plan: orb
+params: { radius: 0.12, stretch: 1.0 }
+palette: { primary: danger, secondary: danger, accent: danger, glow: danger }
+source: { kind: generated, licence: own, author: asset-factory }

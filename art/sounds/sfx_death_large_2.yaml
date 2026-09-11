@@ -1,0 +1,12 @@
+# A large creep dies (2): a falling cry, a thud.
+id: sfx_death_large_2
+event: death_large
+variant: 2
+duration: 0.8999999999999999
+stereo: false
+layers:
+  - { wave: saw, freq: 252.0, freq_end: 72.0, attack: 0.01, decay: 0.3, release: 0.1, gain: 0.45, filter: { type: lowpass, freq: 900, freq_end: 270.0, q: 1.1 }, vibrato: [22, 60], drive: 0.3 }
+  - { wave: sine, freq: 59.4, freq_end: 45, delay: 0.21, attack: 0.003, decay: 0.3, release: 0.1, gain: 0.7 }
+  - { wave: noise, delay: 0.21, attack: 0.002, decay: 0.08, release: 0.05, gain: 0.3, filter: { type: lowpass, freq: 900, freq_end: 200 } }
+reverb: 0.2
+source: { kind: generated, licence: own }

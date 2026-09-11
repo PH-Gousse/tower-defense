@@ -7,7 +7,7 @@
         "spawn": "sfx_spawn_medium_1"
       },
       "bones": 16,
-      "bytes": 172256,
+      "bytes": 171972,
       "class": "creep",
       "clips": {
         "Death": {
@@ -44,8 +44,8 @@
       "file": "build/creep_runner_t1.glb",
       "footprint": 0.9544,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.0",
-      "hash": "8b84d9bba8ada0a0",
+      "generator_version": "0.1.2",
+      "hash": "f6becdde056f4a43",
       "height": 0.679,
       "source": {
         "approved_by": "",
@@ -64,9 +64,9 @@
         }
       ],
       "tier": 1,
-      "triangles": 1114,
-      "version": 2,
-      "vertices": 1816
+      "triangles": 1102,
+      "version": 3,
+      "vertices": 1806
     },
     "creep_runner_t2": {
       "archetype": "runner",
@@ -75,7 +75,7 @@
         "spawn": "sfx_spawn_medium_1"
       },
       "bones": 16,
-      "bytes": 186152,
+      "bytes": 185640,
       "class": "creep",
       "clips": {
         "Death": {
@@ -113,8 +113,8 @@
       "file": "build/creep_runner_t2.glb",
       "footprint": 1.0205,
       "gated_by": "asset-gate",
-      "generator_version": "0.1.0",
-      "hash": "c632d366bba9e8ab",
+      "generator_version": "0.1.2",
+      "hash": "5a28a2078aa72b72",
       "height": 0.7542,
       "source": {
         "approved_by": "",
@@ -133,28 +133,2338 @@
         }
       ],
       "tier": 2,
-      "triangles": 1178,
+      "triangles": 1166,
+      "version": 3,
+      "vertices": 1966
+    },
+    "creep_runner_t3": {
+      "archetype": "runner",
+      "audio": {
+        "death": "sfx_death_medium_1",
+        "spawn": "sfx_spawn_medium_1"
+      },
+      "bones": 16,
+      "bytes": 195504,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.55
+          },
+          "seconds": 0.7083
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 1.4167
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.5
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 0.2917,
+          "stride": 0.9
+        }
+      },
+      "derived_from": "creep_runner_t2",
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_runner_t3.glb",
+      "footprint": 1.0205,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "a282f5c7cb9cfaf8",
+      "height": 0.8088,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "20af6e54faad854e",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 3,
+      "triangles": 1250,
+      "version": 3,
+      "vertices": 2182
+    },
+    "creep_swarm_t1": {
+      "archetype": "swarm",
+      "audio": {
+        "death": "sfx_death_small_1",
+        "spawn": "sfx_spawn_small_1"
+      },
+      "bones": 12,
+      "bytes": 139952,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.4
+          },
+          "seconds": 0.5
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 1
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.4167
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 0.125,
+          "stride": 0.4
+        }
+      },
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_swarm_t1.glb",
+      "footprint": 0.7414,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "d0d8b0482093f576",
+      "height": 0.3606,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "aabfe2ce042faf6a",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 1,
+      "triangles": 692,
       "version": 2,
-      "vertices": 1976
+      "vertices": 826
+    },
+    "creep_swarm_t2": {
+      "archetype": "swarm",
+      "audio": {
+        "death": "sfx_death_small_1",
+        "spawn": "sfx_spawn_small_1"
+      },
+      "bones": 12,
+      "bytes": 148764,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.4
+          },
+          "seconds": 0.5
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 1
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.4167
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 0.125,
+          "stride": 0.4
+        }
+      },
+      "derived_from": "creep_swarm_t1",
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_swarm_t2.glb",
+      "footprint": 0.7414,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "9922147280a37877",
+      "height": 0.4976,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "2d033742b4d8ff0a",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 2,
+      "triangles": 732,
+      "version": 2,
+      "vertices": 926
+    },
+    "creep_swarm_t3": {
+      "archetype": "swarm",
+      "audio": {
+        "death": "sfx_death_small_1",
+        "spawn": "sfx_spawn_small_1"
+      },
+      "bones": 12,
+      "bytes": 160656,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.4
+          },
+          "seconds": 0.5
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 1
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.4167
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 0.125,
+          "stride": 0.4
+        }
+      },
+      "derived_from": "creep_swarm_t2",
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_swarm_t3.glb",
+      "footprint": 0.7414,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "d3dbcdc6b22796ad",
+      "height": 0.5335,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "147aa25bf8a83078",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 3,
+      "triangles": 796,
+      "version": 3,
+      "vertices": 1112
+    },
+    "creep_tank_t1": {
+      "archetype": "tank",
+      "audio": {
+        "death": "sfx_death_large_1",
+        "spawn": "sfx_spawn_large_1"
+      },
+      "bones": 16,
+      "bytes": 206904,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.6
+          },
+          "seconds": 1
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 2.2083
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.7083
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 0.5833,
+          "stride": 0.8
+        }
+      },
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_tank_t1.glb",
+      "footprint": 0.8581,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "5d691153d814ebb6",
+      "height": 1.0166,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "106507eaffc8683f",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 1,
+      "triangles": 896,
+      "version": 2,
+      "vertices": 1397
+    },
+    "creep_tank_t2": {
+      "archetype": "tank",
+      "audio": {
+        "death": "sfx_death_large_1",
+        "spawn": "sfx_spawn_large_1"
+      },
+      "bones": 16,
+      "bytes": 213708,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.6
+          },
+          "seconds": 1
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 2.2083
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.7083
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 0.5833,
+          "stride": 0.8
+        }
+      },
+      "derived_from": "creep_tank_t1",
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_tank_t2.glb",
+      "footprint": 0.8581,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "7960e76814416189",
+      "height": 1.0188,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "f8d0a7a16790ac2c",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 2,
+      "triangles": 920,
+      "version": 1,
+      "vertices": 1449
+    },
+    "creep_tank_t3": {
+      "archetype": "tank",
+      "audio": {
+        "death": "sfx_death_large_1",
+        "spawn": "sfx_spawn_large_1"
+      },
+      "bones": 16,
+      "bytes": 226212,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.6
+          },
+          "seconds": 1
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 2.2083
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.7083
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 0.5833,
+          "stride": 0.8
+        }
+      },
+      "derived_from": "creep_tank_t2",
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_tank_t3.glb",
+      "footprint": 0.8581,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "b28dcf45effba91c",
+      "height": 1.0346,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "a7d4e0f1d2a36241",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 3,
+      "triangles": 1004,
+      "version": 1,
+      "vertices": 1661
+    },
+    "fx_hit_single": {
+      "archetype": "hit_single",
+      "audio": {},
+      "bones": 0,
+      "bytes": 2196,
+      "class": "effect",
+      "clips": {},
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization"
+      ],
+      "file": "build/fx_hit_single.glb",
+      "footprint": 0.24,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "c787719e50936cb6",
+      "height": 0.24,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "036cc982079f744f",
+      "textures": [],
+      "triangles": 8,
+      "version": 1,
+      "vertices": 24
+    },
+    "fx_hit_slow": {
+      "archetype": "hit_slow",
+      "audio": {},
+      "bones": 0,
+      "bytes": 2172,
+      "class": "effect",
+      "clips": {},
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization"
+      ],
+      "file": "build/fx_hit_slow.glb",
+      "footprint": 0.24,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "277a0cb1f18a7dcc",
+      "height": 0.24,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "7f599dfab011be1f",
+      "textures": [],
+      "triangles": 8,
+      "version": 1,
+      "vertices": 24
+    },
+    "fx_hit_splash": {
+      "archetype": "hit_splash",
+      "audio": {},
+      "bones": 0,
+      "bytes": 2180,
+      "class": "effect",
+      "clips": {},
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization"
+      ],
+      "file": "build/fx_hit_splash.glb",
+      "footprint": 0.24,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "596cd943fd4e2b3f",
+      "height": 0.24,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "d7909de3e3275c42",
+      "textures": [],
+      "triangles": 8,
+      "version": 1,
+      "vertices": 24
+    },
+    "proj_bolt": {
+      "archetype": "bolt",
+      "audio": {},
+      "bones": 0,
+      "bytes": 11524,
+      "class": "projectile",
+      "clips": {},
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/proj_bolt.glb",
+      "footprint": 0.3996,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "c7e23b6066e8cf51",
+      "height": 0.072,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "a99da594e79a62aa",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 128
+        }
+      ],
+      "triangles": 48,
+      "version": 1,
+      "vertices": 98
+    },
+    "proj_orb": {
+      "archetype": "orb",
+      "audio": {},
+      "bones": 0,
+      "bytes": 2144,
+      "class": "projectile",
+      "clips": {},
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization"
+      ],
+      "file": "build/proj_orb.glb",
+      "footprint": 0.288,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "11582728a7a45393",
+      "height": 0.18,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "72c06c3c7ff9ac3f",
+      "textures": [],
+      "triangles": 8,
+      "version": 1,
+      "vertices": 24
+    },
+    "proj_shell": {
+      "archetype": "shell",
+      "audio": {},
+      "bones": 0,
+      "bytes": 9200,
+      "class": "projectile",
+      "clips": {},
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/proj_shell.glb",
+      "footprint": 0.18,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "f34089afe5372521",
+      "height": 0.1627,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "fc131ff7cfca07dc",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 128
+        }
+      ],
+      "triangles": 56,
+      "version": 1,
+      "vertices": 60
+    },
+    "tile_blocked": {
+      "archetype": "blocked",
+      "audio": {},
+      "bones": 0,
+      "bytes": 17216,
+      "class": "tile",
+      "clips": {},
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/tile_blocked.glb",
+      "footprint": 0.96,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "07b414d3b048a531",
+      "height": 0.05,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "17852cc9dcc73e27",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 256
+        }
+      ],
+      "triangles": 36,
+      "version": 2,
+      "vertices": 72
+    },
+    "tile_cursor": {
+      "archetype": "cursor",
+      "audio": {},
+      "bones": 0,
+      "bytes": 17320,
+      "class": "tile",
+      "clips": {},
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/tile_cursor.glb",
+      "footprint": 0.96,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "81b5e5ec1706ede7",
+      "height": 0.04,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "994453c52252fbd5",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 256
+        }
+      ],
+      "triangles": 36,
+      "version": 2,
+      "vertices": 72
+    },
+    "tile_entrance": {
+      "archetype": "entrance",
+      "audio": {},
+      "bones": 0,
+      "bytes": 15944,
+      "class": "tile",
+      "clips": {},
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/tile_entrance.glb",
+      "footprint": 0.96,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "2279c66098a207d1",
+      "height": 0.05,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "bf77b4e8877d4010",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 256
+        }
+      ],
+      "triangles": 32,
+      "version": 2,
+      "vertices": 66
+    },
+    "tile_exit": {
+      "archetype": "exit",
+      "audio": {},
+      "bones": 0,
+      "bytes": 20848,
+      "class": "tile",
+      "clips": {},
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/tile_exit.glb",
+      "footprint": 0.96,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "d1b5f834c632682b",
+      "height": 0.048,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "8ab7475c6b238de3",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 256
+        }
+      ],
+      "triangles": 132,
+      "version": 1,
+      "vertices": 224
+    },
+    "tile_leak": {
+      "archetype": "leak",
+      "audio": {},
+      "bones": 0,
+      "bytes": 16740,
+      "class": "tile",
+      "clips": {},
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/tile_leak.glb",
+      "footprint": 0.96,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "fd9d1c290a3ffcab",
+      "height": 0.05,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "dac652ea8ccde861",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 256
+        }
+      ],
+      "triangles": 36,
+      "version": 2,
+      "vertices": 72
+    },
+    "tile_normal": {
+      "archetype": "normal",
+      "audio": {},
+      "bones": 0,
+      "bytes": 7144,
+      "class": "tile",
+      "clips": {},
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/tile_normal.glb",
+      "footprint": 0.96,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "f48601a50ea3a7d7",
+      "height": 0.02,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "dea219d5af9a60e0",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 256
+        }
+      ],
+      "triangles": 12,
+      "version": 2,
+      "vertices": 24
+    },
+    "tower_single_l1": {
+      "archetype": "single",
+      "audio": {
+        "shot": "sfx_shot_single_1"
+      },
+      "bones": 4,
+      "bytes": 99896,
+      "class": "tower",
+      "clips": {
+        "Attack": {
+          "loop": false,
+          "markers": {
+            "fire": 0.1
+          },
+          "seconds": 0.2917
+        },
+        "Build": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.7917
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 3
+        },
+        "Sell": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.5833
+        },
+        "Upgrade": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.5
+        }
+      },
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/tower_single_l1.glb",
+      "footprint": 0.84,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "7854093c5b27f443",
+      "height": 1.68,
+      "level": 1,
+      "muzzle": [
+        0,
+        1.74,
+        0
+      ],
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "faa204758e89a2a9",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "triangles": 436,
+      "version": 1,
+      "vertices": 840
+    },
+    "tower_single_l2": {
+      "archetype": "single",
+      "audio": {
+        "shot": "sfx_shot_single_1"
+      },
+      "bones": 4,
+      "bytes": 98348,
+      "class": "tower",
+      "clips": {
+        "Attack": {
+          "loop": false,
+          "markers": {
+            "fire": 0.1
+          },
+          "seconds": 0.2917
+        },
+        "Build": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.7917
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 3
+        },
+        "Sell": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.5833
+        },
+        "Upgrade": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.5
+        }
+      },
+      "derived_from": "tower_single_l1",
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/tower_single_l2.glb",
+      "footprint": 0.84,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "62fe327fb8b3fb89",
+      "height": 2.22,
+      "level": 2,
+      "muzzle": [
+        0,
+        1.86,
+        0
+      ],
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "ad02aa7ef913bd67",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "triangles": 450,
+      "version": 1,
+      "vertices": 872
+    },
+    "tower_single_l3": {
+      "archetype": "single",
+      "audio": {
+        "shot": "sfx_shot_single_1"
+      },
+      "bones": 4,
+      "bytes": 107720,
+      "class": "tower",
+      "clips": {
+        "Attack": {
+          "loop": false,
+          "markers": {
+            "fire": 0.1
+          },
+          "seconds": 0.2917
+        },
+        "Build": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.7917
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 3
+        },
+        "Sell": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.5833
+        },
+        "Upgrade": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.5
+        }
+      },
+      "derived_from": "tower_single_l2",
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/tower_single_l3.glb",
+      "footprint": 0.84,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "0ebe932397ebcf24",
+      "height": 2.35,
+      "level": 3,
+      "muzzle": [
+        0,
+        1.86,
+        0
+      ],
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "5265df2f9c1b4d10",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "triangles": 502,
+      "version": 1,
+      "vertices": 956
+    },
+    "tower_slow_l1": {
+      "archetype": "slow",
+      "audio": {
+        "shot": "sfx_shot_slow_1"
+      },
+      "bones": 4,
+      "bytes": 105724,
+      "class": "tower",
+      "clips": {
+        "Attack": {
+          "loop": false,
+          "markers": {
+            "fire": 0.3
+          },
+          "seconds": 0.4167
+        },
+        "Build": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.7917
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 3
+        },
+        "Sell": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.5833
+        },
+        "Upgrade": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.5
+        }
+      },
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/tower_slow_l1.glb",
+      "footprint": 0.84,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "71f851686e54e176",
+      "height": 1.17,
+      "level": 1,
+      "muzzle": [
+        0,
+        1.17,
+        0
+      ],
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "c9019fd5ff03b0be",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "triangles": 628,
+      "version": 1,
+      "vertices": 896
+    },
+    "tower_slow_l2": {
+      "archetype": "slow",
+      "audio": {
+        "shot": "sfx_shot_slow_1"
+      },
+      "bones": 4,
+      "bytes": 115008,
+      "class": "tower",
+      "clips": {
+        "Attack": {
+          "loop": false,
+          "markers": {
+            "fire": 0.3
+          },
+          "seconds": 0.4167
+        },
+        "Build": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.7917
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 3
+        },
+        "Sell": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.5833
+        },
+        "Upgrade": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.5
+        }
+      },
+      "derived_from": "tower_slow_l1",
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/tower_slow_l2.glb",
+      "footprint": 0.84,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "517f13f1ce953e73",
+      "height": 1.24,
+      "level": 2,
+      "muzzle": [
+        0,
+        1.24,
+        0
+      ],
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "e0c911f7d60ab1b9",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "triangles": 668,
+      "version": 1,
+      "vertices": 1016
+    },
+    "tower_slow_l3": {
+      "archetype": "slow",
+      "audio": {
+        "shot": "sfx_shot_slow_1"
+      },
+      "bones": 4,
+      "bytes": 141632,
+      "class": "tower",
+      "clips": {
+        "Attack": {
+          "loop": false,
+          "markers": {
+            "fire": 0.3
+          },
+          "seconds": 0.4167
+        },
+        "Build": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.7917
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 3
+        },
+        "Sell": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.5833
+        },
+        "Upgrade": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.5
+        }
+      },
+      "derived_from": "tower_slow_l2",
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/tower_slow_l3.glb",
+      "footprint": 0.84,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "340198b9670838aa",
+      "height": 1.32,
+      "level": 3,
+      "muzzle": [
+        0,
+        1.32,
+        0
+      ],
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "b532a90947304e2a",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "triangles": 800,
+      "version": 1,
+      "vertices": 1340
+    },
+    "tower_splash_l1": {
+      "archetype": "splash",
+      "audio": {
+        "shot": "sfx_shot_splash_1"
+      },
+      "bones": 4,
+      "bytes": 121840,
+      "class": "tower",
+      "clips": {
+        "Attack": {
+          "loop": false,
+          "markers": {
+            "fire": 0.1
+          },
+          "seconds": 0.3333
+        },
+        "Build": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.7917
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 3
+        },
+        "Sell": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.5833
+        },
+        "Upgrade": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.5
+        }
+      },
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/tower_splash_l1.glb",
+      "footprint": 0.84,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "96da4498c5eff5a4",
+      "height": 1.2127,
+      "level": 1,
+      "muzzle": [
+        0,
+        1.1324,
+        0.2048
+      ],
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "a36f915260d5979f",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "triangles": 884,
+      "version": 1,
+      "vertices": 1310
+    },
+    "tower_splash_l2": {
+      "archetype": "splash",
+      "audio": {
+        "shot": "sfx_shot_splash_1"
+      },
+      "bones": 4,
+      "bytes": 126584,
+      "class": "tower",
+      "clips": {
+        "Attack": {
+          "loop": false,
+          "markers": {
+            "fire": 0.1
+          },
+          "seconds": 0.3333
+        },
+        "Build": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.7917
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 3
+        },
+        "Sell": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.5833
+        },
+        "Upgrade": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.5
+        }
+      },
+      "derived_from": "tower_splash_l1",
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/tower_splash_l2.glb",
+      "footprint": 0.84,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "c8663faa56297386",
+      "height": 1.3396,
+      "level": 2,
+      "muzzle": [
+        0,
+        1.2573,
+        0.2291
+      ],
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "795f889cda5ab15f",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "triangles": 988,
+      "version": 2,
+      "vertices": 1478
+    },
+    "tower_splash_l3": {
+      "archetype": "splash",
+      "audio": {
+        "shot": "sfx_shot_splash_1"
+      },
+      "bones": 4,
+      "bytes": 143140,
+      "class": "tower",
+      "clips": {
+        "Attack": {
+          "loop": false,
+          "markers": {
+            "fire": 0.1
+          },
+          "seconds": 0.3333
+        },
+        "Build": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.7917
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 3
+        },
+        "Sell": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.5833
+        },
+        "Upgrade": {
+          "loop": false,
+          "markers": {},
+          "seconds": 0.5
+        }
+      },
+      "derived_from": "tower_splash_l2",
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/tower_splash_l3.glb",
+      "footprint": 0.84,
+      "gated_by": "asset-gate",
+      "generator_version": "0.1.2",
+      "hash": "abef0574d0335f3a",
+      "height": 1.4517,
+      "level": 3,
+      "muzzle": [
+        -0.08,
+        1.3681,
+        0.2438
+      ],
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "0cb5f6f6c38c4068",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "triangles": 1208,
+      "version": 2,
+      "vertices": 1788
     }
   },
   "manifest_version": 1,
   "sounds": {
+    "sfx_build_single_1": {
+      "bytes": {
+        "mp3": 13868,
+        "webm": 8371
+      },
+      "event": "build_single",
+      "files": {
+        "mp3": "build/sfx/sfx_build_single_1.mp3",
+        "webm": "build/sfx/sfx_build_single_1.webm"
+      },
+      "hash": "072f7e32b56033a7",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -7.2,
+      "seconds": 0.83,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_build_slow_1": {
+      "bytes": {
+        "mp3": 14252,
+        "webm": 7441
+      },
+      "event": "build_slow",
+      "files": {
+        "mp3": "build/sfx/sfx_build_slow_1.mp3",
+        "webm": "build/sfx/sfx_build_slow_1.webm"
+      },
+      "hash": "63f2cc5cfaf911ef",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -6.6,
+      "seconds": 0.85,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_build_splash_1": {
+      "bytes": {
+        "mp3": 14252,
+        "webm": 8195
+      },
+      "event": "build_splash",
+      "files": {
+        "mp3": "build/sfx/sfx_build_splash_1.mp3",
+        "webm": "build/sfx/sfx_build_splash_1.webm"
+      },
+      "hash": "42eadaa935768b56",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -6.3,
+      "seconds": 0.84,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_click_1": {
+      "bytes": {
+        "mp3": 3884,
+        "webm": 2613
+      },
+      "event": "click",
+      "files": {
+        "mp3": "build/sfx/sfx_click_1.mp3",
+        "webm": "build/sfx/sfx_click_1.webm"
+      },
+      "hash": "d845d50415e203da",
+      "lufs": -16.3,
+      "measure": "momentary",
+      "peak_dbtp": -2.1,
+      "seconds": 0.2,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_death_large_1": {
+      "bytes": {
+        "mp3": 15020,
+        "webm": 7445
+      },
+      "event": "death_large",
+      "files": {
+        "mp3": "build/sfx/sfx_death_large_1.mp3",
+        "webm": "build/sfx/sfx_death_large_1.webm"
+      },
+      "hash": "820513668262d0b7",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -6.3,
+      "seconds": 0.9,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_death_large_2": {
+      "bytes": {
+        "mp3": 14252,
+        "webm": 7310
+      },
+      "event": "death_large",
+      "files": {
+        "mp3": "build/sfx/sfx_death_large_2.mp3",
+        "webm": "build/sfx/sfx_death_large_2.webm"
+      },
+      "hash": "9789cd8f0bdc4944",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -5.9,
+      "seconds": 0.86,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 2,
+      "version": 1
+    },
+    "sfx_death_large_3": {
+      "bytes": {
+        "mp3": 14636,
+        "webm": 7289
+      },
+      "event": "death_large",
+      "files": {
+        "mp3": "build/sfx/sfx_death_large_3.mp3",
+        "webm": "build/sfx/sfx_death_large_3.webm"
+      },
+      "hash": "67e0f385525e5472",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -5.9,
+      "seconds": 0.87,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 3,
+      "version": 1
+    },
     "sfx_death_medium_1": {
       "bytes": {
-        "mp3": 10412,
-        "webm": 4950
+        "mp3": 11180,
+        "webm": 5175
       },
       "event": "death_medium",
       "files": {
         "mp3": "build/sfx/sfx_death_medium_1.mp3",
         "webm": "build/sfx/sfx_death_medium_1.webm"
       },
-      "hash": "8f5ae82060378619",
+      "hash": "758fe5aaf8c46f60",
       "lufs": -16,
       "measure": "momentary",
-      "peak_dbtp": -5.1,
+      "peak_dbtp": -4.9,
+      "seconds": 0.65,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 2
+    },
+    "sfx_death_medium_2": {
+      "bytes": {
+        "mp3": 10796,
+        "webm": 5211
+      },
+      "event": "death_medium",
+      "files": {
+        "mp3": "build/sfx/sfx_death_medium_2.mp3",
+        "webm": "build/sfx/sfx_death_medium_2.webm"
+      },
+      "hash": "4c417cb2fa5a1363",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -5,
+      "seconds": 0.65,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 2,
+      "version": 1
+    },
+    "sfx_death_medium_3": {
+      "bytes": {
+        "mp3": 11180,
+        "webm": 5147
+      },
+      "event": "death_medium",
+      "files": {
+        "mp3": "build/sfx/sfx_death_medium_3.mp3",
+        "webm": "build/sfx/sfx_death_medium_3.webm"
+      },
+      "hash": "14a6ad8cc2e09029",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -5.4,
+      "seconds": 0.65,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 3,
+      "version": 1
+    },
+    "sfx_death_small_1": {
+      "bytes": {
+        "mp3": 8492,
+        "webm": 4438
+      },
+      "event": "death_small",
+      "files": {
+        "mp3": "build/sfx/sfx_death_small_1.mp3",
+        "webm": "build/sfx/sfx_death_small_1.webm"
+      },
+      "hash": "b5a7ceecac33dfbb",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -4,
+      "seconds": 0.5,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_death_small_2": {
+      "bytes": {
+        "mp3": 8492,
+        "webm": 4426
+      },
+      "event": "death_small",
+      "files": {
+        "mp3": "build/sfx/sfx_death_small_2.mp3",
+        "webm": "build/sfx/sfx_death_small_2.webm"
+      },
+      "hash": "6139996e62e43868",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -3.9,
+      "seconds": 0.5,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 2,
+      "version": 1
+    },
+    "sfx_death_small_3": {
+      "bytes": {
+        "mp3": 8492,
+        "webm": 4411
+      },
+      "event": "death_small",
+      "files": {
+        "mp3": "build/sfx/sfx_death_small_3.mp3",
+        "webm": "build/sfx/sfx_death_small_3.webm"
+      },
+      "hash": "5f6b01245ec0d51e",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -3.8,
+      "seconds": 0.5,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 3,
+      "version": 1
+    },
+    "sfx_hit_single_1": {
+      "bytes": {
+        "mp3": 4652,
+        "webm": 2660
+      },
+      "event": "hit_single",
+      "files": {
+        "mp3": "build/sfx/sfx_hit_single_1.mp3",
+        "webm": "build/sfx/sfx_hit_single_1.webm"
+      },
+      "hash": "4c3948d4b968a25e",
+      "lufs": -16.7,
+      "measure": "momentary",
+      "peak_dbtp": -2.1,
+      "seconds": 0.25,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_hit_single_2": {
+      "bytes": {
+        "mp3": 4652,
+        "webm": 2685
+      },
+      "event": "hit_single",
+      "files": {
+        "mp3": "build/sfx/sfx_hit_single_2.mp3",
+        "webm": "build/sfx/sfx_hit_single_2.webm"
+      },
+      "hash": "05e44708678a010c",
+      "lufs": -16.9,
+      "measure": "momentary",
+      "peak_dbtp": -2.1,
+      "seconds": 0.25,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 2,
+      "version": 1
+    },
+    "sfx_hit_single_3": {
+      "bytes": {
+        "mp3": 4652,
+        "webm": 2670
+      },
+      "event": "hit_single",
+      "files": {
+        "mp3": "build/sfx/sfx_hit_single_3.mp3",
+        "webm": "build/sfx/sfx_hit_single_3.webm"
+      },
+      "hash": "6750a8984c9c3b4a",
+      "lufs": -16.9,
+      "measure": "momentary",
+      "peak_dbtp": -2.1,
+      "seconds": 0.25,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 3,
+      "version": 1
+    },
+    "sfx_hit_slow_1": {
+      "bytes": {
+        "mp3": 6956,
+        "webm": 3773
+      },
+      "event": "hit_slow",
+      "files": {
+        "mp3": "build/sfx/sfx_hit_slow_1.mp3",
+        "webm": "build/sfx/sfx_hit_slow_1.webm"
+      },
+      "hash": "93561c4b5dcb109f",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -3,
+      "seconds": 0.4,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_hit_slow_2": {
+      "bytes": {
+        "mp3": 6956,
+        "webm": 3817
+      },
+      "event": "hit_slow",
+      "files": {
+        "mp3": "build/sfx/sfx_hit_slow_2.mp3",
+        "webm": "build/sfx/sfx_hit_slow_2.webm"
+      },
+      "hash": "9c5b38cab203af1c",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -3.3,
+      "seconds": 0.4,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 2,
+      "version": 1
+    },
+    "sfx_hit_splash_1": {
+      "bytes": {
+        "mp3": 20012,
+        "webm": 8556
+      },
+      "event": "hit_splash",
+      "files": {
+        "mp3": "build/sfx/sfx_hit_splash_1.mp3",
+        "webm": "build/sfx/sfx_hit_splash_1.webm"
+      },
+      "hash": "39c7d68d635eb9f6",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -3.4,
+      "seconds": 1.2,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_hit_splash_2": {
+      "bytes": {
+        "mp3": 20012,
+        "webm": 8781
+      },
+      "event": "hit_splash",
+      "files": {
+        "mp3": "build/sfx/sfx_hit_splash_2.mp3",
+        "webm": "build/sfx/sfx_hit_splash_2.webm"
+      },
+      "hash": "6ec524ed1587edae",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -4.7,
+      "seconds": 1.22,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 2,
+      "version": 1
+    },
+    "sfx_income_1": {
+      "bytes": {
+        "mp3": 10412,
+        "webm": 8674
+      },
+      "event": "income",
+      "files": {
+        "mp3": "build/sfx/sfx_income_1.mp3",
+        "webm": "build/sfx/sfx_income_1.webm"
+      },
+      "hash": "29181a1c32b1c65b",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -6.8,
       "seconds": 0.6,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_leak_mine_1": {
+      "bytes": {
+        "mp3": 13484,
+        "webm": 6247
+      },
+      "event": "leak_mine",
+      "files": {
+        "mp3": "build/sfx/sfx_leak_mine_1.mp3",
+        "webm": "build/sfx/sfx_leak_mine_1.webm"
+      },
+      "hash": "9d6df2e059fc2ffb",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -6.6,
+      "seconds": 0.8,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_leak_theirs_1": {
+      "bytes": {
+        "mp3": 11948,
+        "webm": 9527
+      },
+      "event": "leak_theirs",
+      "files": {
+        "mp3": "build/sfx/sfx_leak_theirs_1.mp3",
+        "webm": "build/sfx/sfx_leak_theirs_1.webm"
+      },
+      "hash": "e9b434769ce3e811",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -5.2,
+      "seconds": 0.7,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_match_lost_1": {
+      "bytes": {
+        "mp3": 43820,
+        "webm": 33256
+      },
+      "event": "match_lost",
+      "files": {
+        "mp3": "build/sfx/sfx_match_lost_1.mp3",
+        "webm": "build/sfx/sfx_match_lost_1.webm"
+      },
+      "hash": "e8df46be1c4a20fa",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -9.4,
+      "seconds": 2.7,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_match_won_1": {
+      "bytes": {
+        "mp3": 44972,
+        "webm": 34741
+      },
+      "event": "match_won",
+      "files": {
+        "mp3": "build/sfx/sfx_match_won_1.mp3",
+        "webm": "build/sfx/sfx_match_won_1.webm"
+      },
+      "hash": "4e284f183aa301fe",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -8.8,
+      "seconds": 2.78,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_refused_1": {
+      "bytes": {
+        "mp3": 4652,
+        "webm": 2789
+      },
+      "event": "refused",
+      "files": {
+        "mp3": "build/sfx/sfx_refused_1.mp3",
+        "webm": "build/sfx/sfx_refused_1.webm"
+      },
+      "hash": "352481ef09f44116",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -4,
+      "seconds": 0.25,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_respawn_1": {
+      "bytes": {
+        "mp3": 8492,
+        "webm": 4355
+      },
+      "event": "respawn",
+      "files": {
+        "mp3": "build/sfx/sfx_respawn_1.mp3",
+        "webm": "build/sfx/sfx_respawn_1.webm"
+      },
+      "hash": "ecc0afcf49e6f802",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -3.7,
+      "seconds": 0.5,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_select_1": {
+      "bytes": {
+        "mp3": 3116,
+        "webm": 2270
+      },
+      "event": "select",
+      "files": {
+        "mp3": "build/sfx/sfx_select_1.mp3",
+        "webm": "build/sfx/sfx_select_1.webm"
+      },
+      "hash": "f6893af450a3dd83",
+      "lufs": -16.7,
+      "measure": "momentary",
+      "peak_dbtp": -2.2,
+      "seconds": 0.15,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_sell_1": {
+      "bytes": {
+        "mp3": 10028,
+        "webm": 5401
+      },
+      "event": "sell",
+      "files": {
+        "mp3": "build/sfx/sfx_sell_1.mp3",
+        "webm": "build/sfx/sfx_sell_1.webm"
+      },
+      "hash": "88ea0d6f9f518fc3",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -5.3,
+      "seconds": 0.6,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_send_1": {
+      "bytes": {
+        "mp3": 3884,
+        "webm": 2720
+      },
+      "event": "send",
+      "files": {
+        "mp3": "build/sfx/sfx_send_1.mp3",
+        "webm": "build/sfx/sfx_send_1.webm"
+      },
+      "hash": "e5ee61a11c682193",
+      "lufs": -17,
+      "measure": "momentary",
+      "peak_dbtp": -2.1,
+      "seconds": 0.2,
       "source": {
         "attribution": "",
         "author": "asset-factory",
@@ -180,6 +2490,406 @@
       "measure": "momentary",
       "peak_dbtp": -1.5,
       "seconds": 0.35,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_shot_single_2": {
+      "bytes": {
+        "mp3": 6188,
+        "webm": 3346
+      },
+      "event": "shot_single",
+      "files": {
+        "mp3": "build/sfx/sfx_shot_single_2.mp3",
+        "webm": "build/sfx/sfx_shot_single_2.webm"
+      },
+      "hash": "1d6ea68ffba1cd01",
+      "lufs": -17.1,
+      "measure": "momentary",
+      "peak_dbtp": -1.1,
+      "seconds": 0.35,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 2,
+      "version": 1
+    },
+    "sfx_shot_single_3": {
+      "bytes": {
+        "mp3": 6188,
+        "webm": 3359
+      },
+      "event": "shot_single",
+      "files": {
+        "mp3": "build/sfx/sfx_shot_single_3.mp3",
+        "webm": "build/sfx/sfx_shot_single_3.webm"
+      },
+      "hash": "93c48ae1ddd337e2",
+      "lufs": -16.5,
+      "measure": "momentary",
+      "peak_dbtp": -1.1,
+      "seconds": 0.35,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 3,
+      "version": 1
+    },
+    "sfx_shot_slow_1": {
+      "bytes": {
+        "mp3": 7724,
+        "webm": 4600
+      },
+      "event": "shot_slow",
+      "files": {
+        "mp3": "build/sfx/sfx_shot_slow_1.mp3",
+        "webm": "build/sfx/sfx_shot_slow_1.webm"
+      },
+      "hash": "f329fd1a5f5f6269",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -8.1,
+      "seconds": 0.45,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_shot_slow_2": {
+      "bytes": {
+        "mp3": 7724,
+        "webm": 4659
+      },
+      "event": "shot_slow",
+      "files": {
+        "mp3": "build/sfx/sfx_shot_slow_2.mp3",
+        "webm": "build/sfx/sfx_shot_slow_2.webm"
+      },
+      "hash": "f1e059a1b2ba57e4",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -8.3,
+      "seconds": 0.45,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 2,
+      "version": 1
+    },
+    "sfx_shot_slow_3": {
+      "bytes": {
+        "mp3": 7724,
+        "webm": 4735
+      },
+      "event": "shot_slow",
+      "files": {
+        "mp3": "build/sfx/sfx_shot_slow_3.mp3",
+        "webm": "build/sfx/sfx_shot_slow_3.webm"
+      },
+      "hash": "ba060d31702bf189",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -8,
+      "seconds": 0.45,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 3,
+      "version": 1
+    },
+    "sfx_shot_splash_1": {
+      "bytes": {
+        "mp3": 15788,
+        "webm": 6784
+      },
+      "event": "shot_splash",
+      "files": {
+        "mp3": "build/sfx/sfx_shot_splash_1.mp3",
+        "webm": "build/sfx/sfx_shot_splash_1.webm"
+      },
+      "hash": "50b3de62b829a778",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -3.6,
+      "seconds": 0.94,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_shot_splash_2": {
+      "bytes": {
+        "mp3": 16172,
+        "webm": 6859
+      },
+      "event": "shot_splash",
+      "files": {
+        "mp3": "build/sfx/sfx_shot_splash_2.mp3",
+        "webm": "build/sfx/sfx_shot_splash_2.webm"
+      },
+      "hash": "07f65b5f79269158",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -3.7,
+      "seconds": 0.97,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 2,
+      "version": 1
+    },
+    "sfx_shot_splash_3": {
+      "bytes": {
+        "mp3": 15404,
+        "webm": 6621
+      },
+      "event": "shot_splash",
+      "files": {
+        "mp3": "build/sfx/sfx_shot_splash_3.mp3",
+        "webm": "build/sfx/sfx_shot_splash_3.webm"
+      },
+      "hash": "1a45a70b1348bb1f",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -4.1,
+      "seconds": 0.93,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 3,
+      "version": 1
+    },
+    "sfx_spawn_large_1": {
+      "bytes": {
+        "mp3": 11564,
+        "webm": 7304
+      },
+      "event": "spawn_large",
+      "files": {
+        "mp3": "build/sfx/sfx_spawn_large_1.mp3",
+        "webm": "build/sfx/sfx_spawn_large_1.webm"
+      },
+      "hash": "37bdbdd17bf2eb47",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -6.8,
+      "seconds": 0.69,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_spawn_large_2": {
+      "bytes": {
+        "mp3": 12716,
+        "webm": 7971
+      },
+      "event": "spawn_large",
+      "files": {
+        "mp3": "build/sfx/sfx_spawn_large_2.mp3",
+        "webm": "build/sfx/sfx_spawn_large_2.webm"
+      },
+      "hash": "245c9d6ed1da1418",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -6.7,
+      "seconds": 0.76,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 2,
+      "version": 1
+    },
+    "sfx_spawn_medium_1": {
+      "bytes": {
+        "mp3": 9260,
+        "webm": 4907
+      },
+      "event": "spawn_medium",
+      "files": {
+        "mp3": "build/sfx/sfx_spawn_medium_1.mp3",
+        "webm": "build/sfx/sfx_spawn_medium_1.webm"
+      },
+      "hash": "c4d9f72146171265",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -5.1,
+      "seconds": 0.55,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_spawn_medium_2": {
+      "bytes": {
+        "mp3": 9260,
+        "webm": 4860
+      },
+      "event": "spawn_medium",
+      "files": {
+        "mp3": "build/sfx/sfx_spawn_medium_2.mp3",
+        "webm": "build/sfx/sfx_spawn_medium_2.webm"
+      },
+      "hash": "814eb47761027ed7",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -5.4,
+      "seconds": 0.55,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 2,
+      "version": 1
+    },
+    "sfx_spawn_small_1": {
+      "bytes": {
+        "mp3": 6956,
+        "webm": 3790
+      },
+      "event": "spawn_small",
+      "files": {
+        "mp3": "build/sfx/sfx_spawn_small_1.mp3",
+        "webm": "build/sfx/sfx_spawn_small_1.webm"
+      },
+      "hash": "5a54ae88b1ed0d9c",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -3.5,
+      "seconds": 0.4,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_spawn_small_2": {
+      "bytes": {
+        "mp3": 6956,
+        "webm": 3803
+      },
+      "event": "spawn_small",
+      "files": {
+        "mp3": "build/sfx/sfx_spawn_small_2.mp3",
+        "webm": "build/sfx/sfx_spawn_small_2.webm"
+      },
+      "hash": "c10de44289134f5b",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -3.8,
+      "seconds": 0.4,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 2,
+      "version": 1
+    },
+    "sfx_tier_unlock_1": {
+      "bytes": {
+        "mp3": 38060,
+        "webm": 32367
+      },
+      "event": "tier_unlock",
+      "files": {
+        "mp3": "build/sfx/sfx_tier_unlock_1.mp3",
+        "webm": "build/sfx/sfx_tier_unlock_1.webm"
+      },
+      "hash": "b4abbf2e6c54d1db",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -9.2,
+      "seconds": 2.34,
+      "source": {
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "url": ""
+      },
+      "variant": 1,
+      "version": 1
+    },
+    "sfx_upgrade_1": {
+      "bytes": {
+        "mp3": 11948,
+        "webm": 6781
+      },
+      "event": "upgrade",
+      "files": {
+        "mp3": "build/sfx/sfx_upgrade_1.mp3",
+        "webm": "build/sfx/sfx_upgrade_1.webm"
+      },
+      "hash": "89e0b5cc180d485d",
+      "lufs": -16,
+      "measure": "momentary",
+      "peak_dbtp": -4.6,
+      "seconds": 0.7,
       "source": {
         "attribution": "",
         "author": "asset-factory",

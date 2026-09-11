@@ -1,0 +1,24 @@
+# The frost shrine: a pedestal with glowing crystals, the visible emitter.
+# Answers runners.
+id: tower_slow_l1
+class: tower
+archetype: slow
+level: 1
+body_plan: crystal_emitter
+params: { height: 1.1, crystal_height: 0.55, ring_crystals: 2 }
+palette:
+  primary: stone_blue
+  secondary: stone_dark
+  accent: team_blue
+  glow: ice
+  team_mask: [banner, ring]
+rig: turret
+animations:
+  Build:   { gen: build_up, duration: 0.8 }
+  Idle:    { gen: idle_breathe, amplitude: 0.004, duration: 3.0 }
+  Attack:  { gen: pulse, duration: 0.4, amount: 0.12, fire: 0.3 }
+  Upgrade: { gen: upgrade_flash, duration: 0.5 }
+  Sell:    { gen: sell_sink, duration: 0.6 }
+audio: { shot: sfx_shot_slow_1 }
+game: { cost: 800, damage: 4, range: 2.25, cooldownTicks: 10, slowPercent: 30 }
+source: { kind: generated, licence: own, author: asset-factory }

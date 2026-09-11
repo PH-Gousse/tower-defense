@@ -1,0 +1,12 @@
+# Defeat: a minor third sagging over a low drum.
+id: sfx_match_lost_1
+event: match_lost
+variant: 1
+duration: 3.5
+stereo: true
+layers:
+  - { wave: saw, freq: 262, freq_end: 233, hold: 0.6, attack: 0.05, decay: 0.3, sustain: 0.6, release: 1.4, gain: 0.3, filter: { type: lowpass, freq: 1400 }, vibrato: [4, 15] }
+  - { wave: saw, freq: 311, freq_end: 277, hold: 0.6, delay: 0.3, attack: 0.05, decay: 0.3, sustain: 0.6, release: 1.4, gain: 0.28, filter: { type: lowpass, freq: 1400 }, vibrato: [4, 15] }
+  - { wave: sine, freq: 65, freq_end: 40, delay: 0.2, attack: 0.02, decay: 1.5, release: 0.8, gain: 0.5 }
+reverb: 0.5
+source: { kind: generated, licence: own }

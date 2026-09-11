@@ -1,0 +1,11 @@
+# Bolt hit 2: a thock.
+id: sfx_hit_single_2
+event: hit_single
+variant: 2
+duration: 0.25
+stereo: false
+layers:
+  - { wave: noise, attack: 0.001, decay: 0.04, release: 0.02, gain: 0.6, filter: { type: bandpass, freq: 1800.0, q: 1.2 } }
+  - { wave: sine, freq: 260.0, freq_end: 110, attack: 0.002, decay: 0.09, release: 0.03, gain: 0.5 }
+reverb: 0.1
+source: { kind: generated, licence: own }

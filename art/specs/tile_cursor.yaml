@@ -1,0 +1,8 @@
+# The cursor marker: a slab with a raised chevron in the glow material.
+id: tile_cursor
+class: tile
+archetype: cursor
+body_plan: tile_marker
+params: { rune: chevron, height: 0.02 }
+palette: { primary: stone_dark, secondary: stone_dark, accent: gold, glow: gold }
+source: { kind: generated, licence: own, author: asset-factory }

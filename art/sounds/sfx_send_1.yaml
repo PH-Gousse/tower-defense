@@ -1,0 +1,11 @@
+# A creep sent: the click that confirms it.
+id: sfx_send_1
+event: send
+variant: 1
+duration: 0.2
+stereo: false
+layers:
+  - { wave: square, freq: 880, attack: 0.002, decay: 0.05, release: 0.03, gain: 0.25, filter: { type: lowpass, freq: 3000 } }
+  - { wave: noise, attack: 0.001, decay: 0.02, release: 0.02, gain: 0.2, filter: { type: bandpass, freq: 4000, q: 1.5 } }
+reverb: 0.05
+source: { kind: generated, licence: own }

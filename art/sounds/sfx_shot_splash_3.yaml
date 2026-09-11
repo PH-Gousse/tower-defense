@@ -1,0 +1,12 @@
+# Mortar shot 3: a crack, a sub thump, a second of falling rumble.
+id: sfx_shot_splash_3
+event: shot_splash
+variant: 3
+duration: 1.2
+stereo: false
+layers:
+  - { wave: noise, attack: 0.001, decay: 0.05, release: 0.05, gain: 0.9, filter: { type: highpass, freq: 1200 }, drive: 0.5 }
+  - { wave: sine, freq: 151.2, freq_end: 34, attack: 0.003, decay: 0.5, release: 0.2, gain: 0.9 }
+  - { wave: noise, delay: 0.02, attack: 0.01, decay: 0.9, release: 0.2, gain: 0.35, filter: { type: lowpass, freq: 700, freq_end: 60 } }
+reverb: 0.25
+source: { kind: generated, licence: own }

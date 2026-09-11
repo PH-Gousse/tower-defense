@@ -1,0 +1,23 @@
+# The guard tower: tall and thin, a keep with a parapet. Answers tanks.
+id: tower_single_l1
+class: tower
+archetype: single
+level: 1
+body_plan: turret_on_base
+params: { height: 1.2, keep_radius: 0.27, merlons: 6, roof: none }
+palette:
+  primary: stone
+  secondary: stone_dark
+  accent: team_blue
+  glow: gold
+  team_mask: [banner, parapet]
+rig: turret
+animations:
+  Build:   { gen: build_up, duration: 0.8 }
+  Idle:    { gen: idle_breathe, amplitude: 0.004, duration: 3.0 }
+  Attack:  { gen: turret_recoil, duration: 0.3, kick: 0.05, fire: 0.1 }
+  Upgrade: { gen: upgrade_flash, duration: 0.5 }
+  Sell:    { gen: sell_sink, duration: 0.6 }
+audio: { shot: sfx_shot_single_1 }
+game: { cost: 600, damage: 30, range: 3.0, cooldownTicks: 25 }
+source: { kind: generated, licence: own, author: asset-factory }

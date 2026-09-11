@@ -1,0 +1,12 @@
+# A medium creep dies (3): a falling cry, a thud.
+id: sfx_death_medium_3
+event: death_medium
+variant: 3
+duration: 0.6499999999999999
+stereo: false
+layers:
+  - { wave: saw, freq: 635.04, freq_end: 181.44, attack: 0.01, decay: 0.175, release: 0.1, gain: 0.45, filter: { type: lowpass, freq: 2100, freq_end: 630.0, q: 1.1 }, vibrato: [22, 60], drive: 0.3 }
+  - { wave: sine, freq: 149.688, freq_end: 45, delay: 0.12249999999999998, attack: 0.003, decay: 0.175, release: 0.1, gain: 0.7 }
+  - { wave: noise, delay: 0.12249999999999998, attack: 0.002, decay: 0.08, release: 0.05, gain: 0.3, filter: { type: lowpass, freq: 900, freq_end: 200 } }
+reverb: 0.2
+source: { kind: generated, licence: own }

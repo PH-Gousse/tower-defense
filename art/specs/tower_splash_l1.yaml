@@ -1,0 +1,23 @@
+# The mortar: squat and wide, a barrel pitched at the sky. Answers swarms.
+id: tower_splash_l1
+class: tower
+archetype: splash
+level: 1
+body_plan: cannon
+params: { height: 0.9, drum_radius: 0.34, barrels: 1, barrel_length: 0.42, pitch_deg: 55 }
+palette:
+  primary: stone
+  secondary: stone_dark
+  accent: team_blue
+  glow: danger
+  team_mask: [banner]
+rig: turret
+animations:
+  Build:   { gen: build_up, duration: 0.8 }
+  Idle:    { gen: idle_breathe, amplitude: 0.004, duration: 3.0 }
+  Attack:  { gen: turret_recoil, duration: 0.35, kick: 0.08, fire: 0.1 }
+  Upgrade: { gen: upgrade_flash, duration: 0.5 }
+  Sell:    { gen: sell_sink, duration: 0.6 }
+audio: { shot: sfx_shot_splash_1 }
+game: { cost: 1100, damage: 12, range: 1.5, cooldownTicks: 12 }
+source: { kind: generated, licence: own, author: asset-factory }

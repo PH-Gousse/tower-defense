@@ -1,0 +1,11 @@
+# A large creep spawns (1): a rising growl and a puff of earth.
+id: sfx_spawn_large_1
+event: spawn_large
+variant: 1
+duration: 0.8
+stereo: false
+layers:
+  - { wave: saw, freq: 82.8, freq_end: 165.6, attack: 0.02, decay: 0.36, release: 0.1, gain: 0.35, filter: { type: lowpass, freq: 540, q: 1.2 }, drive: 0.2 }
+  - { wave: noise, attack: 0.01, decay: 0.24, release: 0.08, gain: 0.25, filter: { type: lowpass, freq: 360, freq_end: 90.0 } }
+reverb: 0.2
+source: { kind: generated, licence: own }

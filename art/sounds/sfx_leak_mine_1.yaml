@@ -1,0 +1,11 @@
+# A life lost: a low warning.
+id: sfx_leak_mine_1
+event: leak_mine
+variant: 1
+duration: 0.8
+stereo: false
+layers:
+  - { wave: square, freq: 330, freq_end: 220, attack: 0.01, decay: 0.3, release: 0.2, gain: 0.35, filter: { type: lowpass, freq: 1500 } }
+  - { wave: sine, freq: 110, freq_end: 55, attack: 0.01, decay: 0.5, release: 0.2, gain: 0.5 }
+reverb: 0.3
+source: { kind: generated, licence: own }

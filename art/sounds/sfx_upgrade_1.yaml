@@ -1,0 +1,12 @@
+# An upgrade lands: two rising notes and a sparkle.
+id: sfx_upgrade_1
+event: upgrade
+variant: 1
+duration: 0.7
+stereo: false
+layers:
+  - { wave: triangle, freq: 440, freq_end: 660, attack: 0.01, decay: 0.2, release: 0.1, gain: 0.3 }
+  - { wave: triangle, freq: 660, freq_end: 880, delay: 0.1, attack: 0.01, decay: 0.3, release: 0.15, gain: 0.3 }
+  - { wave: noise, attack: 0.02, decay: 0.3, release: 0.1, gain: 0.12, filter: { type: highpass, freq: 5000 } }
+reverb: 0.3
+source: { kind: generated, licence: own }
