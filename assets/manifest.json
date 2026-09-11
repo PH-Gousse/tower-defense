@@ -7,7 +7,7 @@
         "spawn": "sfx_spawn_medium_1"
       },
       "bones": 16,
-      "bytes": 184208,
+      "bytes": 172256,
       "class": "creep",
       "clips": {
         "Death": {
@@ -45,7 +45,7 @@
       "footprint": 0.9544,
       "gated_by": "asset-gate",
       "generator_version": "0.1.0",
-      "hash": "76478fb78e7a781c",
+      "hash": "8b84d9bba8ada0a0",
       "height": 0.679,
       "source": {
         "approved_by": "",
@@ -65,7 +65,7 @@
       ],
       "tier": 1,
       "triangles": 1114,
-      "version": 1,
+      "version": 2,
       "vertices": 1816
     },
     "creep_runner_t2": {
@@ -75,7 +75,7 @@
         "spawn": "sfx_spawn_medium_1"
       },
       "bones": 16,
-      "bytes": 196200,
+      "bytes": 186152,
       "class": "creep",
       "clips": {
         "Death": {
@@ -114,7 +114,7 @@
       "footprint": 1.0205,
       "gated_by": "asset-gate",
       "generator_version": "0.1.0",
-      "hash": "987f0175afb97cb0",
+      "hash": "c632d366bba9e8ab",
       "height": 0.7542,
       "source": {
         "approved_by": "",
@@ -134,7 +134,7 @@
       ],
       "tier": 2,
       "triangles": 1178,
-      "version": 1,
+      "version": 2,
       "vertices": 1976
     }
   },

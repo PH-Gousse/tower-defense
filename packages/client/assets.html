@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Assets &middot; Line Tower Wars</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: #11151a; overflow: hidden; font: 13px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif; color: #d6dbe0; }
+    canvas { display: block; }
+    #panel { position: fixed; left: 12px; top: 12px; width: 300px; z-index: 5; background: rgba(14,16,19,.86); border: 1px solid #2a3038; border-radius: 6px; padding: 12px; backdrop-filter: blur(6px); max-height: calc(100% - 24px); overflow: auto; }
+    #panel h1 { font-size: 14px; margin: 0 0 8px; }
+    #panel label { display: block; margin-top: 8px; color: #8b939d; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+    select, button { width: 100%; margin-top: 4px; background: #1c2128; color: #e6ebf0; border: 1px solid #3a424c; border-radius: 4px; padding: 6px 8px; font: inherit; }
+    button { cursor: pointer; } button:hover { background: #262d36; } button:disabled { opacity: .5; cursor: default; }
+    .row { display: flex; gap: 6px; } .row button { flex: 1; }
+    .toggles label { display: flex; align-items: center; gap: 8px; text-transform: none; font-size: 13px; color: #d6dbe0; margin-top: 6px; }
+    #numbers { font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre; margin-top: 10px; color: #b8c0c8; }
+    #numbers .over { color: #ff6a5a; }
+    #log { font: 11px/1.4 ui-monospace, Menlo, monospace; white-space: pre-wrap; max-height: 160px; overflow: auto; margin-top: 8px; color: #8b939d; }
+    #status { position: fixed; right: 12px; top: 12px; z-index: 5; background: rgba(14,16,19,.8); border: 1px solid #2a3038; border-radius: 4px; padding: 6px 10px; font: 12px ui-monospace, Menlo, monospace; }
+  </style>
+</head>
+<body>
+  <div id="panel">
+    <h1>Asset viewer</h1>
+    <label>Asset</label>
+    <select id="asset"></select>
+    <label>Clip</label>
+    <div class="row"><select id="clip"></select><button id="next" title="cycle clips" style="flex:0 0 40px">⟳</button></div>
+    <div class="toggles">
+      <label><input type="checkbox" id="team" /> Team colour: red (off = blue)</label>
+      <label><input type="checkbox" id="wire" /> Wireframe</label>
+      <label><input type="checkbox" id="gamecam" checked /> Game camera (fov 18, pitch 70)</label>
+      <label><input type="checkbox" id="spin" /> Turntable</label>
+    </div>
+    <div id="numbers"></div>
+    <button id="regen" style="margin-top:10px">Regenerate this asset (asset-build + asset-gate)</button>
+    <div id="log"></div>
+  </div>
+  <div id="status">loading manifest…</div>
+  <script type="module" src="/src/demo/assetViewer.ts"></script>
+</body>
+</html>

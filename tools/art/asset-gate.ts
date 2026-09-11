@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, statSync, copyFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, statSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { tmpdir, homedir } from 'node:os'
 import { spawnSync } from 'node:child_process'
 import { parseArgs, flag, say, emit, fail, selectIds, have } from './lib/cli'
 import { listSpecIds, resolveSpec, loadSchema, loadRegistry, type Registry } from './lib/spec'
@@ -11,6 +10,7 @@ import { generatorVersion } from './lib/blender'
 import { readGlb, triangleCount, bounds, clips, type Glb } from './lib/glb'
 import { BUDGETS, FPS, REQUIRED_CLIPS, ALL_CLIPS, LOOP_CLIPS, CLIP_LENGTH, TEAM_MASK_COVERAGE, TEAM_MASK_CLASSES, SEAM_TRANSLATION, SEAM_ROTATION_RAD, ROOT_DRIFT, ORIGIN_TOLERANCE, type AssetClass } from './lib/budgets'
 import { loadManifest, saveManifest, type AssetEntry, type ClipEntry } from './lib/manifest'
+import { compressGlb, ktxBinary } from './lib/compress'
 
 /**
  * asset-gate <id|all> [--changed] [--report]
@@ -31,12 +31,7 @@ interface Violation { code: string; message: string; fix: string }
 interface Ctx { id: string; spec: AssetSpec; cls: AssetClass; glb: Glb; rawPath: string; log: Record<string, unknown> | null; specHash: string; registry: Registry }
 
 const KTX_HINT = 'KTX-Software from https://github.com/KhronosGroup/KTX-Software/releases (the macOS .pkg; expand with pkgutil into ~/.local/opt/ktx and link bin/ktx into ~/.local/bin if you would rather not install system-wide)'
-const PATH_EXTRA = [join(homedir(), '.local', 'bin'), '/usr/local/bin', '/opt/homebrew/bin']
-const ENV = { ...process.env, PATH: [...PATH_EXTRA, process.env['PATH'] ?? ''].join(':') }
 
-function haveOnExtendedPath(bin: string): boolean {
-  return have(bin) || PATH_EXTRA.some((d) => existsSync(join(d, bin)))
-}
 
 const CHECKS: ((c: Ctx) => Violation[])[] = [
   function stale(c) {
@@ -176,31 +171,6 @@ function sha256(path: string): string {
   return createHash('sha256').update(readFileSync(path)).digest('hex').slice(0, 16)
 }
 
-/** meshopt + KTX2 through the gltf-transform CLI, in a temp dir. */
-function compress(rawPath: string, outPath: string, textured: boolean): { ok: boolean; log: string } {
-  const cli = join(import.meta.dirname, 'node_modules', '.bin', 'gltf-transform')
-  const work = join(tmpdir(), `ltw-gate-${process.pid}`)
-  mkdirSync(work, { recursive: true })
-  const a = join(work, 'a.glb')
-  const b = join(work, 'b.glb')
-  copyFileSync(rawPath, a)
-  const steps: string[][] = []
-  if (textured) steps.push(['uastc', a, b, '--slots', 'baseColor', '--level', '2', '--rdo', '1'])
-  else steps.push(['copy', a, b])
-  steps.push(['meshopt', b, outPath, '--level', 'medium'])
-  let log = ''
-  for (const s of steps) {
-    const r = spawnSync(cli, s, { encoding: 'utf8', env: ENV, timeout: 300_000 })
-    log += `$ gltf-transform ${s.join(' ')}\n${r.stdout ?? ''}${r.stderr ?? ''}\n`
-    if (r.status !== 0) {
-      rmSync(work, { recursive: true, force: true })
-      return { ok: false, log }
-    }
-  }
-  rmSync(work, { recursive: true, force: true })
-  return { ok: true, log }
-}
-
 // ---------------------------------------------------------------------------
 
 const argv = process.argv.slice(2)
@@ -209,7 +179,7 @@ const ids = selectIds(argv, listSpecIds)
 if (ids.length === 0) fail('no specs selected')
 
 const missing: { bin: string; install: string }[] = []
-if (!haveOnExtendedPath('ktx')) missing.push({ bin: 'ktx', install: KTX_HINT })
+if (!ktxBinary()) missing.push({ bin: 'ktx', install: KTX_HINT })
 if (!have('magick')) missing.push({ bin: 'magick', install: 'brew install imagemagick' })
 if (missing.length) {
   for (const m of missing) console.error(`missing: ${m.bin}    install: ${m.install}`)
@@ -250,10 +220,9 @@ for (const id of ids) {
   }
   // Admit: compress, hash, record.
   const outPath = join(BUILD, `${id}.glb`)
-  const textured = (glb.json.images ?? []).length > 0
-  const comp = compress(rawPath, outPath, textured)
+  const comp = await compressGlb(rawPath, outPath)
   if (!comp.ok) {
-    results.push({ id, ok: false, violations: [{ code: 'CompressFailed', message: comp.log.split('\n').filter(Boolean).slice(-3).join(' | '), fix: 'see the gltf-transform output above' }] })
+    results.push({ id, ok: false, violations: [{ code: 'CompressFailed', message: comp.log.split('\n').filter(Boolean).slice(-3).join(' | '), fix: 'see the ktx / gltf-transform output above' }] })
     continue
   }
   const bytes = statSync(outPath).size

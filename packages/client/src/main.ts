@@ -10,6 +10,7 @@ import {
 } from '@ltw/sim'
 import { mmss, secondsUntil, ticksUntilIncome, ticksUntilNextTier, unlockedTier } from './clocks'
 import { railWidth, safeEdges } from './chrome'
+import { bootAssets } from './assets/boot'
 
 let scene: Scene
 try {
@@ -523,9 +524,8 @@ function connect(code: string): void {
         (cmd) => net?.sendCommand(cmd),
         (tick) => net?.sendWatermark(tick),
       )
-      if (startScreen) startScreen.hidden = true
       if (btnConcede) btnConcede.hidden = false
-      scene.start()
+      startMatch()
     },
     onCommand: (cmd) => scene.driver.receive(cmd),
     onWatermark: (player, tick) => scene.driver.receiveWatermark(player, tick),
@@ -629,6 +629,35 @@ function showEnding(): void {
 const BOTS: Record<string, BotConfig> = { easy: BOT_EASY, normal: BOT_NORMAL, hard: BOT_HARD }
 const startScreen = el('start')
 
+/**
+ * The asset catalogue loads while the player reads the start screen. A
+ * match waits for it: `startMatch` runs once the promise settles. In dev a
+ * broken catalogue is shown on the start screen and the match does not
+ * start; in a build it starts on the procedural models.
+ */
+const assetStatus = el('assetStatus')
+const assetsReady: Promise<void> = bootAssets(scene.renderer, import.meta.env.BASE_URL, import.meta.env.DEV, (text) => {
+  if (assetStatus) assetStatus.textContent = text
+}).then((r) => {
+  if (r.registry && r.sfx) scene.attachAssets(r.registry, r.sfx, import.meta.env.DEV)
+  if (assetStatus) assetStatus.textContent = r.registry ? `${r.loaded} assets ready${r.problems.length ? ` · ${r.problems.length} note(s) in the console` : ''}` : 'procedural models'
+})
+
+function startMatch(): void {
+  void assetsReady.then(
+    () => {
+      if (startScreen) startScreen.hidden = true
+      scene.start()
+      requestAnimationFrame(() => requestAnimationFrame(syncSafeArea))
+    },
+    (err: unknown) => {
+      // Dev only: bootAssets throws only in dev. Say so where the player is looking.
+      if (assetStatus) assetStatus.textContent = String(err instanceof Error ? err.message : err)
+      console.error(err)
+    },
+  )
+}
+
 // `[data-bot]`, not every button on the start screen. Step 11 added "Create a
 // room" and "Join" inside the same panel, and a selector of `#start button`
 // silently bound the bot-match handler to those too -- so creating a room
@@ -639,15 +668,14 @@ for (const b of Array.from(
 )) {
   b.addEventListener('click', () => {
     scene.setBot(BOTS[b.dataset.bot ?? 'normal'] ?? BOT_NORMAL)
-    if (startScreen) startScreen.hidden = true
-    scene.start()
     // `start()` frames the board, but the palette is still its pre-match height
     // at this instant -- the send buttons are built by the first stats callback,
-    // one tick later. Re-measure once the layout has settled, or the board is
-    // framed against a shorter palette than the one that ends up covering it and
-    // the exit row hides behind the bar. Waiting on the ResizeObserver alone is
-    // not enough: if the palette's height happens not to change, it never fires.
-    requestAnimationFrame(() => requestAnimationFrame(syncSafeArea))
+    // one tick later. startMatch re-measures once the layout has settled, or the
+    // board is framed against a shorter palette than the one that ends up
+    // covering it and the exit row hides behind the bar. Waiting on the
+    // ResizeObserver alone is not enough: if the palette's height happens not to
+    // change, it never fires.
+    startMatch()
   })
 }
 

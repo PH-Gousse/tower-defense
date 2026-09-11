@@ -59,8 +59,12 @@ import { glowTexture, ringTexture, puffTexture, chevronTexture } from './render/
 import { SpritePool, ProjectilePool, CorpsePool } from './render/effects'
 import { HealthBars } from './render/bars'
 import { renderIcon } from './render/icons'
-import { createAudio, type Audio } from './audio/audio'
 import { intensity } from './audio/mixer'
+import { createAudio, type Audio } from './audio/audio'
+import { AssetLayer } from './assets/layer'
+import type { AssetRegistry } from './assets/registry'
+import type { SfxPlayer } from './assets/sfx'
+import { CREEP_FILE } from '@ltw/sim'
 
 /**
  * Wire-level refusals, in the player's language.
@@ -200,6 +204,12 @@ export interface Scene {
   /** Every sound, synthesised. `main.ts` owns its controls; the scene feeds it events. */
   readonly audio: Audio
   /**
+   * Draw creeps and towers from the asset catalogue when it has them. Until
+   * this is called (or for anything the catalogue lacks) the procedural
+   * models draw, so a match never depends on the manifest to start.
+   */
+  readonly attachAssets: (registry: AssetRegistry, sfx: SfxPlayer, dev: boolean) => AssetLayer
+  /**
    * The renderer, exposed read-only so the benchmark scene can read
    * `renderer.info` (draw calls, triangles, live geometries and textures).
    *
@@ -247,6 +257,11 @@ export function createScene(
    * rendered seat 0's lane and sent commands the relay refused.
    */
   const me = () => driver.me
+
+  /** The asset layer, once attached. Null draws the procedural models. */
+  let assets: AssetLayer | null = null
+  let fileSfx: SfxPlayer | null = null
+  const scratchMuzzle = new THREE.Vector3()
 
   // The shared renderer and resize hub, so the camera demo at /camera and the
   // game are never two GL contexts fighting over one page.
@@ -924,14 +939,16 @@ export function createScene(
         const kind = t.kind[i] as number
         if (kind === -1) continue
         const level = t.level[i] as number
+        if (lane === me()) mine += 1
+        if (assets && assets.placeTower(lane, i, kind, level, ox + tileX(i) + 0.5, tileY(i) + 0.5)) continue
         const set = (towerSets[kind] as TowerSet[])[level - 1] as TowerSet
         scratch.makeTranslation(ox + tileX(i) + 0.5, 0, tileY(i) + 0.5)
         set.lit.setMatrixAt(set.count, scratch)
         if (set.glow) set.glow.setMatrixAt(set.count, scratch)
         set.count += 1
-        if (lane === me()) mine += 1
       }
     }
+    assets?.syncTowers((lane, tile) => (driver.current.lanes[lane] as Lane).towers.kind[tile] !== -1)
     for (const levels of towerSets) {
       for (const set of levels) {
         set.lit.count = set.count
@@ -969,12 +986,12 @@ export function createScene(
             dust.spawn(x + Math.cos(a) * 0.3, 0.15, z + Math.sin(a) * 0.3, 0.5, 1.1, 0x7a6a48, 520, now, 0.35)
           }
           rings.spawn(x, 0.035, z, 0.4, 1.4, 0xd8c8a0, 320, now)
-          audio.build(ck as TowerKind, x, z, lane === me())
+          if (!assets?.towerBuilt(lane, i)) audio.build(ck as TowerKind, x, z, lane === me())
         } else if (ck === -1) {
           dust.spawn(x, 0.3, z, 0.7, 1.4, 0x7a6a48, 500, now, 0.4)
-          if (lane === me()) audio.sell(x, z)
+          if (!assets?.towerSold(lane, i) && lane === me()) audio.sell(x, z)
         } else {
-          audio.upgrade(x, z, lane === me())
+          if (!assets?.towerUpgraded(lane, i)) audio.upgrade(x, z, lane === me())
           for (let d = 0; d < 5; d++) {
             const a = (d / 5) * Math.PI * 2 + 0.3
             flashes.spawn(x + Math.cos(a) * 0.25, 0.4 + (d % 2) * 0.4, z + Math.sin(a) * 0.25, 0.15, 0.4, 0xffd86a, 420, now, 0.5)
@@ -1047,9 +1064,15 @@ export function createScene(
         if (!wasIdle) continue
         const slot = targetOf(lane, i, spec.range)
         if (slot === -1) continue
-        const sx = ox + tileX(i) + 0.5
-        const sz = tileY(i) + 0.5
-        const sy = muzzleHeight(kind as TowerKind, level)
+        let sx = ox + tileX(i) + 0.5
+        let sz = tileY(i) + 0.5
+        let sy = muzzleHeight(kind as TowerKind, level)
+        const backed = assets?.towerFired(lane, i, scratchMuzzle) ?? false
+        if (backed) {
+          sx = scratchMuzzle.x
+          sy = scratchMuzzle.y
+          sz = scratchMuzzle.z
+        }
         const id = (driver.previous.lanes[lane] as Lane).creeps.id[slot] as number
         ;(projectiles[kind] as ProjectilePool).fire(
           lane,
@@ -1062,7 +1085,7 @@ export function createScene(
           drawZ[lane]![slot] as number,
           now,
         )
-        audio.shot(kind as TowerKind, sx, sz)
+        if (!(backed && assets?.hasSfxFor('fired', kind))) audio.shot(kind as TowerKind, sx, sz)
         if (kind === TowerKind.Splash) {
           flashes.spawn(sx, sy + 0.15, sz - 0.2, 0.3, 0.7, 0xffb070, 140, now)
           dust.spawn(sx, sy + 0.2, sz - 0.2, 0.3, 0.8, 0x6a6058, 500, now, 0.5)
@@ -1107,7 +1130,7 @@ export function createScene(
           // A lap counter that moved is a leak: the creep is back at the entrance.
           if ((curr.laps[c] as number) > (prev.laps[p] as number)) {
             rings.spawn(dx[c] as number, 0.04, dz[c] as number, 0.3, 1.6, 0xff5040, 420, now)
-            audio.leak(lane === me(), dx[c] as number, dz[c] as number)
+            if (!assets?.creepLeaked(lane, cid, dx[c] as number, dz[c] as number)) audio.leak(lane === me(), dx[c] as number, dz[c] as number)
             flashes.spawn(dx[c] as number, 0.3, dz[c] as number, 0.4, 1.0, 0xff6a50, 300, now, 0.4)
             const sx = ox + (curr.x[c] as number)
             const sz = curr.y[c] as number
@@ -1116,6 +1139,8 @@ export function createScene(
             // interpolate a creep the length of the lane.
             dx[c] = sx
             dz[c] = sz
+            const rspec = CREEPS[curr.spec[c] as number]
+            assets?.creepSpawned(lane, cid, rspec ? rspec.archetype : 0, rspec ? rspec.tier : 0, sx, sz, true)
           }
           p++
           c++
@@ -1129,8 +1154,10 @@ export function createScene(
           const set = creepSets[kind] as CreepSet
           const x = dx[p] as number
           const z = dz[p] as number
-          set.corpses.add(x, z, face[p] as number, scale, 1, 1, 1, now)
-          audio.death(kind, x, z)
+          if (!assets?.creepDied(lane, pid, x, z)) {
+            set.corpses.add(x, z, face[p] as number, scale, 1, 1, 1, now)
+            audio.death(kind, x, z)
+          }
           dust.spawn(x, 0.15 * scale, z, 0.3 * scale, 0.9 * scale, 0x5a4a38, 450, now, 0.3)
           if (kind === CreepArchetypeKind.Tank) {
             rings.spawn(x, 0.035, z, 0.3, 1.5 * scale, 0xc8b898, 350, now)
@@ -1139,6 +1166,10 @@ export function createScene(
           continue
         }
         // An id in curr but not prev: a spawn. Nothing to shift.
+        if (assets) {
+          const sspec = CREEPS[curr.spec[c] as number]
+          assets.creepSpawned(lane, cid, sspec ? sspec.archetype : 0, sspec ? sspec.tier : 0, ox + (curr.x[c] as number), curr.y[c] as number, false)
+        }
         c++
       }
     }
@@ -1244,6 +1275,16 @@ export function createScene(
         const bob = moving ? Math.abs(stride) * gait.bob * scale : 0
         const wx = ox + x
         const wz = y
+        if (assets && assets.placeCreep(lane, id, kind, tier, wx, wz, heading, moving, (Math.abs(mdx) + Math.abs(mdy)) * 20, slowed)) {
+          dxs[i] = wx
+          dys[i] = 0.35 * scale
+          dzs[i] = wz
+          const atop = set.height * scale + 0.22
+          const ahp = curr.hp[i] as number
+          const amax = spec ? spec.hp : ahp
+          if (ahp < amax) bars.add(wx, atop, wz, ahp / amax)
+          continue
+        }
         scratchV.set(wx, bob, wz)
         scratchQ.setFromAxisAngle(UP, heading + stride * gait.yaw)
         if (gait.roll > 0) scratchQ.multiply(scratchQ2.setFromAxisAngle(X_AXIS, stride * gait.roll))
@@ -1292,6 +1333,7 @@ export function createScene(
     pips.count = pipCount
     pips.instanceMatrix.needsUpdate = true
     bars.end()
+    assets?.endCreepFrame()
   }
 
   /**
@@ -1387,11 +1429,27 @@ export function createScene(
         select(null)
       }
     },
+    attachAssets: (registry, sfx, dev) => {
+      const layer = new AssetLayer(scene, registry, sfx, {
+        dev,
+        creepNames: CREEP_FILE.archetypes.map((a) => a.key),
+        towerNames: ARCHETYPES.map((a) => a.key),
+      })
+      const missing = layer.missingFor(CREEP_FILE.archetypes.length, 3, ARCHETYPES.length, 3)
+      if (missing.length && dev) console.warn(`[assets] catalogue lacks ${missing.length} of the match's assets (${missing.join(', ')}); those draw procedurally`)
+      assets = layer
+      fileSfx = sfx
+      if (started) sfx.start()
+      // Existing towers get their models on the next tick; creeps on the next frame.
+      lastSyncedTick = -1
+      return layer
+    },
     start: () => {
       started = true
       // A click on the start screen got us here, which is the gesture the
       // browser wants before it will make a sound.
       audio.start()
+      fileSfx?.start()
       host.resize()
       renderer.setAnimationLoop(drawFrame)
     },
@@ -1455,6 +1513,7 @@ export function createScene(
       rings.update(nowMs)
       dust.update(nowMs)
       for (const set of creepSets) set.corpses.update(nowMs)
+      assets?.update(nowMs)
       currentPath.update(nowMs)
       candidatePath.update(nowMs)
       leakTrail.update(nowMs)
@@ -1470,6 +1529,7 @@ export function createScene(
         scratchV.z,
         rig.distance * Math.tan((rig.fovDeg * Math.PI) / 360) * camera.aspect,
       )
+      fileSfx?.setListener(scratchV.x, rig.distance * Math.tan((rig.fovDeg * Math.PI) / 360) * camera.aspect)
       audio.setIntensity(intensity((state.lanes[me()] as Lane).creeps.count))
       audio.update()
       renderer.render(scene, camera)
