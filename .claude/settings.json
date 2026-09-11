@@ -16,6 +16,12 @@
             "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/sim-preedit-guard.sh",
             "timeout": 30,
             "statusMessage": "scanning for banned APIs"
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/assets-guard.sh",
+            "timeout": 10,
+            "statusMessage": "generated-files guard"
           }
         ]
       }
@@ -29,6 +35,12 @@
             "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/post-edit-checks.sh",
             "timeout": 60,
             "statusMessage": "format, typecheck, tests"
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/art-post-edit.sh",
+            "timeout": 120,
+            "statusMessage": "spec-validate / generator tests"
           }
         ]
       }
@@ -41,6 +53,12 @@
             "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/stop-guard.sh",
             "timeout": 120,
             "statusMessage": "determinism + sim suite"
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/art-stop-guard.sh",
+            "timeout": 600,
+            "statusMessage": "asset-gate --changed + asset-report"
           }
         ]
       }

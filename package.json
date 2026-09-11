@@ -28,6 +28,8 @@
     "audio-import": "pnpm --filter @ltw/art-tools exec vite-node audio-import.ts --",
     "manifest-types": "pnpm --filter @ltw/art-tools exec vite-node manifest-types.ts --",
     "game-proposal": "pnpm --filter @ltw/art-tools exec vite-node game-proposal.ts --",
+    "asset-regen": "pnpm --filter @ltw/art-tools exec vite-node asset-regen.ts --",
+    "asset-retire": "pnpm --filter @ltw/art-tools exec vite-node asset-retire.ts --",
     "rule-change:begin": ".claude/hooks/rule-change-marker.sh begin",
     "rule-change:end": ".claude/hooks/rule-change-marker.sh end",
     "rule-change:status": ".claude/hooks/rule-change-marker.sh status"

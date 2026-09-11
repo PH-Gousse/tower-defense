@@ -33,6 +33,13 @@ simulation package, a three.js client, a Cloudflare Workers relay, and a headles
 | Banned-API scan | `pnpm banned-api-scan [files…]` (< 0.3 s; the pre-edit hook uses it) |
 | State hash | `pnpm state-hash --replay <file.json> [--every N]` |
 | Cross-engine golden | `bun run scripts/golden-jsc.ts` (JavaScriptCore, not V8) |
+| Art: validate specs | `pnpm spec-validate <id\|all>` (< 1 s, no Blender) |
+| Art: build | `pnpm asset-build <id\|all> [--force] [--dry-run]` (headless Blender, ~0.5 s per asset, cached) |
+| Art: gate | `pnpm asset-gate <id\|all>` — the admission gate; the only writer of `assets/build/` |
+| Art: previews | `pnpm asset-preview <id\|all>` → `reports/art/<id>/` (~10 s per asset) |
+| Art: critique, report | `pnpm asset-critique <id>` · `pnpm asset-report` |
+| Art: sounds | `pnpm audio-synth <id\|all>` · `pnpm audio-import <file> --as <id> …` |
+| Art: catalogue upkeep | `pnpm asset-regen [--all]` · `pnpm asset-retire <id>` · `pnpm manifest-types` · `pnpm game-proposal <id>` |
 
 Every tool prints a human summary and a single line of JSON as its **last** line, and exits
 non-zero on failure. Sources in `packages/harness/tools/`.
@@ -52,6 +59,8 @@ Requires Node 24 and pnpm 10. `bun` is needed only for the cross-engine check.
 | Engineering invariants | [`docs/invariants.md`](docs/invariants.md) |
 | Decisions | [`docs/adr/`](docs/adr/) |
 | Balance constants | `packages/sim/data/towers.json`, `packages/sim/data/creeps.json`, and `STARTING_GOLD` / `STARTING_INCOME` in `packages/sim/src/data.ts`, `STARTING_LIVES` in `packages/sim/src/state.ts` |
+| Art rules | [`docs/art/style-sheet.md`](docs/art/style-sheet.md) (binding), [`docs/art/animation-contract.md`](docs/art/animation-contract.md), [`docs/art/audio.md`](docs/art/audio.md), [`docs/art/pipeline.md`](docs/art/pipeline.md) (how the factory works) |
+| Asset specs | `art/specs/<id>.yaml` — the source of truth for every asset; `assets/build/` is a cache of them (ADR-0018) |
 | Work in flight | GitHub issues (`gh issue list`) |
 | Machine setup | [`docs/dev-setup.md`](docs/dev-setup.md) |
 
@@ -90,6 +99,11 @@ kept for the reasoning it records and is not authoritative.
   moves `docs/gdd.md`, the constants and the tests together.
 - **Never edit balance constants** outside `/rule-change` or `/balance` acceptance. A hook
   enforces this.
+- **`/asset`** for anything art: it takes a one-line request to a built, gated, previewed
+  asset and stops for approval. **Never hand-edit `assets/build/`, the manifest or any
+  generated file**; a hook refuses. Budgets change only through `/style-sheet`.
+- **The factory never touches the sim.** A spec's `game:` block becomes a proposal under
+  `reports/art/`; `/rule-change` applies it.
 - **`/determinism-check` before claiming sim work is done.** Also `/replay-verify` if you
   touched anything a replay reads.
 - Never weaken a check, a lint rule or a hook to make something pass. If a guard is wrong,
@@ -100,7 +114,9 @@ kept for the reasoning it records and is not authoritative.
 ## Skill routing
 
 Project skills: `/decide` · `/rule-change` · `/determinism-check` · `/replay-verify` ·
-`/balance` · `/netcode-review` · `/perf` · `/ship` · `/slice`.
+`/balance` · `/netcode-review` · `/perf` · `/ship` · `/slice` · `/asset` (art, with
+subcommands `new evolve import source review regen retire audio status`) · `/style-sheet` ·
+`/asset-gate`.
 
 General gstack skills, when the request matches: product ideas → `/office-hours`; strategy →
 `/plan-ceo-review`; architecture → `/plan-eng-review`; design → `/design-consultation` or
