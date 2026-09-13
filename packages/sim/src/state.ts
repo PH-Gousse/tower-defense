@@ -1,12 +1,21 @@
-import { TILE_COUNT, GRID_W, SPAWN_TILES, DIR_DX, DIR_DY, Dir } from './grid'
+import {
+  TILE_COUNT,
+  GRID_W,
+  LANE_WIDTH,
+  SPAWN_ROWS,
+  MAX_TOWERS,
+  DIR_DX,
+  DIR_DY,
+  Dir,
+  inBounds,
+  footprintCells,
+  footprintContains,
+  FOOTPRINT_CELLS,
+} from './grid'
 import { buildField, createField, type FlowField } from './field'
 
 /**
  * Game state.
- *
- * Step 2 scope: one lane, towers, and creeps walking a flow field. Teams, gold,
- * income, lives and sending arrive at steps 4-6; the shapes below are sized so
- * those land as fields rather than as a reshuffle.
  *
  * Two properties this file exists to protect:
  *
@@ -40,22 +49,40 @@ export interface Creeps {
 }
 
 /**
- * Towers, stored per tile rather than in a dense list.
+ * Towers: a dense list of anchors, plus a per-tile cache of which tower
+ * covers each cell.
  *
- * One tower per tile and 960 tiles, so a tile-indexed array is smaller than the
- * bookkeeping a dense list would need — and it makes "fire in tile order", the
- * determinism pin, a plain forward loop.
+ * A tower is `{ id, anchorX, anchorY, kind, level, cooldown }` at slot `i`,
+ * and its 2x2 footprint is DERIVED from the anchor (ADR-0019). `at[tile]` is
+ * the slot covering that tile, or -1; `Lane.blocked` is the same fact as a
+ * byte per tile for the flow field. Both are caches, rebuilt by `insertTower`
+ * and `removeTowerSlot` and nowhere else. A tower stored four times over would
+ * be four places to disagree.
  *
- * `kind[i] === -1` means no tower.
+ * **Slots are kept sorted by anchor tile index.** "Towers fire in tile-index
+ * order" is a determinism pin (invariants rule 4), and a sorted list makes it
+ * a plain forward loop here, in `hashState`, and in the bot -- the same order
+ * everywhere, by construction rather than by each caller remembering to sort.
+ * A build shifts at most 800 entries; a sell compacts stably. Both are rare
+ * next to a tick.
+ *
+ * `id` is monotonic per match and never reused. Slots shift when a tower is
+ * built or sold ahead of them, so the id is what the renderer keys effects on.
  */
 export interface Towers {
+  readonly id: Int32Array
+  readonly anchorX: Int16Array
+  readonly anchorY: Int16Array
   readonly kind: Int8Array
   readonly level: Int8Array
   readonly cooldown: Int32Array
+  /** Per tile: slot of the tower covering it, or -1. Cache. */
+  readonly at: Int32Array
+  count: number
 }
 
 export interface Lane {
-  /** 1 = tower present, 0 = walkable. Index is row-major tile index. */
+  /** 1 = inside a tower footprint, 0 = walkable. Cache; index is row-major tile index. */
   readonly blocked: Uint8Array
   readonly field: FlowField
   readonly creeps: Creeps
@@ -68,7 +95,7 @@ export interface Lane {
    * send -- and this counter is what keeps simultaneous arrivals apart, by
    * giving each one a different starting point. See `spawnPointFor`.
    *
-   * Counts respawns too: a creep returned to the entrance by a leak or by a
+   * Counts respawns too: a creep returned to the spawn zone by a leak or by a
    * sealed path takes the next number, so it does not land on top of whatever
    * was just sent.
    */
@@ -88,6 +115,8 @@ export interface GameState {
   tick: number
   /** Next creep id to hand out. Monotonic, never reused. */
   nextCreepId: number
+  /** Next tower id to hand out. Monotonic, never reused. */
+  nextTowerId: number
   result: MatchResult
   /** Index of the winning player once `result` is not Playing; -1 for a draw. */
   winner: number
@@ -161,9 +190,18 @@ function createCreeps(): Creeps {
 }
 
 function createTowers(): Towers {
-  const kind = new Int8Array(TILE_COUNT)
-  kind.fill(-1)
-  return { kind, level: new Int8Array(TILE_COUNT), cooldown: new Int32Array(TILE_COUNT) }
+  const at = new Int32Array(TILE_COUNT)
+  at.fill(-1)
+  return {
+    id: new Int32Array(MAX_TOWERS),
+    anchorX: new Int16Array(MAX_TOWERS),
+    anchorY: new Int16Array(MAX_TOWERS),
+    kind: new Int8Array(MAX_TOWERS),
+    level: new Int8Array(MAX_TOWERS),
+    cooldown: new Int32Array(MAX_TOWERS),
+    at,
+    count: 0,
+  }
 }
 
 function createLane(): Lane {
@@ -191,6 +229,7 @@ export function createState(): GameState {
   return {
     tick: 0,
     nextCreepId: 1,
+    nextTowerId: 1,
     result: MatchResult.Playing,
     winner: -1,
     players: [createPlayer(), createPlayer()],
@@ -208,6 +247,7 @@ export function createState(): GameState {
 export function cloneState(from: GameState, into: GameState): GameState {
   into.tick = from.tick
   into.nextCreepId = from.nextCreepId
+  into.nextTowerId = from.nextTowerId
   into.result = from.result
   into.winner = from.winner
 
@@ -227,10 +267,19 @@ export function cloneState(from: GameState, into: GameState): GameState {
     dst.blocked.set(src.blocked)
     dst.field.dist.set(src.field.dist)
     dst.field.dir.set(src.field.dir)
-    dst.towers.kind.set(src.towers.kind)
-    dst.towers.level.set(src.towers.level)
-    dst.towers.cooldown.set(src.towers.cooldown)
     dst.released = src.released
+
+    const ts = src.towers
+    const td = dst.towers
+    const tn = ts.count
+    td.id.set(ts.id.subarray(0, tn))
+    td.anchorX.set(ts.anchorX.subarray(0, tn))
+    td.anchorY.set(ts.anchorY.subarray(0, tn))
+    td.kind.set(ts.kind.subarray(0, tn))
+    td.level.set(ts.level.subarray(0, tn))
+    td.cooldown.set(ts.cooldown.subarray(0, tn))
+    td.at.set(ts.at)
+    td.count = tn
 
     // Only the LIVE prefix. Everything at or past `count` is dead space: the
     // arrays are dense, `removeDead` compacts into them, spawns write at
@@ -261,83 +310,173 @@ export function cloneState(from: GameState, into: GameState): GameState {
   return into
 }
 
+// --- towers ------------------------------------------------------------------
+
+const cellScratch = new Int32Array(FOOTPRINT_CELLS)
+
+/** The slot of the tower covering (x, y), or -1. Any footprint cell resolves. */
+export function towerSlotAt(lane: Lane, x: number, y: number): number {
+  if (!inBounds(x, y)) return -1
+  return lane.towers.at[y * GRID_W + x] as number
+}
+
+/** The kind of the tower covering (x, y), or -1. */
+export function towerKindAt(lane: Lane, x: number, y: number): number {
+  const slot = towerSlotAt(lane, x, y)
+  return slot === -1 ? -1 : (lane.towers.kind[slot] as number)
+}
+
+/** Whether any cell of the footprint at (ax, ay) is already inside a tower. */
+export function footprintOverlapsTower(lane: Lane, ax: number, ay: number): boolean {
+  footprintCells(ax, ay, cellScratch)
+  for (let k = 0; k < FOOTPRINT_CELLS; k++) {
+    if (lane.blocked[cellScratch[k] as number] === 1) return true
+  }
+  return false
+}
+
+/** Whether any creep in the lane stands on a cell of the footprint. */
+export function creepOnFootprint(lane: Lane, ax: number, ay: number): boolean {
+  const c = lane.creeps
+  for (let i = 0; i < c.count; i++) {
+    const cx = Math.floor(c.x[i] as number)
+    const cy = Math.floor(c.y[i] as number)
+    if (footprintContains(ax, ay, cx, cy)) return true
+  }
+  return false
+}
+
+/** Stamp the caches for slot `s` with `value` (the slot itself, or -1). */
+function stampFootprint(lane: Lane, s: number, value: number): void {
+  const t = lane.towers
+  footprintCells(t.anchorX[s] as number, t.anchorY[s] as number, cellScratch)
+  for (let k = 0; k < FOOTPRINT_CELLS; k++) {
+    const cell = cellScratch[k] as number
+    t.at[cell] = value
+    lane.blocked[cell] = value === -1 ? 0 : 1
+  }
+}
+
 /**
- * Distinct starting points for creeps that arrive together.
+ * Add a tower, keeping the slots sorted by anchor tile index. Returns the slot.
+ *
+ * Does NOT rebuild the flow field; the caller does, once, after the caches are
+ * consistent. The caller has also already validated the footprint.
+ */
+export function insertTower(lane: Lane, id: number, ax: number, ay: number, kind: number): number {
+  const t = lane.towers
+  const anchor = ay * GRID_W + ax
+  let p = t.count
+  while (p > 0) {
+    const q = p - 1
+    if ((t.anchorY[q] as number) * GRID_W + (t.anchorX[q] as number) < anchor) break
+    p = q
+  }
+  // Shift [p, count) right by one. The shifted towers' cache entries move with
+  // them: re-stamp each at its new slot.
+  for (let s = t.count; s > p; s--) {
+    const q = s - 1
+    t.id[s] = t.id[q] as number
+    t.anchorX[s] = t.anchorX[q] as number
+    t.anchorY[s] = t.anchorY[q] as number
+    t.kind[s] = t.kind[q] as number
+    t.level[s] = t.level[q] as number
+    t.cooldown[s] = t.cooldown[q] as number
+    stampFootprint(lane, s, s)
+  }
+  t.id[p] = id
+  t.anchorX[p] = ax
+  t.anchorY[p] = ay
+  t.kind[p] = kind
+  t.level[p] = 1
+  t.cooldown[p] = 0
+  t.count += 1
+  stampFootprint(lane, p, p)
+  return p
+}
+
+/** Remove the tower at `slot`, compacting stably. Field rebuild is the caller's. */
+export function removeTowerSlot(lane: Lane, slot: number): void {
+  const t = lane.towers
+  stampFootprint(lane, slot, -1)
+  for (let s = slot + 1; s < t.count; s++) {
+    const q = s - 1
+    t.id[q] = t.id[s] as number
+    t.anchorX[q] = t.anchorX[s] as number
+    t.anchorY[q] = t.anchorY[s] as number
+    t.kind[q] = t.kind[s] as number
+    t.level[q] = t.level[s] as number
+    t.cooldown[q] = t.cooldown[s] as number
+    stampFootprint(lane, q, q)
+  }
+  t.count -= 1
+}
+
+// --- spawning ----------------------------------------------------------------
+
+/**
+ * Where a creep appears: spread across the whole spawn zone, plus a fractional
+ * setback along the route (ADR-0022).
  *
  * Sending is unpaced -- a purchase puts its creep on the board that tick, and
- * only gold limits how many you buy -- so twenty creeps can enter on one tick.
+ * only gold limits how many you buy -- so many creeps can enter on one tick.
  * They must not enter on one POINT. Identical creeps sharing a position move
- * identically forever, so they read as a single dot with twenty health bars and
- * one splash shot clears the lot, which erases the Splash tower's reason to
- * exist. That is what the old spawn queue was for, and this replaces it.
+ * identically forever, so they read as a single dot with N health bars and one
+ * splash shot clears the lot, which erases the Splash tower's reason to exist.
  *
- * Spreading them ACROSS the entrance does not work, and it is worth saying why
- * because it is the obvious fix. Creeps steer centre-to-centre: `moveCreeps`
- * aims at `cx + DIR_DX[d] + 0.5`, so whatever sideways offset a creep starts
- * with is gone the first time it crosses a tile boundary, and once two creeps
- * share a tile heading the same way they are welded together.
+ * Three coordinates come out of the lane's release counter:
  *
- *     across the entrance          after one tile transition
- *     ┌───────────┐                ┌───────────┐
- *     │ o o o o o │  ────────────▶ │     O     │   welded: one splash kills all
- *     └───────────┘                └───────────┘
+ *   column   release % LANE_WIDTH            consecutive arrivals form a FRONT
+ *   row      (release / LANE_WIDTH) % SPAWN_ROWS   across the zone, then fill it
+ *   setback  a fraction of a tile, backwards along `field.dir` at that cell
  *
- *     along the path               after one tile transition
- *     ┌───────────┐                ┌───────────┐
- *     │     o     │  y = 0.5       │     o     │   a distance gap became a TIME
- *     │     o     │  y = 0.4  ───▶ │     o     │   gap, and centre-snapping
- *     │     o     │  y = 0.3       │     o     │   preserves time gaps
- *     └───────────┘                └───────────┘
+ * The setback is the load-bearing part, and it is worth saying why because a
+ * later reader will be tempted to drop it "since the zone spreads them
+ * anyway". Creeps steer centre-to-centre, so any offset ACROSS the route is
+ * gone at the first tile boundary; only an offset ALONG the route survives,
+ * because it is really a time gap, and centre-snapping preserves time gaps.
+ * Two creeps in different cells are not safe either: their walks to the first
+ * gap differ by an integer number of tiles, and two cells symmetric about the
+ * gap differ by zero, so they would arrive at the gap on the same tick at the
+ * same point and be welded for the rest of the match. A setback that is unique
+ * per release breaks every such tie: integer differences are >= 1 or 0, the
+ * fractions differ by less than SPAWN_SETBACK < 1, so no two of the
+ * SPAWN_PERIOD releases ever share a distance-to-anywhere.
  *
- * So the offset goes BACKWARDS ALONG THE ROUTE instead, and it has to read the
- * flow field to know which way that is. Guessing costs a day: the lane runs top
- * to bottom, so "back" looks like -y, but the route leaves the entrance row
- * heading EAST and only turns south at the far column. A y-offset there is
- * lateral, and worse than useless -- creeps at 0.955 and 0.045 are both 0.455
- * from the centre they steer to, so they arrive on the same tick at the same
- * point and weld, which is the exact failure being prevented. `field.dir` at
- * the spawn tile is the only thing that knows which way is forward.
+ * The setback slot walks the period with a coprime stride so a burst bought on
+ * one tick spreads over the whole 0..SPAWN_SETBACK rather than clustering at
+ * one end: 22 consecutive releases span it. 81 is coprime with 1760 (2^5.5.11).
  *
- * Stepping back along it makes the walk to the next centre longer by exactly
- * the offset, so a creep set back by 0.3 stays 0.3 behind for the rest of the
- * match, through every turn, at every speed.
+ * Direction comes from `field.dir` at the spawn cell, not from "up is back":
+ * the zone is open so most cells point S, but a cell beside the first wall can
+ * point E or W, and a setback along the wrong axis is lateral -- exactly the
+ * offset that welds. Guessing this once cost a day on the old board.
  *
- * Tile and slot advance together on `release`, and 2 and 11 are coprime, so the
- * pair repeats every 22. That number is a budget, not a decoration: 22 creeps
- * arriving on one tick get 22 distinct points, and the 23rd starts exactly where
- * the first did. Creeps that share a point on the same tick are welded for the
- * rest of the match, so `MAX_SEND_BURST` in bot.ts is held at 22 to match. A
- * player cannot outrun it either: a tick is 50ms, so even two ×10 buttons
- * pressed together stay inside the budget.
- *
- * SPAWN_PERIOD is what to raise if a bigger single-tick burst ever becomes
- * possible -- and raising it is nearly free, because the slots subdivide a tile
- * that is 1.0 across and nothing else depends on the gap being any given size.
- *
- * What it deliberately does NOT try to do is spread a mass send beyond splash
- * range. Splash reaches 1.2 tiles and the entrance is one tile wide, so a wave
- * bought in one instant is a wave one blast can catch, and that is the intended
- * counter rather than a defect. The job here is only that no two creeps are the
- * SAME creep.
+ * SPAWN_PERIOD is the budget: that many arrivals get distinct points before the
+ * pattern repeats. It replaces the old 22, and the bot's burst cap is no longer
+ * tied to it (see MAX_SEND_BURST in bot.ts).
  */
 const SPAWN_SLOTS = 11
-export const SPAWN_PERIOD = SPAWN_TILES.length * SPAWN_SLOTS
+export const SPAWN_PERIOD = LANE_WIDTH * SPAWN_ROWS * SPAWN_SLOTS
+/** Coprime with SPAWN_PERIOD, so `release * stride mod period` is a bijection. */
+const SPAWN_SETBACK_STRIDE = 81
 /** Furthest back a creep may start. Under 0.5 so `floor` stays on its tile. */
 const SPAWN_SETBACK = 0.45
 
 export function spawnPointFor(release: number, field: FlowField): { x: number; y: number } {
-  const t = SPAWN_TILES[release % SPAWN_TILES.length] as { x: number; y: number }
-  const slot = release % SPAWN_SLOTS
-  const back = ((slot + 0.5) / SPAWN_SLOTS) * SPAWN_SETBACK
-  const d = field.dir[t.y * GRID_W + t.x] as number
+  const n = release % SPAWN_PERIOD
+  const col = n % LANE_WIDTH
+  const row = ((n - col) / LANE_WIDTH) % SPAWN_ROWS
+  const slot = (n * SPAWN_SETBACK_STRIDE) % SPAWN_PERIOD
+  const back = ((slot + 0.5) / SPAWN_PERIOD) * SPAWN_SETBACK
+  const d = field.dir[row * GRID_W + col] as number
   // A sealed lane has no direction to step back along. Centre, and let the
-  // teleport-to-spawn path in `moveCreeps` sort it out on the next tick.
-  if (d === Dir.None) return { x: t.x + 0.5, y: t.y + 0.5 }
+  // no-path branch in `moveCreeps` sort it out on the next tick.
+  if (d === Dir.None) return { x: col + 0.5, y: row + 0.5 }
   return {
-    x: t.x + 0.5 - (DIR_DX[d] as number) * back,
-    y: t.y + 0.5 - (DIR_DY[d] as number) * back,
+    x: col + 0.5 - (DIR_DX[d] as number) * back,
+    y: row + 0.5 - (DIR_DY[d] as number) * back,
   }
 }
-
 
 export { TILE_COUNT, GRID_W }

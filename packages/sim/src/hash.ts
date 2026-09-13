@@ -75,6 +75,7 @@ export function hashState(s: GameState): number {
   // --- match-level scalars ---------------------------------------------------
   h.int(s.tick)
   h.int(s.nextCreepId)
+  h.int(s.nextTowerId)
   h.int(s.result)
   h.int(s.winner)
 
@@ -92,25 +93,32 @@ export function hashState(s: GameState): number {
   for (let l = 0; l < s.lanes.length; l++) {
     const lane = s.lanes[l]!
 
+    // `blocked` is derived from the tower anchors, like the field below, and is
+    // hashed for the same reason: a cache that drifted from its source would
+    // show up here as a mismatch rather than as a creep walking through a wall.
     const blocked = lane.blocked
     for (let i = 0; i < blocked.length; i++) h.byte(blocked[i] as number)
 
+    // Towers in slot order, which is anchor order (state.ts keeps it so).
     const t = lane.towers
-    for (let i = 0; i < t.kind.length; i++) {
-      // Skip empty tiles cheaply, but still hash the index so a tower moving
-      // between tiles cannot cancel out.
-      if (t.kind[i] === -1) continue
-      h.int(i)
+    h.int(t.count)
+    for (let i = 0; i < t.count; i++) {
+      h.int(t.id[i] as number)
+      h.int(t.anchorX[i] as number)
+      h.int(t.anchorY[i] as number)
       h.byte(t.kind[i] as number)
       h.byte(t.level[i] as number)
       h.int(t.cooldown[i] as number)
     }
 
-    // The flow field is derived from `blocked`, so hashing it is redundant for
-    // correctness — but it is cheap and it turns "our fields diverged" into a
-    // hash mismatch instead of into a creep quietly taking a different route.
-    const dist = lane.field.dist
-    for (let i = 0; i < dist.length; i++) h.int(dist[i] as number)
+    // The flow field is NOT hashed. It is derived from `blocked` by an integer
+    // BFS, so two peers with equal `blocked` have equal fields by construction,
+    // and a field that somehow diverged would show up one tick later in the
+    // creep positions, which are hashed. It used to be hashed anyway "because
+    // it is cheap": at 960 tiles it was. At 3408 tiles it was 13.6 KB of byte
+    // walks per lane per tick -- measured, `hashState` cost seventeen times
+    // `step` on a mid-game board and determinism-check went from 3.5 s to
+    // 42 s -- for a divergence the hash already catches. ADR-0019.
 
     // There are no pending sends any more -- a send spawns on the spot -- but
     // the release counter is still match state, and more load-bearing than it

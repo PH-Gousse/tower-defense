@@ -3,10 +3,12 @@ import {
   DIR_DX,
   DIR_DY,
   Dir,
-  tileIndex,
   inBounds,
-  isReservedIndex,
   isExitIndex,
+  isSpawnIndex,
+  footprintCells,
+  footprintInGrid,
+  FOOTPRINT_CELLS,
 } from './grid'
 import {
   buildField,
@@ -20,6 +22,11 @@ import {
   cloneState,
   spawnPointFor,
   opponentOf,
+  towerSlotAt,
+  footprintOverlapsTower,
+  creepOnFootprint,
+  insertTower,
+  removeTowerSlot,
   MAX_CREEPS,
   MatchResult,
   PLAYER_COUNT,
@@ -64,7 +71,7 @@ import { createSpatialHash, rebuildHash, fireTowers, type SpatialHash } from './
  * Ordering is the whole determinism story now that arithmetic is restricted.
  * The pins: commands sort by (player, kind); lanes process in index order;
  * creeps update in id order, which is array order because ids are monotonic and
- * creeps are appended; towers fire in tile order.
+ * creeps are appended; towers fire in anchor tile order, which is slot order.
  */
 
 export enum Kind {
@@ -75,6 +82,10 @@ export enum Kind {
   Send = 4,
 }
 
+/**
+ * Build carries the ANCHOR of the 2x2 footprint: its lowest-x, lowest-y tile.
+ * Upgrade and Sell carry any tile of the footprint; the sim resolves it.
+ */
 export type Command =
   | { readonly tick: number; readonly player: 0 | 1; readonly kind: Kind.None }
   | {
@@ -104,18 +115,38 @@ export type Command =
 export const TICK_HZ = 20
 export const TICK_MS = 1000 / TICK_HZ
 
+/**
+ * Every way a command can fail, named from the player's side.
+ *
+ * The build refusals are listed in the order `checkBuild` tests them, which is
+ * the order ADR-0019 fixes: the cheapest and most useful message first. All of
+ * them are checked before any gold moves (invariants rule 9).
+ */
 export enum Refusal {
   None = 0,
-  OutOfBounds = 1,
-  Occupied = 2,
-  SpawnOrExit = 3,
-  WouldSealLane = 4,
-  NotEnoughGold = 5,
-  NoTowerHere = 6,
-  AlreadyMaxLevel = 7,
-  TierLocked = 8,
+  NotEnoughGold = 1,
+  /** The 2x2 footprint is not wholly inside the lane. */
+  OutOfBounds = 2,
+  /** Part of the footprint is in the spawn zone. */
+  InSpawnZone = 3,
+  /** Part of the footprint is in the exit zone. */
+  InExitZone = 4,
+  /** Part of the footprint already belongs to a tower. */
+  OverlapsTower = 5,
+  /**
+   * A creep is standing on the footprint. ADR-0023: refusing here is what
+   * stops a 240-gold tower from being a teleport-to-spawn button on a
+   * 213-row lane. The client shows this as its own ghost colour, because it
+   * flickers as creeps walk and the player needs to see why.
+   */
+  CreepOnFootprint = 6,
+  /** No route of empty tiles would remain from the spawn zone to the exit zone. */
+  WouldSealLane = 7,
+  NoTowerHere = 8,
+  AlreadyMaxLevel = 9,
+  TierLocked = 10,
   /** The opening build phase is still running; nobody may send yet. */
-  BuildPhase = 9,
+  BuildPhase = 11,
   /**
    * The target lane is holding as many creeps as it can.
    *
@@ -126,7 +157,7 @@ export enum Refusal {
    * the alternative is what the code used to do: take the gold, grant the
    * income, and drop the creep in silence.
    */
-  LaneFull = 10,
+  LaneFull = 12,
 }
 
 export interface BuildCheck {
@@ -137,6 +168,7 @@ export interface BuildCheck {
 
 const stepScratch: FlowField = createField()
 const hash: SpatialHash = createSpatialHash(MAX_CREEPS)
+const cells = new Int32Array(FOOTPRINT_CELLS)
 
 /**
  * Sort key for the total order within a tick.
@@ -152,34 +184,50 @@ function commandOrder(a: Command, b: Command): number {
 
 // --- checks ------------------------------------------------------------------
 
+/**
+ * May a tower anchored at (ax, ay) be built? Refusals in ADR-0019's order.
+ *
+ * Gold first: a player who cannot afford the tool gets that answer wherever
+ * they hover, rather than a geometry lesson they cannot act on.
+ */
 export function checkBuild(
   state: GameState,
   player: number,
-  x: number,
-  y: number,
+  ax: number,
+  ay: number,
   tower: TowerKind = TowerKind.Single,
   scratch?: FlowField,
 ): BuildCheck {
-  if (!inBounds(x, y)) return { refusal: Refusal.OutOfBounds, mazeAfter: 0 }
-  const lane = state.lanes[player] as Lane
-  const i = tileIndex({ x, y })
-  if (lane.blocked[i] === 1) return { refusal: Refusal.Occupied, mazeAfter: 0 }
-  // The whole entrance row and the whole exit row, not just the four tiles that
-  // spawn and drain. See isReservedIndex.
-  if (isReservedIndex(i)) return { refusal: Refusal.SpawnOrExit, mazeAfter: 0 }
   if ((state.players[player] as Player).gold < levelOf(tower, 1).cost) {
     return { refusal: Refusal.NotEnoughGold, mazeAfter: 0 }
   }
+  if (!footprintInGrid(ax, ay)) return { refusal: Refusal.OutOfBounds, mazeAfter: 0 }
 
-  // Candidate rebuild: would this seal the lane? It checks the spawn tiles
-  // only. Creeps stranded mid-field teleport to the spawn instead — refusing on
-  // creep positions would make legality flicker as they move, and would let a
-  // cheap swarm send lock tiles out of the defender's maze.
-  lane.blocked[i] = 1
+  footprintCells(ax, ay, cells)
+  for (let k = 0; k < FOOTPRINT_CELLS; k++) {
+    if (isSpawnIndex(cells[k] as number)) return { refusal: Refusal.InSpawnZone, mazeAfter: 0 }
+  }
+  for (let k = 0; k < FOOTPRINT_CELLS; k++) {
+    if (isExitIndex(cells[k] as number)) return { refusal: Refusal.InExitZone, mazeAfter: 0 }
+  }
+
+  const lane = state.lanes[player] as Lane
+  if (footprintOverlapsTower(lane, ax, ay)) return { refusal: Refusal.OverlapsTower, mazeAfter: 0 }
+  if (creepOnFootprint(lane, ax, ay)) return { refusal: Refusal.CreepOnFootprint, mazeAfter: 0 }
+
+  // Candidate rebuild: would this seal the lane? It asks whether the spawn
+  // zone still reaches the exit zone, and nothing about creeps: a creep
+  // stranded mid-field by a placement ELSEWHERE goes back to the spawn zone
+  // (ADR-0012). Placing ON a creep was refused just above (ADR-0023).
+  //
+  // The probe writes the footprint into `blocked` and takes it back out. The
+  // tower caches are not touched, so `at` stays honest throughout.
+  footprintCells(ax, ay, cells)
+  for (let k = 0; k < FOOTPRINT_CELLS; k++) lane.blocked[cells[k] as number] = 1
   const probe = buildField(lane.blocked, scratch)
   const reachable = spawnsReachable(probe)
   const after = reachable ? mazeLength(probe) : UNREACHABLE
-  lane.blocked[i] = 0
+  for (let k = 0; k < FOOTPRINT_CELLS; k++) lane.blocked[cells[k] as number] = 0
 
   if (!reachable) return { refusal: Refusal.WouldSealLane, mazeAfter: UNREACHABLE }
   return { refusal: Refusal.None, mazeAfter: after }
@@ -188,22 +236,22 @@ export function checkBuild(
 export function canBuild(
   state: GameState,
   player: number,
-  x: number,
-  y: number,
+  ax: number,
+  ay: number,
   tower = TowerKind.Single,
 ): boolean {
-  return checkBuild(state, player, x, y, tower, stepScratch).refusal === Refusal.None
+  return checkBuild(state, player, ax, ay, tower, stepScratch).refusal === Refusal.None
 }
 
 export function checkUpgrade(state: GameState, player: number, x: number, y: number): Refusal {
   if (!inBounds(x, y)) return Refusal.OutOfBounds
   const lane = state.lanes[player] as Lane
-  const i = tileIndex({ x, y })
-  const kind = lane.towers.kind[i] as number
-  if (kind === -1) return Refusal.NoTowerHere
-  const level = lane.towers.level[i] as number
+  const slot = towerSlotAt(lane, x, y)
+  if (slot === -1) return Refusal.NoTowerHere
+  const kind = lane.towers.kind[slot] as TowerKind
+  const level = lane.towers.level[slot] as number
   if (level >= MAX_LEVEL) return Refusal.AlreadyMaxLevel
-  if ((state.players[player] as Player).gold < levelOf(kind as TowerKind, level + 1).cost) {
+  if ((state.players[player] as Player).gold < levelOf(kind, level + 1).cost) {
     return Refusal.NotEnoughGold
   }
   return Refusal.None
@@ -218,18 +266,17 @@ export function checkUpgrade(state: GameState, player: number, x: number, y: num
  */
 export function checkSell(state: GameState, player: number, x: number, y: number): Refusal {
   if (!inBounds(x, y)) return Refusal.OutOfBounds
-  if ((state.lanes[player] as Lane).towers.kind[tileIndex({ x, y })] === -1) {
-    return Refusal.NoTowerHere
-  }
+  if (towerSlotAt(state.lanes[player] as Lane, x, y) === -1) return Refusal.NoTowerHere
   return Refusal.None
 }
 
 export function sellValue(state: GameState, player: number, x: number, y: number): number {
   const lane = state.lanes[player] as Lane
-  const i = tileIndex({ x, y })
-  const kind = lane.towers.kind[i] as number
-  if (kind === -1) return 0
-  return Math.floor(investedIn(kind as TowerKind, lane.towers.level[i] as number) * SELL_REFUND)
+  const slot = towerSlotAt(lane, x, y)
+  if (slot === -1) return 0
+  return Math.floor(
+    investedIn(lane.towers.kind[slot] as TowerKind, lane.towers.level[slot] as number) * SELL_REFUND,
+  )
 }
 
 /** Can this player send this creep right now? */
@@ -316,16 +363,13 @@ function applyCommands(s: GameState, commands: readonly Command[]): void {
     }
 
     const lane = s.lanes[player] as Lane
-    const i = tileIndex({ x: cmd.x, y: cmd.y })
 
     if (cmd.kind === Kind.Build) {
       if (checkBuild(s, player, cmd.x, cmd.y, cmd.tower, stepScratch).refusal !== Refusal.None) {
         continue
       }
-      lane.blocked[i] = 1
-      lane.towers.kind[i] = cmd.tower
-      lane.towers.level[i] = 1
-      lane.towers.cooldown[i] = 0
+      insertTower(lane, s.nextTowerId, cmd.x, cmd.y, cmd.tower)
+      s.nextTowerId += 1
       pl.gold -= levelOf(cmd.tower, 1).cost
       buildField(lane.blocked, lane.field)
       continue
@@ -333,9 +377,10 @@ function applyCommands(s: GameState, commands: readonly Command[]): void {
 
     if (cmd.kind === Kind.Upgrade) {
       if (checkUpgrade(s, player, cmd.x, cmd.y) !== Refusal.None) continue
-      const next = (lane.towers.level[i] as number) + 1
-      pl.gold -= levelOf(lane.towers.kind[i] as TowerKind, next).cost
-      lane.towers.level[i] = next
+      const slot = towerSlotAt(lane, cmd.x, cmd.y)
+      const next = (lane.towers.level[slot] as number) + 1
+      pl.gold -= levelOf(lane.towers.kind[slot] as TowerKind, next).cost
+      lane.towers.level[slot] = next
       // Upgrading changes range and damage, never the blocked set.
       continue
     }
@@ -343,10 +388,7 @@ function applyCommands(s: GameState, commands: readonly Command[]): void {
     if (cmd.kind === Kind.Sell) {
       if (checkSell(s, player, cmd.x, cmd.y) !== Refusal.None) continue
       pl.gold += sellValue(s, player, cmd.x, cmd.y)
-      lane.towers.kind[i] = -1
-      lane.towers.level[i] = 0
-      lane.towers.cooldown[i] = 0
-      lane.blocked[i] = 0
+      removeTowerSlot(lane, towerSlotAt(lane, cmd.x, cmd.y))
       buildField(lane.blocked, lane.field)
       continue
     }
@@ -363,8 +405,8 @@ function applyCommands(s: GameState, commands: readonly Command[]): void {
  * second however fast you clicked.
  *
  * What the queue was really providing was separation, and `spawnPointFor` now
- * provides it directly: creeps arriving together start at different points
- * along the route, so they stay apart without anyone waiting.
+ * provides it directly: creeps arriving together start at different points in
+ * the spawn zone, so they stay apart without anyone waiting.
  *
  * `count` is 1 for every archetype today. The loop stays because the roster
  * still carries the field and a pack card can come back, and because each
@@ -443,10 +485,53 @@ function removeDead(s: GameState, laneIndex: number): void {
 }
 
 /**
+ * A leak does two things, and deliberately not a third:
+ *   1. the lane owner loses a life
+ *   2. the creep returns to the spawn zone and runs the maze again, keeping
+ *      its damage and lap count
+ * The sender gains nothing. Lives only ever go down, for everyone.
+ * Crediting the sender would make each leak a 2-point swing, so a
+ * leader would compound in lives and income at once with nothing
+ * pushing back. (Issue #7 / ADR-0008 hold the confirmed rule that
+ * overrides this; unchanged by the geometry.)
+ *
+ * No lap cap, no decay, no timeout: tower damage is the only thing that
+ * removes a creep, and that is the intended pressure.
+ */
+function leak(s: GameState, lane: Lane, defender: Player, i: number): void {
+  const c = lane.creeps
+  defender.lives -= 1
+  defender.leaks += 1
+  c.laps[i] = (c.laps[i] as number) + 1
+  lane.released += 1
+  const p = spawnPointFor(lane.released, lane.field)
+  c.x[i] = p.x
+  c.y[i] = p.y
+  if (defender.lives <= 0) {
+    defender.lives = 0
+    endMatch(s)
+  }
+}
+
+/** Put a creep with no route back in the spawn zone. See ADR-0012. */
+function respawn(lane: Lane, i: number): void {
+  const c = lane.creeps
+  lane.released += 1
+  const p = spawnPointFor(lane.released, lane.field)
+  c.x[i] = p.x
+  c.y[i] = p.y
+}
+
+/**
  * Advance every creep in a lane one tick along its field.
  *
  * Arithmetic is + - * / only: movement along a 4-connected field is
  * axis-aligned, so distance is a subtraction and there is nothing to root.
+ *
+ * A creep leaks on the tick its position ENTERS an exit-zone cell, which is
+ * why the exit test runs after a partial move as well as before each full
+ * one: the crossing usually happens mid-step, and testing only at the top of
+ * the loop would leak it a tick late.
  */
 function moveCreeps(s: GameState, laneIndex: number): void {
   const lane = s.lanes[laneIndex] as Lane
@@ -462,6 +547,7 @@ function moveCreeps(s: GameState, laneIndex: number): void {
       c.slowPercent[i] = 0
     }
     let remaining = speed
+    let leaked = false
 
     for (let guard = 0; guard < 8 && remaining > 0; guard++) {
       const cx = Math.floor(c.x[i] as number)
@@ -469,40 +555,18 @@ function moveCreeps(s: GameState, laneIndex: number): void {
       const idx = cy * GRID_W + cx
 
       if (isExitIndex(idx)) {
-        // A leak does two things, and deliberately not a third:
-        //   1. the lane owner loses a life
-        //   2. the creep returns to the spawn and runs the maze again, keeping
-        //      its damage and lap count
-        // The sender gains nothing. Lives only ever go down, for everyone.
-        // Crediting the sender would make each leak a 2-point swing, so a
-        // leader would compound in lives and income at once with nothing
-        // pushing back.
-        //
-        // No lap cap, no decay, no timeout: tower damage is the only thing that
-        // removes a creep, and that is the intended pressure.
-        defender.lives -= 1
-        defender.leaks += 1
-        c.laps[i] = (c.laps[i] as number) + 1
-        lane.released += 1
-        const p = spawnPointFor(lane.released, lane.field)
-        c.x[i] = p.x
-        c.y[i] = p.y
-        if (defender.lives <= 0) {
-          defender.lives = 0
-          endMatch(s)
-        }
+        leak(s, lane, defender, i)
+        leaked = true
         break
       }
 
       const d = field.dir[idx] as number
       if (d === Dir.None || (field.dist[idx] as number) === UNREACHABLE) {
-        // No path from here. Teleport to the spawn rather than refusing the
+        // No path from here. Back to the spawn zone rather than refusing the
         // placement that caused it: walling a creep in then costs the trapper
         // towers and achieves nothing, which was always the requirement.
-        lane.released += 1
-        const p = spawnPointFor(lane.released, lane.field)
-        c.x[i] = p.x
-        c.y[i] = p.y
+        respawn(lane, i)
+        leaked = true
         break
       }
 
@@ -524,6 +588,13 @@ function moveCreeps(s: GameState, laneIndex: number): void {
         c.y[i] = (c.y[i] as number) + dy * f
         remaining = 0
       }
+    }
+
+    // The step ended on a cell the loop never re-examined. If it is an exit
+    // cell, the creep has entered the zone this tick and leaks now.
+    if (!leaked) {
+      const idx = Math.floor(c.y[i] as number) * GRID_W + Math.floor(c.x[i] as number)
+      if (isExitIndex(idx)) leak(s, lane, defender, i)
     }
   }
 }

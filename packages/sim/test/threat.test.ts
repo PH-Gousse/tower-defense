@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { createState, type GameState } from '../src/state'
+import { createState, insertTower, type GameState } from '../src/state'
 import { buildField } from '../src/field'
-import { tileIndex, TILE_COUNT } from '../src/grid'
+import { tileIndex, MAX_TOWERS } from '../src/grid'
 import { templateAt } from '../src/maze'
 import { TowerKind, CREEPS } from '../src/data'
 import { hashState } from '../src/hash'
@@ -23,16 +23,15 @@ withoutBuildPhase()
  */
 
 /** Lane 1 of a fresh state, fortified along template 1 with `kinds`. */
-function fortified(kinds: readonly (TowerKind | -1)[], level = 1): GameState {
+function fortified(kinds: readonly TowerKind[], level = 1): GameState {
   const s = createState()
   const lane = s.lanes[1]!
   const tiles = templateAt(1).tiles
   kinds.forEach((k, i) => {
-    const idx = tileIndex(tiles[i]!)
-    lane.blocked[idx] = 1
-    if (k === -1) return
-    lane.towers.kind[idx] = k
-    lane.towers.level[idx] = level
+    const t = tiles[i]!
+    const slot = insertTower(lane, s.nextTowerId, t.x, t.y, k)
+    s.nextTowerId += 1
+    lane.towers.level[slot] = level
   })
   buildField(lane.blocked, lane.field)
   return s
@@ -46,7 +45,7 @@ function leaksOf(s: GameState, creep: number, count: number): number {
   const lane = s.lanes[1]!
   const counts = new Int32Array(CREEPS.length)
   counts[creep] = count
-  return floodLeaks(routeOf(lane), lane.towers.kind, lane.towers.level, counts)
+  return floodLeaks(routeOf(lane), lane.towers, counts)
 }
 
 describe('floodLeaks', () => {
@@ -55,7 +54,7 @@ describe('floodLeaks', () => {
     expect(leaksOf(s, TANK, 0)).toBe(0)
     const counts = new Int32Array(CREEPS.length)
     counts[TANK] = 50
-    expect(floodLeaks([], s.lanes[1]!.towers.kind, s.lanes[1]!.towers.level, counts)).toBe(0)
+    expect(floodLeaks([], s.lanes[1]!.towers, counts)).toBe(0)
   })
 
   it('never exceeds the crowd and never goes negative', () => {
@@ -87,13 +86,28 @@ describe('floodLeaks', () => {
   })
 
   it('knows splash answers numbers: swarm floods die to mortars and not to guard towers', () => {
-    // The measured truth this model exists to encode. Twenty single-target
-    // towers killed 1279 of 2596 streamed swarm -- one per shot, about 410
-    // shots a lap between them -- while four mortars killed every one.
-    const guards = fortified(singles(20))
-    const mortarsOnly = fortified(mix(20).map((k) => (k === TowerKind.Splash ? k : -1)))
-    expect(leaksOf(guards, SWARM, 800)).toBeGreaterThan(300)
-    expect(leaksOf(mortarsOnly, SWARM, 800)).toBe(0)
+    // The measured truth this model exists to encode (on the old board; see
+    // the file comment). Twenty single-target towers killed 1279 of 2596
+    // streamed swarm -- one per shot, about 410 shots a lap between them --
+    // while the four mortars of the bot's mix killed every one. Every blocked
+    // cell now belongs to a tower, so "mortars alone" is the mix: the mortars
+    // plus guards that were already shown not to be enough.
+    // The crowd has to be past saturation for twenty guards, and on this lane
+    // that is further out than it was: a lap is long enough that every tower
+    // fires for the whole of it, so twenty guards clear about 2,600 swarm
+    // where the 100-tile route let them clear about 1,300. Five thousand is
+    // well past either. Splash is costed per creep, so the mortars' answer
+    // does not depend on the crowd at all -- which is the shape being pinned.
+    //
+    // At level 3, not 1. A creep walks the centre of its tile and a tower's
+    // centre sits on a grid vertex, so the nearest a route cell's centre comes
+    // to a 2x2 tower is sqrt(2.5) = 1.58 tiles -- past the level-1 splash
+    // range of 1.5. Until ADR-0025's range conversion lands, a level-1 mortar
+    // reaches nothing on this board, in the model and in the sim alike.
+    const guards = fortified(singles(20), 3)
+    const withMortars = fortified(mix(20), 3)
+    expect(leaksOf(guards, SWARM, 5000)).toBeGreaterThan(300)
+    expect(leaksOf(withMortars, SWARM, 5000)).toBe(0)
   })
 
   it('knows a tank flood walks through single-target fire', () => {
@@ -108,14 +122,15 @@ describe('floodLeaks', () => {
     const counts = new Int32Array(CREEPS.length)
     counts[TANK] = 200
     const route = routeOf(lane)
-    const viaOverride = floodLeaks(route, lane.towers.kind, lane.towers.level, counts, {
+    const viaOverride = floodLeaks(route, lane.towers, counts, {
       tile,
       kind: TowerKind.Splash,
       level: 1,
     })
-    lane.towers.kind[tile] = TowerKind.Splash
-    lane.towers.level[tile] = 1
-    const built = floodLeaks(route, lane.towers.kind, lane.towers.level, counts)
+    const t = templateAt(1).tiles[12]!
+    const slot = insertTower(lane, 99, t.x, t.y, TowerKind.Splash)
+    lane.towers.level[slot] = 1
+    const built = floodLeaks(route, lane.towers, counts)
     expect(viaOverride).toBe(built)
   })
 })
@@ -153,6 +168,6 @@ describe('laneThreat and waveLeaks', () => {
     laneThreat(lane, route, { tile: tileIndex(templateAt(1).tiles[20]!), kind: TowerKind.Slow, level: 2 })
     waveLeaks(lane, route, TANK, 50)
     expect(hashState(s)).toBe(before)
-    expect(lane.towers.kind.length).toBe(TILE_COUNT)
+    expect(lane.towers.kind.length).toBe(MAX_TOWERS)
   })
 })

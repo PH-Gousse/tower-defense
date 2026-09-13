@@ -31,11 +31,14 @@ keeping its damage and its lap count. Nothing but tower damage removes it. Lap c
 pips on the creep, the route that produced a leak flashes red, and at zero lives the match
 ends. One creep your maze cannot kill is enough to lose.
 
-**Two lanes**, vertical, **8 × 24 tiles each** — the opponent's exactly as large as yours,
-and both drawn at full size side by side, because you cannot counter-pick a maze you cannot
-read. Creeps enter top-left and leave bottom-right, so even a bare lane is a diagonal walk;
-the entrance and exit rows are reserved and never take a tower. The board is a real 3D scene
-seen down a fixed Warcraft-style camera: fixed yaw, zoom and pan only.
+**Two lanes**, vertical, **16 tiles wide and Warcraft 3-length** — a 10-row spawn zone,
+200 buildable rows, a 3-row exit zone — the opponent's exactly as large as yours, and both
+drawn side by side, because you cannot counter-pick a maze you cannot read. **A tower is
+2 × 2 tiles and a creep is one**, so two towers offset by a single tile leave a corridor one
+creep wide: the half-slot, which is the whole mazing skill. Creeps appear spread across the
+spawn zone and leak the moment they enter the exit zone; neither zone takes a tower. The
+board is a real 3D scene seen down a fixed Warcraft-style camera: fixed yaw, zoom and pan
+only, and the lane is far too long to fit in one screen, so you scroll.
 
 You defend your lane and send creeps into your opponent's. The first twenty seconds are a
 build phase: nobody can send yet, so you lay your opening maze without a wave already walking

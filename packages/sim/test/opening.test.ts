@@ -10,7 +10,8 @@ import {
   installBalanceData,
 } from '../src/data'
 import { botCommand, BOT_NORMAL } from '../src/bot'
-import { SWARM, RUNNER, build, send, run } from './helpers'
+import { towerSlotAt } from '../src/state'
+import { SWARM, RUNNER, build, send, run, R } from './helpers'
 
 /**
  * The opening build phase.
@@ -69,9 +70,9 @@ describe('the opening build phase', () => {
   })
 
   it('never blocks building -- that is the whole point of the phase', () => {
-    const s = run(10, { 0: [build(4, 10)], 3: [build(5, 10)] })
-    expect(s.lanes[0]!.towers.kind[10 * 8 + 4]).not.toBe(-1)
-    expect(s.lanes[0]!.towers.kind[10 * 8 + 5]).not.toBe(-1)
+    const s = run(10, { 0: [build(4, R)], 3: [build(6, R)] })
+    expect(towerSlotAt(s.lanes[0]!, 4, R)).not.toBe(-1)
+    expect(towerSlotAt(s.lanes[0]!, 6, R)).not.toBe(-1)
   })
 
   it('ends before tier 1 unlocks, so the two are separate beats', () => {

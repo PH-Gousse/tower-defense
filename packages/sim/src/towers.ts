@@ -1,4 +1,10 @@
-import { GRID_W, GRID_H, TILE_COUNT, tileX, tileY } from './grid'
+import {
+  GRID_W,
+  GRID_H,
+  HASH_CELL,
+  footprintCentreX,
+  footprintCentreY,
+} from './grid'
 import { UNREACHABLE } from './field'
 import { TowerKind, levelOf, ARCHETYPES, type TowerArchetype } from './data'
 import type { GameState, Lane } from './state'
@@ -7,17 +13,25 @@ import type { GameState, Lane } from './state'
  * Tower firing, and the spatial hash that makes it affordable.
  *
  * Naive targeting is "every tower scans every creep": O(towers x creeps) every
- * tick, and both are bounded only by gold. The hash buckets creeps by tile so a
- * tower only looks at the tiles its range actually covers.
+ * tick, and both are bounded only by gold -- up to 800 towers a lane on this
+ * board. The hash buckets creeps by HASH_CELL x HASH_CELL tiles so a tower only
+ * looks at the cells its range actually covers.
  *
- *   creeps ──▶ counting sort by tile ──▶ bucketStart[] + bucketItems[]
- *                                              │
- *   tower at tile t, range r ──▶ bounding box ─┘──▶ candidates ──▶ nearest exit
+ *   creeps ──▶ counting sort by hash cell ──▶ bucketStart[] + bucketItems[]
+ *                                                   │
+ *   tower centre, range r ──▶ bounding box ─────────┘──▶ candidates ──▶ nearest exit
+ *
+ * Why HASH_CELL rather than per-tile buckets, which is what this was: a bucket
+ * per tile is 3408 buckets, and a range-r query walks (2r)^2 of them whether or
+ * not any creep is inside. At 4 tiles a cell the walk is (2r/4)^2 -- 36 cells
+ * for a range-10 tower against 440 -- and a cell holds only the creeps that are
+ * actually there, so the work tracks the population rather than the board.
  *
  * Three ordered operations live in this file, and every one is a determinism
  * pin rather than a preference:
  *
- *   1. Towers fire in tile-index order.
+ *   1. Towers fire in anchor tile-index order, which is slot order because
+ *      the tower list is kept sorted (see state.ts).
  *   2. Bucket contents are in creep-array order, which is ascending id,
  *      because the counting sort fills them by walking creeps in order.
  *   3. Targeting picks the lowest `dist` — the creep nearest the exit —
@@ -28,27 +42,43 @@ import type { GameState, Lane } from './state'
  * diverges.
  */
 
+/** Hash cells across and down. Ceiling division, written without a transcendental. */
+export const HASH_W = Math.ceil(GRID_W / HASH_CELL)
+export const HASH_H = Math.ceil(GRID_H / HASH_CELL)
+export const HASH_COUNT = HASH_W * HASH_H
+
 /** Rebuilt every tick by counting sort. No allocation after construction. */
 export interface SpatialHash {
-  /** bucketStart[t] .. bucketStart[t+1] indexes into bucketItems for tile t. */
+  /** bucketStart[c] .. bucketStart[c+1] indexes into bucketItems for cell c. */
   readonly bucketStart: Int32Array
-  /** Creep indices, grouped by tile, ascending within each bucket. */
+  /** Creep indices, grouped by cell, ascending within each bucket. */
   readonly bucketItems: Int32Array
   readonly counts: Int32Array
 }
 
 export function createSpatialHash(maxCreeps: number): SpatialHash {
   return {
-    bucketStart: new Int32Array(TILE_COUNT + 1),
+    bucketStart: new Int32Array(HASH_COUNT + 1),
     bucketItems: new Int32Array(maxCreeps),
-    counts: new Int32Array(TILE_COUNT),
+    counts: new Int32Array(HASH_COUNT),
   }
 }
 
+/** The hash cell a position falls in, clamped to the board. */
+function cellOf(x: number, y: number): number {
+  let cx = Math.floor(x / HASH_CELL)
+  let cy = Math.floor(y / HASH_CELL)
+  if (cx < 0) cx = 0
+  if (cx >= HASH_W) cx = HASH_W - 1
+  if (cy < 0) cy = 0
+  if (cy >= HASH_H) cy = HASH_H - 1
+  return cy * HASH_W + cx
+}
+
 /**
- * Counting sort creeps into per-tile buckets.
+ * Counting sort creeps into per-cell buckets.
  *
- * O(tiles + creeps), no allocation, and stable: creeps land in each bucket in
+ * O(cells + creeps), no allocation, and stable: creeps land in each bucket in
  * array order, which is ascending id. That stability is what gives targeting
  * its tiebreak for free.
  */
@@ -58,28 +88,29 @@ export function rebuildHash(lane: Lane, hash: SpatialHash): void {
   counts.fill(0)
 
   for (let i = 0; i < c.count; i++) {
-    const t = tileOf(c.x[i] as number, c.y[i] as number)
+    const t = cellOf(c.x[i] as number, c.y[i] as number)
     counts[t] = (counts[t] as number) + 1
   }
 
   let running = 0
-  for (let t = 0; t < TILE_COUNT; t++) {
+  for (let t = 0; t < HASH_COUNT; t++) {
     bucketStart[t] = running
     running += counts[t] as number
   }
-  bucketStart[TILE_COUNT] = running
+  bucketStart[HASH_COUNT] = running
 
   // Reuse counts as a per-bucket write cursor.
   counts.fill(0)
   for (let i = 0; i < c.count; i++) {
-    const t = tileOf(c.x[i] as number, c.y[i] as number)
+    const t = cellOf(c.x[i] as number, c.y[i] as number)
     const at = (bucketStart[t] as number) + (counts[t] as number)
     bucketItems[at] = i
     counts[t] = (counts[t] as number) + 1
   }
 }
 
-function tileOf(x: number, y: number): number {
+/** The tile a creep position falls in, clamped to the board. */
+export function tileOf(x: number, y: number): number {
   let tx = Math.floor(x)
   let ty = Math.floor(y)
   if (tx < 0) tx = 0
@@ -92,15 +123,15 @@ function tileOf(x: number, y: number): number {
 /**
  * Fire every tower that is off cooldown.
  *
- * Towers are walked in tile-index order. Damage is instant with no projectile
- * travel, so a shot resolves in the tick it is fired.
+ * Towers are walked in slot order, which is anchor tile-index order. Damage is
+ * instant with no projectile travel, so a shot resolves in the tick it is
+ * fired.
  */
 export function fireTowers(state: GameState, lane: Lane, hash: SpatialHash): void {
   const t = lane.towers
   const c = lane.creeps
 
-  for (let i = 0; i < TILE_COUNT; i++) {
-    if (t.kind[i] === -1) continue
+  for (let i = 0; i < t.count; i++) {
     const cd = t.cooldown[i] as number
     if (cd > 0) {
       t.cooldown[i] = cd - 1
@@ -138,40 +169,43 @@ export function fireTowers(state: GameState, lane: Lane, hash: SpatialHash): voi
 /**
  * The in-range creep nearest the exit, tiebroken by ascending creep id.
  *
- * "Nearest the exit" is the flow field's `dist`, already computed — one integer
- * lookup rather than a geometric comparison. Note the consequence, which is
- * real and unresolved: towers permanently focus whichever creep is furthest
- * along, so a long-lived tank soaks every shot while fresh creeps walk behind
- * it. Whether that is a feature or degenerate is a tuning question for the
- * harness at step 8.
+ * Range is measured from the tower's footprint centre (ADR-0019). "Nearest the
+ * exit" is the flow field's `dist`, already computed — one integer lookup
+ * rather than a geometric comparison. Note the consequence, which is real and
+ * unresolved: towers permanently focus whichever creep is furthest along, so a
+ * long-lived tank soaks every shot while fresh creeps walk behind it. Whether
+ * that is a feature or degenerate is a tuning question for the harness.
+ *
+ * Exported so a test can hold it against a brute-force scan of every creep on
+ * random boards: the hash must never change the answer, only the cost.
  */
-function findTarget(
+export function findTarget(
   lane: Lane,
   hash: SpatialHash,
-  towerTile: number,
+  slot: number,
   range: number,
 ): number {
   const c = lane.creeps
   const field = lane.field
-  const tx = tileX(towerTile) + 0.5
-  const ty = tileY(towerTile) + 0.5
+  const tx = footprintCentreX(lane.towers.anchorX[slot] as number)
+  const ty = footprintCentreY(lane.towers.anchorY[slot] as number)
   const r2 = range * range
 
   let best = -1
   let bestDist = UNREACHABLE
   let bestId = 0
 
-  const minX = clampX(Math.floor(tx - range))
-  const maxX = clampX(Math.floor(tx + range))
-  const minY = clampY(Math.floor(ty - range))
-  const maxY = clampY(Math.floor(ty + range))
+  const minX = clampCellX(Math.floor((tx - range) / HASH_CELL))
+  const maxX = clampCellX(Math.floor((tx + range) / HASH_CELL))
+  const minY = clampCellY(Math.floor((ty - range) / HASH_CELL))
+  const maxY = clampCellY(Math.floor((ty + range) / HASH_CELL))
 
   // Row-major over the bounding box: another fixed iteration order.
   for (let y = minY; y <= maxY; y++) {
     for (let x = minX; x <= maxX; x++) {
-      const tile = y * GRID_W + x
-      const from = hash.bucketStart[tile] as number
-      const to = hash.bucketStart[tile + 1] as number
+      const cell = y * HASH_W + x
+      const from = hash.bucketStart[cell] as number
+      const to = hash.bucketStart[cell + 1] as number
       for (let k = from; k < to; k++) {
         const ci = hash.bucketItems[k] as number
         if ((c.hp[ci] as number) <= 0) continue
@@ -205,16 +239,16 @@ function damageAround(
   const cy = c.y[target] as number
   const r2 = radius * radius
 
-  const minX = clampX(Math.floor(cx - radius))
-  const maxX = clampX(Math.floor(cx + radius))
-  const minY = clampY(Math.floor(cy - radius))
-  const maxY = clampY(Math.floor(cy + radius))
+  const minX = clampCellX(Math.floor((cx - radius) / HASH_CELL))
+  const maxX = clampCellX(Math.floor((cx + radius) / HASH_CELL))
+  const minY = clampCellY(Math.floor((cy - radius) / HASH_CELL))
+  const maxY = clampCellY(Math.floor((cy + radius) / HASH_CELL))
 
   for (let y = minY; y <= maxY; y++) {
     for (let x = minX; x <= maxX; x++) {
-      const tile = y * GRID_W + x
-      const from = hash.bucketStart[tile] as number
-      const to = hash.bucketStart[tile + 1] as number
+      const cell = y * HASH_W + x
+      const from = hash.bucketStart[cell] as number
+      const to = hash.bucketStart[cell + 1] as number
       for (let k = from; k < to; k++) {
         const ci = hash.bucketItems[k] as number
         if ((c.hp[ci] as number) <= 0) continue
@@ -227,14 +261,14 @@ function damageAround(
   }
 }
 
-function clampX(v: number): number {
+function clampCellX(v: number): number {
   if (v < 0) return 0
-  if (v >= GRID_W) return GRID_W - 1
+  if (v >= HASH_W) return HASH_W - 1
   return v
 }
 
-function clampY(v: number): number {
+function clampCellY(v: number): number {
   if (v < 0) return 0
-  if (v >= GRID_H) return GRID_H - 1
+  if (v >= HASH_H) return HASH_H - 1
   return v
 }

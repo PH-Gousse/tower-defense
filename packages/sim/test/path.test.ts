@@ -4,33 +4,45 @@ import { pathFrom } from '../src/path'
 import {
   TILE_COUNT,
   GRID_W,
-  GRID_H,
+  TOWER_SIZE,
+  BUILD_ROW_MIN,
+  EXIT_ROW_MIN,
   SPAWN_INDICES,
   EXIT_INDICES,
-  tileIndex,
+  FOOTPRINT_CELLS,
+  footprintCells,
 } from '../src/grid'
 
 const empty = () => new Uint8Array(TILE_COUNT)
 const spawn = SPAWN_INDICES[0] as number
+const cells = new Int32Array(FOOTPRINT_CELLS)
 
-/** A wall across the vertical lane. `gap` is the column left open, -1 to seal. */
-function wall(b: Uint8Array, y: number, gap: number): void {
-  for (let x = 0; x < GRID_W; x++) if (x !== gap) b[tileIndex({ x, y })] = 1
+function tower(b: Uint8Array, ax: number, ay: number): void {
+  footprintCells(ax, ay, cells)
+  for (let k = 0; k < FOOTPRINT_CELLS; k++) b[cells[k] as number] = 1
+}
+
+/** A wall across the lane at rows y..y+1, leaving the listed columns open. */
+function wall(b: Uint8Array, y: number, open: readonly number[]): void {
+  for (let ax = 0; ax + TOWER_SIZE <= GRID_W; ax += TOWER_SIZE) {
+    if (open.includes(ax) || open.includes(ax + 1)) continue
+    tower(b, ax, y)
+  }
 }
 
 describe('pathFrom', () => {
-  it('walks an empty lane down to the exit', () => {
+  it('walks an empty lane straight down to the exit zone', () => {
     const p = pathFrom(buildField(empty()), spawn)
     expect(p[0]).toBe(spawn)
     expect(EXIT_INDICES).toContain(p[p.length - 1])
-    // Entrance (0,0) to exit (GRID_W-2, GRID_H-1): the drop plus the crossing,
-    // and one more because the route counts tiles rather than steps.
-    expect(p.length).toBe(GRID_H - 1 + (GRID_W - 2) + 1)
+    // The drop from row 0 to the first exit row, and one more because the
+    // route counts tiles rather than steps.
+    expect(p.length).toBe(EXIT_ROW_MIN + 1)
   })
 
   it('returns an empty route when the lane is sealed', () => {
     const b = empty()
-    wall(b, 12, -1)
+    wall(b, BUILD_ROW_MIN + 4, [])
     const f = buildField(b)
     expect(f.dist[spawn]).toBe(UNREACHABLE)
     expect(pathFrom(f, spawn)).toEqual([])
@@ -38,8 +50,8 @@ describe('pathFrom', () => {
 
   it('is exactly as long as the maze score claims', () => {
     const b = empty()
-    wall(b, 8, GRID_W - 1)
-    wall(b, 16, 0)
+    wall(b, BUILD_ROW_MIN + 4, [GRID_W - 2, GRID_W - 1])
+    wall(b, BUILD_ROW_MIN + 8, [0, 1])
     const f = buildField(b)
     const p = pathFrom(f, spawn)
     // dist counts steps; the route counts tiles, so it is one longer.
@@ -48,7 +60,7 @@ describe('pathFrom', () => {
 
   it('never revisits a tile — dist strictly decreases along the walk', () => {
     const b = empty()
-    wall(b, 12, GRID_W - 1)
+    wall(b, BUILD_ROW_MIN + 4, [GRID_W - 2, GRID_W - 1])
     const f = buildField(b)
     const p = pathFrom(f, spawn)
     expect(new Set(p).size).toBe(p.length)
@@ -62,7 +74,7 @@ describe('pathFrom', () => {
     const long = pathFrom(buildField(empty()), spawn, out)
     const lenLong = long.length
     const b = empty()
-    wall(b, 12, -1)
+    wall(b, BUILD_ROW_MIN + 4, [])
     const sealed = pathFrom(buildField(b), spawn, out)
     expect(lenLong).toBeGreaterThan(0)
     expect(sealed.length).toBe(0)

@@ -2,7 +2,8 @@ import {
   createState,
   step,
   buildField,
-  tileIndex,
+  insertTower,
+  footprintOverlapsTower,
   templateAt,
   CREEPS,
   TowerKind,
@@ -37,14 +38,13 @@ function fortify(s: GameState, template: number, towers: number, level: number):
   const tiles = templateAt(template).tiles
   let placed = 0
   for (let i = 0; i < tiles.length && placed < towers; i++) {
-    const idx = tileIndex(tiles[i]!)
-    if (lane.blocked[idx] === 1) continue
+    const t = tiles[i]!
+    if (footprintOverlapsTower(lane, t.x, t.y)) continue
     const m = i % 5
     const kind = m === 3 ? TowerKind.Splash : m === 4 ? TowerKind.Slow : TowerKind.Single
-    lane.blocked[idx] = 1
-    lane.towers.kind[idx] = kind
-    lane.towers.level[idx] = level
-    lane.towers.cooldown[idx] = 0
+    const slot = insertTower(lane, s.nextTowerId, t.x, t.y, kind)
+    s.nextTowerId += 1
+    lane.towers.level[slot] = level
     placed += 1
   }
   buildField(lane.blocked, lane.field)

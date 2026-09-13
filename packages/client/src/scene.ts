@@ -12,9 +12,12 @@ import {
   UNREACHABLE,
   Refusal,
   inBounds,
-  tileIndex,
   tileX,
   tileY,
+  TOWER_SIZE,
+  FOOTPRINT_CELLS,
+  footprintCells,
+  towerSlotAt,
   checkBuild,
   checkUpgrade,
   sellValue,
@@ -86,11 +89,13 @@ const REFUSAL_WIRE: Record<string, string> = {
 /** One line of plain English per refusal. The rule teaches itself or it does not exist. */
 const REFUSAL_TEXT: Record<Refusal, string> = {
   [Refusal.None]: '',
-  [Refusal.OutOfBounds]: 'Outside the lane',
-  [Refusal.Occupied]: 'A tower is already here',
-  [Refusal.SpawnOrExit]: 'Cannot build on the entrance or the exit',
-  [Refusal.WouldSealLane]: 'No path IN to OUT — creeps must always have a way through',
   [Refusal.NotEnoughGold]: 'Not enough gold',
+  [Refusal.OutOfBounds]: 'Outside the lane',
+  [Refusal.InSpawnZone]: 'Cannot build in the spawn zone',
+  [Refusal.InExitZone]: 'Cannot build in the exit zone',
+  [Refusal.OverlapsTower]: 'A tower is already here',
+  [Refusal.CreepOnFootprint]: 'A creep is standing here — wait for it to pass',
+  [Refusal.WouldSealLane]: 'No path IN to OUT — creeps must always have a way through',
   [Refusal.NoTowerHere]: 'No tower on this tile',
   [Refusal.AlreadyMaxLevel]: 'Already at maximum level',
   [Refusal.TierLocked]: 'Not unlocked yet',
@@ -671,6 +676,7 @@ export function createScene(
   // Reused across hovers: a candidate rebuild per tile would otherwise allocate
   // two typed arrays every time the pointer crosses a tile boundary.
   const probeField: FlowField = createField()
+  const probeCells = new Int32Array(FOOTPRINT_CELLS)
   const routeScratch: number[] = []
 
   const scratch = new THREE.Matrix4()
@@ -755,33 +761,38 @@ export function createScene(
     const check = checkBuild(state, me(), t.x, t.y, tool, probeField)
     const allowed = check.refusal === Refusal.None
 
-    hover.position.set(t.x + 0.5, 0.03, t.y + 0.5)
+    // A 2x2 footprint: the ghost, the ring and the hover quad sit on the
+    // footprint's centre, not the anchor tile's. Phase 3 of the restructure
+    // replaces the hovered-tile anchor with a vertex snap (ADR-0020).
+    const hx = t.x + TOWER_SIZE / 2
+    const hz = t.y + TOWER_SIZE / 2
+    hover.position.set(hx, 0.03, hz)
     hoverMaterial.color.setHex(allowed ? OK_COLOUR : REFUSED_COLOUR)
     hover.visible = true
 
-    if (check.refusal === Refusal.Occupied) {
+    if (check.refusal === Refusal.OverlapsTower) {
       // A tile that already holds a tower has a range worth seeing, but it is
       // that tower's, not the tool's -- and it is one click away on the
       // selection ring.
       hoverRange.visible = false
     } else {
       const ghost = hoverGhosts[tool] as THREE.Group
-      ghost.position.set(t.x + 0.5, 0, t.y + 0.5)
+      ghost.position.set(hx, 0, hz)
       ghost.visible = true
       hoverGhostMat.color.setHex(allowed ? 0xbfe0ff : 0xff8a80)
       const reach = levelOf(tool, 1).range
-      hoverRange.position.set(t.x + 0.5, 0.042, t.y + 0.5)
+      hoverRange.position.set(hx, 0.042, hz)
       hoverRange.scale.set(reach, reach, 1)
       ;(hoverRange.material as THREE.MeshBasicMaterial).color.setHex(allowed ? OK_COLOUR : REFUSED_COLOUR)
       hoverRange.visible = true
     }
 
     if (allowed) {
-      const i = tileIndex(t)
       const lane = state.lanes[me()] as Lane
-      lane.blocked[i] = 1
+      footprintCells(t.x, t.y, probeCells)
+      for (let k = 0; k < FOOTPRINT_CELLS; k++) lane.blocked[probeCells[k] as number] = 1
       buildField(lane.blocked, probeField)
-      lane.blocked[i] = 0
+      for (let k = 0; k < FOOTPRINT_CELLS; k++) lane.blocked[probeCells[k] as number] = 0
       candidatePath.set(pathFrom(probeField, SPAWN_INDICES[0] as number, routeScratch))
     } else {
       candidatePath.hide()
@@ -841,7 +852,7 @@ export function createScene(
     const t = tileAt(ev.clientX, ev.clientY)
     if (!t) { select(null); return }
     const state = driver.current
-    if ((state.lanes[me()] as Lane).towers.kind[tileIndex(t)] !== -1) {
+    if (towerSlotAt(state.lanes[me()] as Lane, t.x, t.y) !== -1) {
       select(t)
       return
     }
@@ -864,16 +875,23 @@ export function createScene(
       return
     }
     const state = driver.current
-    const i = tileIndex(t)
     const lane = state.lanes[me()] as Lane
-    const kind = lane.towers.kind[i] as TowerKind
-    const level = lane.towers.level[i] as number
+    const slot = towerSlotAt(lane, t.x, t.y)
+    if (slot === -1) {
+      select(null)
+      return
+    }
+    const kind = lane.towers.kind[slot] as TowerKind
+    const level = lane.towers.level[slot] as number
     const spec = levelOf(kind, level)
+    // Any footprint cell selects the tower; the rings sit on its centre.
+    const cx = (lane.towers.anchorX[slot] as number) + TOWER_SIZE / 2
+    const cz = (lane.towers.anchorY[slot] as number) + TOWER_SIZE / 2
 
     if (!selectRing.visible) audio.select()
-    selectRing.position.set(t.x + 0.5, 0.05, t.y + 0.5)
+    selectRing.position.set(cx, 0.05, cz)
     selectRing.visible = true
-    selectRange.position.set(t.x + 0.5, 0.045, t.y + 0.5)
+    selectRange.position.set(cx, 0.045, cz)
     selectRange.scale.set(spec.range, spec.range, 1)
     selectRange.visible = true
 
@@ -932,23 +950,31 @@ export function createScene(
   function syncTowers(): number {
     for (const levels of towerSets) for (const set of levels) set.count = 0
     let mine = 0
+    // Towers are a dense list of 2x2 anchors (ADR-0019). The asset layer keys
+    // a tower by its anchor tile index, which is unique while it stands; the
+    // model sits on the footprint centre. Tower models are still 1 unit wide
+    // here -- Phase 4 of the restructure rebuilds them at the new footprint.
     for (let lane = 0; lane < 2; lane++) {
       const t = (driver.current.lanes[lane] as Lane).towers
       const ox = laneX(lane)
-      for (let i = 0; i < TILE_COUNT; i++) {
+      for (let i = 0; i < t.count; i++) {
         const kind = t.kind[i] as number
-        if (kind === -1) continue
         const level = t.level[i] as number
+        const ax = t.anchorX[i] as number
+        const ay = t.anchorY[i] as number
+        const key = ay * GRID_W + ax
+        const x = ox + ax + TOWER_SIZE / 2
+        const z = ay + TOWER_SIZE / 2
         if (lane === me()) mine += 1
-        if (assets && assets.placeTower(lane, i, kind, level, ox + tileX(i) + 0.5, tileY(i) + 0.5)) continue
+        if (assets && assets.placeTower(lane, key, kind, level, x, z)) continue
         const set = (towerSets[kind] as TowerSet[])[level - 1] as TowerSet
-        scratch.makeTranslation(ox + tileX(i) + 0.5, 0, tileY(i) + 0.5)
+        scratch.makeTranslation(x, 0, z)
         set.lit.setMatrixAt(set.count, scratch)
         if (set.glow) set.glow.setMatrixAt(set.count, scratch)
         set.count += 1
       }
     }
-    assets?.syncTowers((lane, tile) => (driver.current.lanes[lane] as Lane).towers.kind[tile] !== -1)
+    assets?.syncTowers((lane, key) => towerSlotAt(driver.current.lanes[lane] as Lane, tileX(key), tileY(key)) !== -1)
     for (const levels of towerSets) {
       for (const set of levels) {
         set.lit.count = set.count
@@ -970,33 +996,53 @@ export function createScene(
    * rather than a purchase, and this is the action the player takes most.
    */
   function detectTowerChanges(now: number): void {
+    // Both lists are sorted by anchor (state.ts keeps them so), and a tower's
+    // anchor never changes while it stands, so a merge walk pairs them up
+    // without a lookup table: same anchor and same id is the same tower.
     for (let lane = 0; lane < 2; lane++) {
       const prev = (driver.previous.lanes[lane] as Lane).towers
       const curr = (driver.current.lanes[lane] as Lane).towers
       const ox = laneX(lane)
-      for (let i = 0; i < TILE_COUNT; i++) {
-        const pk = prev.kind[i] as number
-        const ck = curr.kind[i] as number
-        if (pk === ck && prev.level[i] === curr.level[i]) continue
-        const x = ox + tileX(i) + 0.5
-        const z = tileY(i) + 0.5
-        if (ck !== -1 && pk === -1) {
+      let i = 0
+      let j = 0
+      while (i < prev.count || j < curr.count) {
+        const pa = i < prev.count ? (prev.anchorY[i] as number) * GRID_W + (prev.anchorX[i] as number) : Infinity
+        const ca = j < curr.count ? (curr.anchorY[j] as number) * GRID_W + (curr.anchorX[j] as number) : Infinity
+        const same = pa === ca && prev.id[i] === curr.id[j]
+        if (same) {
+          if (prev.level[i] !== curr.level[j]) {
+            const x = ox + (curr.anchorX[j] as number) + TOWER_SIZE / 2
+            const z = (curr.anchorY[j] as number) + TOWER_SIZE / 2
+            if (!assets?.towerUpgraded(lane, ca)) audio.upgrade(x, z, lane === me())
+            for (let d = 0; d < 5; d++) {
+              const a = (d / 5) * Math.PI * 2 + 0.3
+              flashes.spawn(x + Math.cos(a) * 0.25, 0.4 + (d % 2) * 0.4, z + Math.sin(a) * 0.25, 0.15, 0.4, 0xffd86a, 420, now, 0.5)
+            }
+            rings.spawn(x, 0.035, z, 0.3, 1.3, 0xffd86a, 360, now)
+          }
+          i += 1
+          j += 1
+          continue
+        }
+        if (pa <= ca) {
+          // Gone: sold, or replaced on the same anchor by a different tower.
+          const x = ox + (prev.anchorX[i] as number) + TOWER_SIZE / 2
+          const z = (prev.anchorY[i] as number) + TOWER_SIZE / 2
+          dust.spawn(x, 0.3, z, 0.7, 1.4, 0x7a6a48, 500, now, 0.4)
+          if (!assets?.towerSold(lane, pa) && lane === me()) audio.sell(x, z)
+          i += 1
+        }
+        if (ca < pa || (ca === pa && !same)) {
+          const ck = curr.kind[j] as number
+          const x = ox + (curr.anchorX[j] as number) + TOWER_SIZE / 2
+          const z = (curr.anchorY[j] as number) + TOWER_SIZE / 2
           for (let d = 0; d < 4; d++) {
             const a = (d / 4) * Math.PI * 2
             dust.spawn(x + Math.cos(a) * 0.3, 0.15, z + Math.sin(a) * 0.3, 0.5, 1.1, 0x7a6a48, 520, now, 0.35)
           }
           rings.spawn(x, 0.035, z, 0.4, 1.4, 0xd8c8a0, 320, now)
-          if (!assets?.towerBuilt(lane, i, ck, curr.level[i] as number, x, z)) audio.build(ck as TowerKind, x, z, lane === me())
-        } else if (ck === -1) {
-          dust.spawn(x, 0.3, z, 0.7, 1.4, 0x7a6a48, 500, now, 0.4)
-          if (!assets?.towerSold(lane, i) && lane === me()) audio.sell(x, z)
-        } else {
-          if (!assets?.towerUpgraded(lane, i)) audio.upgrade(x, z, lane === me())
-          for (let d = 0; d < 5; d++) {
-            const a = (d / 5) * Math.PI * 2 + 0.3
-            flashes.spawn(x + Math.cos(a) * 0.25, 0.4 + (d % 2) * 0.4, z + Math.sin(a) * 0.25, 0.15, 0.4, 0xffd86a, 420, now, 0.5)
-          }
-          rings.spawn(x, 0.035, z, 0.3, 1.3, 0xffd86a, 360, now)
+          if (!assets?.towerBuilt(lane, ca, ck, curr.level[j] as number, x, z)) audio.build(ck as TowerKind, x, z, lane === me())
+          j += 1
         }
       }
     }
@@ -1009,12 +1055,10 @@ export function createScene(
    * when the shot resolved. A creep that spawned on this very tick is missed,
    * which is invisible: it is standing on the entrance.
    */
-  function targetOf(lane: number, tile: number, range: number): number {
+  function targetOf(lane: number, tx: number, ty: number, range: number): number {
     const prev = driver.previous.lanes[lane] as Lane
     const c = prev.creeps
     const dist = (driver.current.lanes[lane] as Lane).field.dist
-    const tx = tileX(tile) + 0.5
-    const ty = tileY(tile) + 0.5
     const r2 = range * range
     let best = -1
     let bestDist = UNREACHABLE
@@ -1054,20 +1098,28 @@ export function createScene(
       const prev = (driver.previous.lanes[lane] as Lane).towers
       const curr = (driver.current.lanes[lane] as Lane).towers
       const ox = laneX(lane)
-      for (let i = 0; i < TILE_COUNT; i++) {
+      // Merge walk over the two anchor-sorted lists; see detectTowerChanges.
+      let p = 0
+      for (let i = 0; i < curr.count; i++) {
         const kind = curr.kind[i] as number
-        if (kind === -1) continue
         const level = curr.level[i] as number
         const spec = levelOf(kind as TowerKind, level)
         if (curr.cooldown[i] !== spec.cooldownTicks) continue
-        const wasIdle = prev.kind[i] === -1 || prev.cooldown[i] === 0 || prev.level[i] !== level
+        const ax = curr.anchorX[i] as number
+        const ay = curr.anchorY[i] as number
+        const anchor = ay * GRID_W + ax
+        while (p < prev.count && (prev.anchorY[p] as number) * GRID_W + (prev.anchorX[p] as number) < anchor) p += 1
+        const same = p < prev.count && (prev.anchorY[p] as number) * GRID_W + (prev.anchorX[p] as number) === anchor && prev.id[p] === curr.id[i]
+        const wasIdle = !same || prev.cooldown[p] === 0 || prev.level[p] !== level
         if (!wasIdle) continue
-        const slot = targetOf(lane, i, spec.range)
+        const cx = ax + TOWER_SIZE / 2
+        const cz = ay + TOWER_SIZE / 2
+        const slot = targetOf(lane, cx, cz, spec.range)
         if (slot === -1) continue
-        let sx = ox + tileX(i) + 0.5
-        let sz = tileY(i) + 0.5
+        let sx = ox + cx
+        let sz = cz
         let sy = muzzleHeight(kind as TowerKind, level)
-        const backed = assets?.towerFired(lane, i, scratchMuzzle) ?? false
+        const backed = assets?.towerFired(lane, anchor, scratchMuzzle) ?? false
         if (backed) {
           sx = scratchMuzzle.x
           sy = scratchMuzzle.y
@@ -1473,7 +1525,7 @@ export function createScene(
         // Both of these go stale the moment the field or the gold changes.
         if (hovered) previewTile(hovered)
         if (selected) {
-          if ((state.lanes[me()] as Lane).towers.kind[tileIndex(selected)] === -1) select(null)
+          if (towerSlotAt(state.lanes[me()] as Lane, selected.x, selected.y) === -1) select(null)
           else select(selected)
         }
         // A leak just happened: show the route that produced it. Comparing

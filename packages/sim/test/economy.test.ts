@@ -2,8 +2,9 @@ import { describe, it, expect } from 'vitest'
 import { createState, STARTING_GOLD, STARTING_INCOME, INCOME_EVERY_TICKS, MAX_CREEPS } from '../src/state'
 import { checkSend, checkUpgrade, checkSell, sellValue, Refusal } from '../src/step'
 import { TowerKind, levelOf, investedIn, SELL_REFUND, CREEPS, creepSpec, tierUnlockTick, UNLOCK_EVERY_TICKS } from '../src/data'
+import { towerSlotAt } from '../src/state'
 import { tileIndex } from '../src/grid'
-import { build, upgrade, sell, send, run, tick, withGold, SWARM, RUNNER, TANK, SWARM2, withoutBuildPhase } from './helpers'
+import { build, upgrade, sell, send, run, tick, withGold, R, SWARM, RUNNER, TANK, SWARM2, withoutBuildPhase } from './helpers'
 
 // Not a test of the opening: see withoutBuildPhase.
 withoutBuildPhase()
@@ -83,21 +84,18 @@ describe('kill bounty', () => {
   it('pays the defender, not the sender', () => {
     // Killing in your own lane is what earns it.
     //
-    // The towers sit at x=5, one tile off the route, which runs down column 6.
-    // They used to sit at x=3, and that was luck rather than design: the closest
-    // the creep ever came was exactly 3.000 against a range of exactly 3.0, so
-    // whether this test passed turned on the creep's sub-tile phase at the
-    // sampling tick. Removing the spawn queue shifted that phase by two
-    // hundredths of a tile and the tower stopped firing at all. The assertion
-    // below is unchanged; only the scaffolding it needs to reach it is.
+    // The towers sit on the left edge. The swarm spawns in column 0 and is
+    // routed around them, so it passes one tile from their footprints -- well
+    // inside range, rather than at exactly range as an earlier layout had it,
+    // where whether the tower fired turned on the creep's sub-tile phase.
     const cmds = {
       0: [send(SWARM, 1)],
-      1: [build(5, 11, TowerKind.Single, 0), build(5, 12, TowerKind.Single, 0)],
+      1: [build(0, R + 2, TowerKind.Single, 0), build(0, R + 4, TowerKind.Single, 0)],
     }
-    const s = run(600, cmds)
+    const s = run(900, cmds)
     expect(s.players[0]!.kills).toBeGreaterThan(0)
     const spent = levelOf(TowerKind.Single, 1).cost * 2
-    const earnedIncome = STARTING_INCOME * Math.floor(600 / INCOME_EVERY_TICKS)
+    const earnedIncome = STARTING_INCOME * Math.floor(900 / INCOME_EVERY_TICKS)
     const bounty = s.players[0]!.gold - (STARTING_GOLD - spent + earnedIncome)
     expect(bounty).toBeGreaterThan(0)
     expect(bounty).toBe(s.players[0]!.kills * creepSpec(SWARM).bounty)
@@ -176,41 +174,41 @@ describe('creep tiers', () => {
 describe('towers and gold', () => {
   it('charges on build and refuses when short', () => {
     const cost = levelOf(TowerKind.Single, 1).cost
-    const after = run(2, { 0: [build(5, 5)] })
+    const after = run(2, { 0: [build(4, R + 4)] })
     expect(after.players[0]!.gold).toBe(STARTING_GOLD - cost)
 
     const broke = withGold(createState(), 0, cost - 1)
-    const out = tick(broke, [build(5, 5)])
-    expect(out.lanes[0]!.towers.kind[tileIndex({ x: 5, y: 5 })]).toBe(-1)
+    const out = tick(broke, [build(4, R + 4)])
+    expect(towerSlotAt(out.lanes[0]!, 4, R + 4)).toBe(-1)
     expect(out.players[0]!.gold).toBe(cost - 1)
   })
 
   it('upgrades through three levels then refuses', () => {
-    let s = run(2, { 0: [build(5, 5)] })
-    s = tick(s, [upgrade(5, 5)])
-    expect(s.lanes[0]!.towers.level[tileIndex({ x: 5, y: 5 })]).toBe(2)
-    s = tick(s, [upgrade(5, 5)])
-    expect(s.lanes[0]!.towers.level[tileIndex({ x: 5, y: 5 })]).toBe(3)
-    expect(checkUpgrade(s, 0, 5, 5)).toBe(Refusal.AlreadyMaxLevel)
+    let s = run(2, { 0: [build(4, R + 4)] })
+    s = tick(s, [upgrade(4, R + 4)])
+    expect(s.lanes[0]!.towers.level[towerSlotAt(s.lanes[0]!, 4, R + 4)]).toBe(2)
+    s = tick(s, [upgrade(4, R + 4)])
+    expect(s.lanes[0]!.towers.level[towerSlotAt(s.lanes[0]!, 4, R + 4)]).toBe(3)
+    expect(checkUpgrade(s, 0, 4, R + 4)).toBe(Refusal.AlreadyMaxLevel)
   })
 
   it('refuses upgrade and sell on an empty tile', () => {
     const s = createState()
-    expect(checkUpgrade(s, 0, 5, 5)).toBe(Refusal.NoTowerHere)
-    expect(checkSell(s, 0, 5, 5)).toBe(Refusal.NoTowerHere)
+    expect(checkUpgrade(s, 0, 4, R + 4)).toBe(Refusal.NoTowerHere)
+    expect(checkSell(s, 0, 4, R + 4)).toBe(Refusal.NoTowerHere)
   })
 
   it('refunds a fraction of everything invested, and reopens the tile', () => {
-    let s = run(2, { 0: [build(5, 5)] })
-    s = tick(s, [upgrade(5, 5)])
+    let s = run(2, { 0: [build(4, R + 4)] })
+    s = tick(s, [upgrade(4, R + 4)])
     const invested = investedIn(TowerKind.Single, 2)
-    expect(sellValue(s, 0, 5, 5)).toBe(Math.floor(invested * SELL_REFUND))
+    expect(sellValue(s, 0, 4, R + 4)).toBe(Math.floor(invested * SELL_REFUND))
 
     const goldBefore = s.players[0]!.gold
-    s = tick(s, [sell(5, 5)])
+    s = tick(s, [sell(4, R + 4)])
     expect(s.players[0]!.gold).toBe(goldBefore + Math.floor(invested * SELL_REFUND))
-    expect(s.lanes[0]!.towers.kind[tileIndex({ x: 5, y: 5 })]).toBe(-1)
-    expect(s.lanes[0]!.blocked[tileIndex({ x: 5, y: 5 })]).toBe(0)
+    expect(towerSlotAt(s.lanes[0]!, 4, R + 4)).toBe(-1)
+    expect(s.lanes[0]!.blocked[tileIndex({ x: 4, y: R + 4 })]).toBe(0)
   })
 
   it('never refunds in full, so rebuilding the maze is never free', () => {

@@ -3,7 +3,8 @@ import {
   step,
   buildField,
   mazeLength,
-  tileIndex,
+  insertTower,
+  footprintOverlapsTower,
   templateAt,
   CREEPS,
   creepSpec,
@@ -58,12 +59,10 @@ function fortify(s: GameState, towers: number, level: number): void {
   let placed = 0
   for (let i = 0; i < template.tiles.length && placed < towers; i++) {
     const t = template.tiles[i]!
-    const idx = tileIndex(t)
-    if (lane.blocked[idx] === 1) continue
-    lane.blocked[idx] = 1
-    lane.towers.kind[idx] = TowerKind.Single
-    lane.towers.level[idx] = level
-    lane.towers.cooldown[idx] = 0
+    if (footprintOverlapsTower(lane, t.x, t.y)) continue
+    const slot = insertTower(lane, s.nextTowerId, t.x, t.y, TowerKind.Single)
+    s.nextTowerId += 1
+    lane.towers.level[slot] = level
     placed += 1
   }
   buildField(lane.blocked, lane.field)

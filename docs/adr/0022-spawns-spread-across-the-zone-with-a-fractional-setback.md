@@ -1,7 +1,7 @@
 # ADR-0022 — Spawns spread across the whole spawn zone and keep the fractional setback
 
 - **Date:** 2026-09-13
-- **Status:** Accepted — not implemented
+- **Status:** Accepted — implemented 2026-09-13
 
 ## Context
 

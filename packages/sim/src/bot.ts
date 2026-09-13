@@ -1,4 +1,17 @@
-import { GRID_W, TILE_COUNT, tileIndex, tileX, tileY, SPAWN_INDICES, type Tile } from './grid'
+import {
+  GRID_W,
+  TILE_COUNT,
+  MAX_TOWERS,
+  TOWER_SIZE,
+  FOOTPRINT_CELLS,
+  tileIndex,
+  tileX,
+  tileY,
+  footprintCells,
+  footprintInBuildArea,
+  SPAWN_INDICES,
+  type Tile,
+} from './grid'
 import { pathFrom } from './path'
 import {
   TowerKind,
@@ -12,7 +25,13 @@ import {
   tierUnlockTick,
   SEND_UNLOCK_TICKS,
 } from './data'
-import { opponentOf, SPAWN_PERIOD, type GameState, type Lane, type Player } from './state'
+import {
+  opponentOf,
+  footprintOverlapsTower,
+  type GameState,
+  type Lane,
+  type Player,
+} from './state'
 import { Kind, Refusal, checkBuild, checkUpgrade, checkSend, type Command } from './step'
 import { templateAt } from './maze'
 import { buildField, createField, spawnsReachable } from './field'
@@ -476,13 +495,19 @@ const NONE: readonly Command[] = Object.freeze([])
  * Not a balance number -- gold runs out long before this in any measured match.
  * It exists for two reasons. A single decision must not append an unbounded run
  * to the command log, which is replayed and hashed and which a late-game income
- * could otherwise make arbitrarily long. And it is pinned to SPAWN_PERIOD
- * because creeps spawning at the same point on the same tick are welded
- * together for the rest of the match: `spawnPointFor` can give 22 arrivals
- * distinct starting points, so 22 is what a decision may buy. Raise them
- * together or not at all.
+ * could otherwise make arbitrarily long. And creeps spawning at the same point
+ * on the same tick are welded together for the rest of the match, so it must
+ * never exceed `SPAWN_PERIOD`, the number of distinct starting points
+ * `spawnPointFor` can hand out.
+ *
+ * It used to BE `SPAWN_PERIOD`, when that was 22. The spawn zone made the
+ * period 1760 (ADR-0022), and a decision that appends 1760 commands to the log
+ * every ten ticks is the log-length problem the cap exists to prevent -- so
+ * the two are decoupled and this stays at the measured 22. Every balance
+ * figure in this file was recorded with a 22-creep burst; raising it is a
+ * `/balance` question, not a consequence of the geometry.
  */
-const MAX_SEND_BURST = SPAWN_PERIOD
+const MAX_SEND_BURST = 22
 
 /**
  * Buy as many of one creep as the purse allows, as separate commands.
@@ -578,11 +603,12 @@ function unlockedTier(tick: number): number {
 
 /** How many towers stand in a lane. */
 function towerCount(lane: Lane): number {
-  let n = 0
-  for (let i = 0; i < lane.towers.kind.length; i++) {
-    if (lane.towers.kind[i] !== -1) n += 1
-  }
-  return n
+  return lane.towers.count
+}
+
+/** The anchor tile index of the tower in `slot`. */
+function anchorOf(lane: Lane, slot: number): number {
+  return (lane.towers.anchorY[slot] as number) * GRID_W + (lane.towers.anchorX[slot] as number)
 }
 
 /** Index of the creep that has already leaked at least once, or -1. */
@@ -611,37 +637,62 @@ function reinforceRoute(state: GameState, player: 0 | 1, lane: Lane): Command | 
   const route = pathFrom(lane.field, SPAWN_INDICES[0] as number)
   if (route.length === 0) return null
 
-  // Upgrade the strongest-value tower adjacent to the route.
-  let bestTile = -1
+  // Upgrade the strongest-value tower adjacent to the route. A neighbour cell
+  // resolves to whichever tower's footprint covers it.
+  let bestSlot = -1
   let bestLevel = MAX_LEVEL + 1
   for (const tile of route) {
     for (const n of neighbours(tile)) {
-      if (lane.towers.kind[n] === -1) continue
-      const level = lane.towers.level[n] as number
+      const slot = lane.towers.at[n] as number
+      if (slot === -1) continue
+      const level = lane.towers.level[slot] as number
       if (level >= MAX_LEVEL) continue
       if (checkUpgrade(state, player, tileX(n), tileY(n)) !== Refusal.None) continue
       // Prefer the least-upgraded tower: levelling a 1 to a 2 is the cheapest
       // damage available, and spreading levels beats maxing one tower early.
       if (level < bestLevel) {
         bestLevel = level
-        bestTile = n
+        bestSlot = slot
       }
     }
   }
-  if (bestTile !== -1) {
-    return { tick: state.tick, player, kind: Kind.Upgrade, x: tileX(bestTile), y: tileY(bestTile) }
+  if (bestSlot !== -1) {
+    const a = anchorOf(lane, bestSlot)
+    return { tick: state.tick, player, kind: Kind.Upgrade, x: tileX(a), y: tileY(a) }
   }
 
-  // No upgrade available: drop a new tower beside the route.
+  // No upgrade available: drop a new tower beside the route. A 2x2 footprint
+  // touches a cell from four anchors; try them in row-major order and take the
+  // first the rules allow.
   for (const tile of route) {
     for (const n of neighbours(tile)) {
-      const x = tileX(n)
-      const y = tileY(n)
-      if (checkBuild(state, player, x, y, TowerKind.Single).refusal !== Refusal.None) continue
-      return { tick: state.tick, player, kind: Kind.Build, tower: TowerKind.Single, x, y }
+      for (const a of anchorsCovering(n)) {
+        const x = tileX(a)
+        const y = tileY(a)
+        if (checkBuild(state, player, x, y, TowerKind.Single).refusal !== Refusal.None) continue
+        return { tick: state.tick, player, kind: Kind.Build, tower: TowerKind.Single, x, y }
+      }
     }
   }
   return null
+}
+
+/**
+ * Anchors whose footprint would cover `tile`, row-major, inside the build
+ * area. TOWER_SIZE squared of them at most.
+ */
+function anchorsCovering(tile: number): number[] {
+  const x = tileX(tile)
+  const y = tileY(tile)
+  const out: number[] = []
+  for (let dy = TOWER_SIZE - 1; dy >= 0; dy--) {
+    for (let dx = TOWER_SIZE - 1; dx >= 0; dx--) {
+      const ax = x - dx
+      const ay = y - dy
+      if (footprintInBuildArea(ax, ay)) out.push(ay * GRID_W + ax)
+    }
+  }
+  return out
 }
 
 /** Four-connected neighbours, in the same N,E,S,W order the field uses. */
@@ -673,7 +724,7 @@ function nextTemplateTile(
   const template = templateAt(config.template)
   for (let i = 0; i < template.tiles.length; i++) {
     const t = template.tiles[i] as Tile
-    if (lane.blocked[tileIndex(t)] === 1) continue
+    if (footprintOverlapsTower(lane, t.x, t.y)) continue
     // Skew toward the answer, do not monopolise. A maze of one tower type has
     // no answer to the wave after this one, and the bot only ever adds towers
     // -- it never tears the wrong ones down -- so over-committing is permanent.
@@ -778,14 +829,11 @@ const EXPLOITS: readonly CreepArchetypeKind[] = [
 function readMaze(lane: Lane): TowerKind | null {
   const t = lane.towers
   const worth = [0, 0, 0]
-  let any = false
-  for (let i = 0; i < t.kind.length; i++) {
+  if (t.count === 0) return null
+  for (let i = 0; i < t.count; i++) {
     const kind = t.kind[i] as number
-    if (kind === -1) continue
-    any = true
     worth[kind] = (worth[kind] as number) + investedIn(kind as TowerKind, t.level[i] as number)
   }
-  if (!any) return null
   let best = 0
   for (let k = 1; k < worth.length; k++) {
     if ((worth[k] as number) > (worth[best] as number)) best = k
@@ -800,20 +848,22 @@ function bestUpgrade(
   lane: Lane,
   budget: number,
 ): Command | null {
-  let bestTile = -1
+  let bestSlot = -1
   let bestLevel = MAX_LEVEL + 1
-  for (let i = 0; i < lane.towers.kind.length; i++) {
+  for (let i = 0; i < lane.towers.count; i++) {
     const kind = lane.towers.kind[i] as number
-    if (kind === -1) continue
     const level = lane.towers.level[i] as number
     if (level >= bestLevel) continue
     if (level < MAX_LEVEL && levelOf(kind as TowerKind, level + 1).cost > budget) continue
-    if (checkUpgrade(state, player, tileX(i), tileY(i)) !== Refusal.None) continue
+    const ax = lane.towers.anchorX[i] as number
+    const ay = lane.towers.anchorY[i] as number
+    if (checkUpgrade(state, player, ax, ay) !== Refusal.None) continue
     bestLevel = level
-    bestTile = i
+    bestSlot = i
   }
-  if (bestTile === -1) return null
-  return { tick: state.tick, player, kind: Kind.Upgrade, x: tileX(bestTile), y: tileY(bestTile) }
+  if (bestSlot === -1) return null
+  const a = anchorOf(lane, bestSlot)
+  return { tick: state.tick, player, kind: Kind.Upgrade, x: tileX(a), y: tileY(a) }
 }
 
 /**
@@ -851,7 +901,9 @@ const routeB: number[] = []
 const routeC: number[] = []
 const probeBlocked = new Uint8Array(TILE_COUNT)
 const probeField = createField()
-const seen = new Uint8Array(TILE_COUNT)
+const probeCells = new Int32Array(FOOTPRINT_CELLS)
+/** Towers already costed this decision, by slot. */
+const seen = new Uint8Array(MAX_TOWERS)
 
 interface Wave {
   readonly creep: number
@@ -988,32 +1040,40 @@ function shoreUp(
   seen.fill(0)
   for (const tile of route) {
     for (const n of neighbours(tile)) {
-      if (seen[n] === 1) continue
-      seen[n] = 1
-      const kind = lane.towers.kind[n] as number
-      if (kind === -1) continue
-      const level = lane.towers.level[n] as number
+      const slot = lane.towers.at[n] as number
+      if (slot === -1) continue
+      if (seen[slot] === 1) continue
+      seen[slot] = 1
+      const kind = lane.towers.kind[slot] as number
+      const level = lane.towers.level[slot] as number
       if (level >= MAX_LEVEL) continue
       const cost = levelOf(kind as TowerKind, level + 1).cost
       if (cost > gold) continue
-      if (checkUpgrade(state, player, tileX(n), tileY(n)) !== Refusal.None) continue
-      const override: TowerOverride = { tile: n, kind: kind as TowerKind, level: level + 1 }
+      const a = anchorOf(lane, slot)
+      if (checkUpgrade(state, player, tileX(a), tileY(a)) !== Refusal.None) continue
+      const override: TowerOverride = { tile: a, kind: kind as TowerKind, level: level + 1 }
       const after = laneThreat(lane, route, override)
-      consider({ tick: state.tick, player, kind: Kind.Upgrade, x: tileX(n), y: tileY(n) }, cost, after)
+      consider({ tick: state.tick, player, kind: Kind.Upgrade, x: tileX(a), y: tileY(a) }, cost, after)
     }
   }
 
   const tile = nextFreeTemplateTile(lane, config)
   if (tile !== -1) {
     // The candidate's route, without touching the lane: a copy of the blocked
-    // map with the tile set, and a probe field built from it.
+    // map with the footprint set, and a probe field built from it.
     probeBlocked.set(lane.blocked)
-    probeBlocked[tile] = 1
+    footprintCells(tileX(tile), tileY(tile), probeCells)
+    for (let k = 0; k < FOOTPRINT_CELLS; k++) probeBlocked[probeCells[k] as number] = 1
     buildField(probeBlocked, probeField)
     if (spawnsReachable(probeField)) {
       const newRoute = pathFrom(probeField, SPAWN_INDICES[0] as number, routeC)
       for (const kind of KINDS) {
         if (levelOf(kind, 1).cost > gold) continue
+        // The probe answered "would it seal"; the rules also ask about gold
+        // and about creeps standing on the footprint (ADR-0023). A candidate
+        // the sim would refuse is not a fix, and emitting it would be the bot
+        // sending a command a player could not.
+        if (checkBuild(state, player, tileX(tile), tileY(tile), kind).refusal !== Refusal.None) continue
         const after = laneThreat(lane, newRoute, { tile, kind, level: 1 })
         consider(
           { tick: state.tick, player, kind: Kind.Build, tower: kind, x: tileX(tile), y: tileY(tile) },
@@ -1027,12 +1087,12 @@ function shoreUp(
   return best
 }
 
-/** First template tile with nothing on it, regardless of gold or sealing. */
+/** First template anchor whose footprint is free, regardless of gold or sealing. */
 function nextFreeTemplateTile(lane: Lane, config: BotConfig): number {
   const template = templateAt(config.template)
   for (let i = 0; i < template.tiles.length; i++) {
-    const idx = tileIndex(template.tiles[i] as Tile)
-    if (lane.blocked[idx] === 0) return idx
+    const t = template.tiles[i] as Tile
+    if (!footprintOverlapsTower(lane, t.x, t.y)) return tileIndex(t)
   }
   return -1
 }

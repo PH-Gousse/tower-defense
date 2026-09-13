@@ -13,15 +13,15 @@ import {
 } from './grid'
 
 /**
- * Flow field: one breadth-first sweep outward from the exit tiles.
+ * Flow field: one breadth-first sweep outward from the exit zone.
  *
  * Every creep on a field reads the same two arrays instead of owning a path.
  * That is the whole reason this is a flow field and not per-creep A*: creep
  * population is bounded only by gold, so a per-creep search would cost
- * O(creeps x search) on every placement. This costs O(tiles) = 960, whatever
+ * O(creeps x search) on every placement. This costs O(tiles) = 3408, whatever
  * the population.
  *
- *   exit tiles (dist 0)
+ *   exit-zone cells (dist 0)
  *        │  expand N,E,S,W, one ring at a time
  *        ▼
  *   dist[i]  tiles remaining to the exit, or UNREACHABLE
@@ -31,9 +31,14 @@ import {
  * uniform weights — same result, no priority queue. Integer distances mean the
  * field is exact, with no float comparison anywhere in the path layer.
  *
+ * Connectivity is 4-neighbour over EMPTY 1-tile cells. Creeps are one tile, so
+ * a 1-wide gap is passable and two towers touching only at a corner seal the
+ * diagonal. That is the half-slot rule (ADR-0019, ADR-0020), and this sweep is
+ * where it lives: never widen the neighbourhood to make a layout pass.
+ *
  * Three things fall out of this for free, which is why it earns its place:
- *   - the no-block check  (are the spawn tiles still reachable?)
- *   - the maze score      (dist at the spawn tile)
+ *   - the no-block check  (does the spawn zone still reach the exit zone?)
+ *   - the maze score      (worst dist over the spawn zone)
  *   - tower targeting     (lowest dist = closest to the exit)
  */
 
@@ -45,6 +50,15 @@ export interface FlowField {
   /** Neighbour to step toward, or Dir.None on exits and unreachable tiles. */
   readonly dir: Int8Array
 }
+
+/**
+ * Shared BFS ring. Module-level rather than per call: `buildField` runs on
+ * every placement AND on every hover preview, and at 3408 tiles a fresh queue
+ * per call is 13KB of garbage per mouse move. BFS visits each tile at most
+ * once, so the ring never exceeds TILE_COUNT and is never re-entered -- the
+ * sim is single-threaded and nothing calls buildField from inside buildField.
+ */
+const queue = new Int32Array(TILE_COUNT)
 
 /**
  * Build a field over `blocked` (1 = tower, 0 = walkable).
@@ -59,13 +73,11 @@ export function buildField(blocked: Uint8Array, out?: FlowField): FlowField {
   dist.fill(UNREACHABLE)
   dir.fill(Dir.None)
 
-  // A plain Int32Array ring is enough: BFS visits each tile at most once, so
-  // the queue never exceeds TILE_COUNT.
-  const queue = new Int32Array(TILE_COUNT)
   let head = 0
   let tail = 0
 
-  for (const exit of EXIT_INDICES) {
+  for (let k = 0; k < EXIT_INDICES.length; k++) {
+    const exit = EXIT_INDICES[k] as number
     if (blocked[exit] === 1) continue
     dist[exit] = 0
     queue[tail] = exit
@@ -102,31 +114,38 @@ export function buildField(blocked: Uint8Array, out?: FlowField): FlowField {
 /**
  * Would creeps still be able to leave, given this blocked set?
  *
- * The no-block rule is exactly "both spawn tiles have a finite distance". There
- * is no separate flood fill: the field already answered it.
+ * The no-block rule is "at least one spawn-zone cell has a finite distance".
+ * The zone is never built on, so all of its cells are mutually connected and
+ * "any" is the same question as "all" -- it is written as "any" because that
+ * is the rule ADR-0019 states.
  *
  * Note what this does NOT check. An earlier design refused any placement that
  * stranded a creep mid-field; that made build legality depend on where enemy
  * creeps stood, which turned cheap swarm sends into a build-denial weapon. A
- * creep with no path teleports to the spawn instead — see step.ts.
+ * creep with no path goes back to the spawn zone instead -- see step.ts. The
+ * separate rule that a footprint may not be placed ON a creep is checked in
+ * `checkBuild`, not here (ADR-0023).
  */
 export function spawnsReachable(field: FlowField): boolean {
-  for (const spawn of SPAWN_INDICES) {
-    if ((field.dist[spawn] as number) === UNREACHABLE) return false
+  for (let k = 0; k < SPAWN_INDICES.length; k++) {
+    if ((field.dist[SPAWN_INDICES[k] as number] as number) !== UNREACHABLE) return true
   }
-  return true
+  return false
 }
 
 /**
- * Maze length: how far a creep entering now has to walk.
+ * Maze length: how far a creep entering now has to walk, at worst.
  *
- * This is the number rendered as `Maze: 214 tiles`, and the hover preview is
- * just the difference between this before and after a candidate placement.
+ * The worst cell of the spawn zone, because spawns are spread across it
+ * (ADR-0022) and the number rendered as `Maze: 214 tiles` should be the one
+ * the unluckiest creep faces. The hover preview is the difference between this
+ * before and after a candidate placement, and a difference of worst cases is
+ * exact for a wall (it moves every cell by the same amount).
  */
 export function mazeLength(field: FlowField): number {
   let worst = 0
-  for (const spawn of SPAWN_INDICES) {
-    const d = field.dist[spawn] as number
+  for (let k = 0; k < SPAWN_INDICES.length; k++) {
+    const d = field.dist[SPAWN_INDICES[k] as number] as number
     if (d === UNREACHABLE) return UNREACHABLE
     if (d > worst) worst = d
   }

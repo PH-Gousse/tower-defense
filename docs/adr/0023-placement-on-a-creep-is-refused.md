@@ -1,8 +1,8 @@
 # ADR-0023 — A placement whose footprint holds a creep is refused
 
 - **Date:** 2026-09-13
-- **Status:** Accepted — not implemented. Supersedes the "teleport instead of refuse"
-  half of ADR-0012.
+- **Status:** Accepted (sim, 2026-09-13; the client's third ghost state is Phase 3). Supersedes
+  the "teleport instead of refuse" half of ADR-0012.
 
 ## Context
 

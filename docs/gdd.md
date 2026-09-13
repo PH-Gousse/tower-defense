@@ -32,41 +32,66 @@ Related: engineering rules in [`invariants.md`](invariants.md) · decisions in
 
 ## 2. The lane
 
-- **8 tiles wide × 24 tiles long**, 1 world unit per tile. `[confirmed]`
-  (`GRID_W = 8`, `GRID_H = 24`, `packages/sim/src/grid.ts`)
-- The lane runs **vertically**: creeps enter at the top, leave at the bottom. `[proposed]`
-- **Entrance row (y=0) and exit row (y=23) are reserved** — no building on either, the
-  whole row, not just the tiles that spawn and drain. `[confirmed]`
-- Entrance and exit sit on **opposite sides**: entrance is `x ∈ {0,1}`, exit is
-  `x ∈ {6,7}`, so a bare lane is already a ~29-tile diagonal walk rather than a 23-tile
-  drop. `[proposed]` (`SPAWN_TILES`, `EXIT_TILES`)
-- **A tower occupies exactly one tile.** `[confirmed]`
+The **tile** is the creep tile and the only unit the sim speaks. See
+[ADR-0019](adr/0019-lane-is-16-wide-with-2x2-towers-and-1-tile-creeps.md).
+
+- **A creep occupies 1 × 1 tile. A tower occupies 2 × 2 tiles.** No code path may assume the
+  two are the same size. `[confirmed]` (`TOWER_SIZE`, `CREEP_SIZE`, `packages/sim/src/grid.ts`)
+- **The lane is 16 tiles wide** — a full row is 8 towers. `[confirmed]` (`LANE_WIDTH`)
+- The lane runs **vertically**: creeps enter at the top, leave at the bottom. `[confirmed]`
+- Along its length the lane has three zones, in the order creeps meet them:
+  - a **spawn zone** of `SPAWN_ROWS = 10` rows, where creeps appear. Not buildable. `[confirmed]`
+  - a **buildable area** of `LANE_LENGTH` rows. **200 `[proposed]`** — nothing in the code
+    depends on the exact figure, but every lap time scales with it.
+  - an **exit zone** of `EXIT_ROWS = 3` rows. A creep whose position enters it has leaked.
+    Not buildable. `[confirmed]`
+- Two lanes sit side by side, `LANE_GAP` tiles apart. **4 `[proposed]`**
+- **Towers anchor on the 1-tile grid.** A tower's anchor is any tile such that its 2 × 2
+  footprint lies inside the buildable area; the footprint is derived from the anchor and the
+  per-cell occupancy grid is a cache of it, never the source of truth. Two towers offset by
+  one tile leave a corridor one creep wide — the **half-slot** — and that is the mazing
+  skill of the game. `[confirmed]` ([ADR-0020](adr/0020-towers-anchor-on-the-creep-tile-grid.md))
+- **The camera cannot show the whole lane.** The player scrolls. `[confirmed]` — see §9.
 - Width is the maze-richness knob; length is the pace knob. Change one at a time.
   `[proposed]`
 
+Superseded: the 8 × 24 lane with one-tile towers, a reserved entrance row and exit row, and
+entrance and exit on opposite sides. Recorded in ADR-0019.
+
 ## 3. Building
 
-Placement is refused, with the reason on screen and **before any gold moves**, when:
+Placement is refused, with the reason on screen and **before any gold moves**, checked in
+this order:
 
 | Refusal | Meaning | Status |
 |---|---|---|
-| `OutOfBounds` | tile is off the grid | `[proposed]` |
-| `Occupied` | a tower is already there | `[confirmed]` |
-| `SpawnOrExit` | tile is in the entrance or exit row | `[confirmed]` |
-| `WouldSealLane` | no route would remain from entrance to exit | `[confirmed]` |
 | `NotEnoughGold` | cannot afford it | `[confirmed]` |
+| `OutOfBounds` | the 2 × 2 footprint is not fully inside the lane | `[confirmed]` |
+| `InSpawnZone` | any footprint cell is in the spawn zone | `[confirmed]` |
+| `InExitZone` | any footprint cell is in the exit zone | `[confirmed]` |
+| `OverlapsTower` | any footprint cell already belongs to a tower | `[confirmed]` |
+| `CreepOnFootprint` | a creep's current tile is inside the footprint | `[confirmed]` — [ADR-0023](adr/0023-placement-on-a-creep-is-refused.md) |
+| `WouldSealLane` | no route of empty tiles would remain from the spawn zone to the exit zone | `[confirmed]` |
 
-- **Sealing check is on the spawn tiles only, not on creep positions.** `[proposed]` —
-  ⚠️ this differs from the confirmed rule *"placement that lands on a tile a creep
-  currently occupies is refused"*. The code deliberately allows it: refusing on creep
-  positions would make legality flicker as creeps move, and would let a cheap swarm send
-  lock tiles out of the defender's maze. A creep with no route **teleports back to the
-  entrance** instead (`moveCreeps`, `Dir.None` branch). See
-  [ADR-0012](adr/0012-blocking-refusal-checks-spawn-not-creeps.md).
-  **Open: confirm the code's rule, or implement the stated one.**
+- **The block check is 4-neighbour connectivity over empty 1-tile cells**, from the exit
+  zone, with the candidate footprint occupied. Creeps are one tile, so a 1-wide gap is
+  passable and two towers touching only at a corner seal the diagonal. Never weaken it to
+  make a layout pass: the half-slot rule is the game. `[confirmed]`
+- **The block check consults the spawn zone, not creep positions.** A creep stranded by a
+  legal placement elsewhere (a pocket sealed while it stood inside) is placed back in the
+  spawn zone, keeping its HP and lap count. `[confirmed]`
+  ([ADR-0012](adr/0012-blocking-refusal-checks-spawn-not-creeps.md), first half.)
+- **A placement on a creep is refused, not allowed.** On the old 24-row lane a tower placed
+  on a creep sent it back to the spawn, which cost the attacker fifteen seconds; on this
+  lane it would cost 70–200 s for 240 gold of tower, cheaper than the creep. The build
+  ghost shows blocked-by-creep as a third state, distinct from illegal. `[confirmed]`
+  ([ADR-0023](adr/0023-placement-on-a-creep-is-refused.md), superseding the second half of
+  ADR-0012.)
+- Upgrade and sell address a tower by **any tile of its footprint**. `[proposed]`
 - Selling can only open paths, never close them, so a sell needs no reachability check.
   `[proposed]`
 - Upgrading changes range and damage, never the blocked set. `[proposed]`
+- **Tower range is measured from the footprint centre.** `[confirmed]`
 
 ## 4. Towers (v1)
 
@@ -124,7 +149,7 @@ for both players.** `[confirmed]`
 
 ## 6. Sending
 
-- **Buying a creep spawns it immediately** at the entrance row of the **opponent's** lane.
+- **Buying a creep spawns it immediately** in the spawn zone of the **opponent's** lane.
   `[confirmed]` (`spawnSend` runs inside `applyCommands`, same tick.)
 - **No send queue and no pacing.** `[confirmed]` (The release queue that paced one creep
   every four ticks is gone — see [ADR-0006](adr/0006-no-send-queue.md).)
@@ -141,11 +166,16 @@ for both players.** `[confirmed]`
   - ⚠️ **`Refusal.BuildPhase`**: nobody may send for the first **400 ticks (20 s)**. This
     opening build phase is not in the confirmed rules but is load-bearing — the income
     clock anchors to it (§7). `[proposed]` — needs confirming as a rule.
-- Creeps arriving on the same tick are **spread backwards along the route**, not across the
-  entrance, so they stay distinct instead of welding into one dot with N health bars. The
-  budget is **22 distinct spawn points** before the pattern repeats. `[proposed]`
-  (`spawnPointFor`, `SPAWN_PERIOD`.) A single-tick burst past 22 welds creeps together
-  permanently; the bot self-limits to `MAX_SEND_BURST = 22` for this reason.
+- **Creeps spawn spread across the whole 10 × 16 spawn zone**, at a position derived from
+  the lane's release counter (column, row, and a fractional setback along the flow field),
+  so a mass send arrives as a front rather than a column. The fractional setback is
+  load-bearing: it is what keeps two creeps symmetric about the first gap from arriving
+  together and welding. **1760 distinct points** before the pattern repeats. `[confirmed]`
+  ([ADR-0022](adr/0022-spawns-spread-across-the-zone-with-a-fractional-setback.md);
+  `spawnPointFor`, `SPAWN_PERIOD`.)
+- **Creeps do not collide with each other.** They overlap freely; a 1-wide gap passes any
+  number of them, and separation is visual only, done by the client from the creep id.
+  `[confirmed]` ([ADR-0021](adr/0021-creeps-do-not-collide.md))
 
 ## 7. Economy
 
@@ -166,7 +196,7 @@ for both players.** `[confirmed]`
 
 ## 8. Leaks and looping
 
-- When a creep reaches the exit of a lane:
+- When a creep's position enters an exit-zone cell — that tick, not the next:
   1. **The defender loses one life.** `[confirmed]`
   2. ⚠️ **The sender gains one life.** `[confirmed]` — **NOT IMPLEMENTED.** `step.ts`
      `moveCreeps` currently credits nobody, with a deliberate rationale in the code:
@@ -176,13 +206,13 @@ for both players.** `[confirmed]`
      open bug — see [ADR-0008](adr/0008-leak-credits-the-sender.md) and [issue #7](https://github.com/PH-Gousse/tower-defense/issues/7).
      Landing it needs: the sim change, a lives *cap* decision (may lives exceed the
      starting figure?), the `hashState` consequences, and regenerated golden fixtures.
-  3. The creep is placed **back at the entrance of the same lane** with its **current HP**,
-     its **lap counter increments**, and it runs again. `[confirmed]`
+  3. The creep is placed **back in the spawn zone of the same lane** (same spread rule as
+     a fresh spawn) with its **current HP**, its **lap counter increments**, and it runs
+     again. `[confirmed]`
 - **No lap cap, no decay, no timeout.** Tower damage is the only thing that removes a
   creep. `[confirmed]`
-- A creep with no route (walled in mid-field) **teleports to the entrance** rather than the
-  placement being refused. `[proposed]` — walling a creep in then costs the trapper towers
-  and achieves nothing.
+- A creep with no route (a pocket sealed while it stood inside) **is placed back in the
+  spawn zone**. Placing a tower **on** a creep is refused instead — see §3. `[confirmed]`
 
 ## 9. Camera
 
@@ -204,8 +234,9 @@ before any gold moves.** `[confirmed]`
 
 Current enum (`packages/sim/src/step.ts`):
 
-`None`, `OutOfBounds`, `Occupied`, `SpawnOrExit`, `WouldSealLane`, `NotEnoughGold`,
-`NoTowerHere`, `AlreadyMaxLevel`, `TierLocked`, `BuildPhase`, `LaneFull`.
+`None`, `NotEnoughGold`, `OutOfBounds`, `InSpawnZone`, `InExitZone`, `OverlapsTower`,
+`CreepOnFootprint`, `WouldSealLane`, `NoTowerHere`, `AlreadyMaxLevel`, `TierLocked`,
+`BuildPhase`, `LaneFull`.
 
 Naming rule: a `Refusal` names **the condition, from the player's side** — `NotEnoughGold`,
 not `GoldCheckFailed`; `WouldSealLane`, not `InvalidPlacement`. `[proposed]`
@@ -291,7 +322,7 @@ Nine things need your word before they harden. Listed again in the Phase 8 repor
 3. **Sell refund** — 0.60 (code) or 0.75 (stated)?
 4. **Build phase** — is the 20 s opening a confirmed rule?
 5. **Income clock anchor** — tied to send-unlock (code) or to tick 0?
-6. **Blocking refusal** — spawn-reachability only (code), or also refuse on occupied tiles?
+6. ~~Blocking refusal~~ — resolved by ADR-0023: refuse on a creep-occupied footprint.
 7. **Draws** — is a same-tick double-zero a draw, or does someone win?
 8. **Match-ender** — the bounded ladder has no guarantee a match ends. What replaces it?
 9. **Every number in §11.**

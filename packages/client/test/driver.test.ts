@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { Driver } from '../src/driver'
 import {
-  TICK_MS, TowerKind, MatchResult, tileIndex, creepSpec, STARTING_INCOME, STARTING_GOLD, BOT_HARD, Kind,
-  SEND_UNLOCK_TICKS,
+  TICK_MS, TowerKind, MatchResult, creepSpec, STARTING_INCOME, STARTING_GOLD, BOT_HARD, Kind,
+  SEND_UNLOCK_TICKS, BUILD_ROW_MIN, towerSlotAt, towerKindAt,
   type Command,
 } from '@ltw/sim'
 
@@ -106,7 +106,8 @@ describe('Driver', () => {
     d.queueSend(1)
     for (let f = 1; f <= 40; f++) { t += TICK_MS * 10; d.advance(t) }
     expect(d.current.lanes[1]!.creeps.count).toBe(1)
-    expect(d.current.lanes[1]!.creeps.x[0] as number).toBeGreaterThan(1)
+    // Down the lane is +y: an empty lane's field points every cell south.
+    expect(d.current.lanes[1]!.creeps.y[0] as number).toBeGreaterThan(1)
     expect(d.current.lanes[0]!.creeps.count).toBe(0)
   })
 
@@ -122,9 +123,9 @@ describe('Driver', () => {
   it('queues a build that the sim then applies', () => {
     const d = new Driver()
     d.advance(0)
-    d.queueBuild(6, 6, TowerKind.Single)
+    d.queueBuild(6, BUILD_ROW_MIN + 6, TowerKind.Single)
     d.advance(TICK_MS)
-    expect(d.current.lanes[0]!.towers.kind[tileIndex({ x: 6, y: 6 })]).toBe(TowerKind.Single)
+    expect(towerKindAt(d.current.lanes[0]!, 6, BUILD_ROW_MIN + 6)).toBe(TowerKind.Single)
     // Against the opening purse rather than a literal: the point is that the
     // build was paid for, and a hardcoded number turns every economy edit into
     // a red test that says nothing about the driver.
@@ -134,16 +135,16 @@ describe('Driver', () => {
   it('queues upgrade and sell', () => {
     const d = new Driver()
     d.advance(0)
-    d.queueBuild(6, 6, TowerKind.Single)
+    d.queueBuild(6, BUILD_ROW_MIN + 6, TowerKind.Single)
     d.advance(TICK_MS)
-    d.queueUpgrade(6, 6)
+    d.queueUpgrade(6, BUILD_ROW_MIN + 6)
     d.advance(TICK_MS * 2)
-    expect(d.current.lanes[0]!.towers.level[tileIndex({ x: 6, y: 6 })]).toBe(2)
+    expect(d.current.lanes[0]!.towers.level[towerSlotAt(d.current.lanes[0]!, 6, BUILD_ROW_MIN + 6)]).toBe(2)
 
     const goldBefore = d.current.players[0]!.gold
-    d.queueSell(6, 6)
+    d.queueSell(6, BUILD_ROW_MIN + 6)
     d.advance(TICK_MS * 3)
-    expect(d.current.lanes[0]!.towers.kind[tileIndex({ x: 6, y: 6 })]).toBe(-1)
+    expect(towerKindAt(d.current.lanes[0]!, 6, BUILD_ROW_MIN + 6)).toBe(-1)
     expect(d.current.players[0]!.gold).toBeGreaterThan(goldBefore)
   })
 
@@ -172,10 +173,7 @@ describe('Driver', () => {
     for (let f = 1; f <= 300; f++) { t += TICK_MS * 10; d.advance(t) }
 
     // It defends its own lane...
-    let botTowers = 0
-    const kinds = d.current.lanes[1]!.towers.kind
-    for (let i = 0; i < kinds.length; i++) if (kinds[i] !== -1) botTowers += 1
-    expect(botTowers).toBeGreaterThan(0)
+    expect(d.current.lanes[1]!.towers.count).toBeGreaterThan(0)
 
     // ...and attacks mine. Sends land in the receiver's lane, so creeps in
     // lane 0 can only have come from player 1.
@@ -363,21 +361,21 @@ describe('local prediction', () => {
 
   it('shows a ghost the instant you click, not when the relay answers', () => {
     const { d } = lockstepDriver()
-    d.queueBuild(6, 11, TowerKind.Single)
+    d.queueBuild(6, BUILD_ROW_MIN + 11, TowerKind.Single)
     expect(d.ghosts).toHaveLength(1)
     expect(d.ghosts[0]!.state).toBe('pending')
     // And nothing is on the board yet: the relay has not returned it.
-    expect(d.current.lanes[0]!.towers.kind[tileIndex({ x: 6, y: 11 })]).toBe(-1)
+    expect(towerKindAt(d.current.lanes[0]!, 6, BUILD_ROW_MIN + 11)).toBe(-1)
   })
 
   it('retires the ghost once the real command lands', () => {
     const { d, sent } = lockstepDriver()
-    d.queueBuild(6, 11, TowerKind.Single)
+    d.queueBuild(6, BUILD_ROW_MIN + 11, TowerKind.Single)
     // The relay returns it to both clients, including this one.
     d.receive(sent[0]!)
     run(d, 30)
     expect(d.ghosts.filter((g) => g.state === 'pending')).toHaveLength(0)
-    expect(d.current.lanes[0]!.towers.kind[tileIndex({ x: 6, y: 11 })]).not.toBe(-1)
+    expect(towerKindAt(d.current.lanes[0]!, 6, BUILD_ROW_MIN + 11)).not.toBe(-1)
   })
 
   it('marks a ghost LOST once its tick passes with nothing applied', () => {
@@ -385,7 +383,7 @@ describe('local prediction', () => {
     // frame leaves a translucent tower on screen forever and the game looks
     // like it is ignoring clicks.
     const { d } = lockstepDriver()
-    d.queueBuild(6, 11, TowerKind.Single)
+    d.queueBuild(6, BUILD_ROW_MIN + 11, TowerKind.Single)
     const stamped = d.ghosts[0]!.stampedFor
     run(d, stamped + 5)
     expect(d.current.tick).toBeGreaterThan(stamped)
@@ -394,7 +392,7 @@ describe('local prediction', () => {
 
   it('fades a ghost the relay explicitly refused, with the reason', () => {
     const { d } = lockstepDriver()
-    d.queueBuild(6, 11, TowerKind.Single)
+    d.queueBuild(6, BUILD_ROW_MIN + 11, TowerKind.Single)
     d.refuseGhost(d.ghosts[0]!.stampedFor, 'tick-taken')
     expect(d.ghosts[0]!.state).toBe('refused')
     expect(d.ghosts[0]!.reason).toBe('tick-taken')
@@ -405,7 +403,7 @@ describe('local prediction', () => {
     // same 50ms would silently lose the second. Drag-placing a run of towers is
     // the core verb of the game.
     const { d, sent } = lockstepDriver()
-    d.queueBuild(6, 11, TowerKind.Single)
+    d.queueBuild(6, BUILD_ROW_MIN + 11, TowerKind.Single)
     d.queueBuild(7, 11, TowerKind.Single)
     d.queueBuild(8, 11, TowerKind.Single)
     expect(sent).toHaveLength(3)
@@ -418,7 +416,7 @@ describe('local prediction', () => {
   it('does not predict against a bot, where there is nothing to predict', () => {
     const d = new Driver(0, null)
     d.advance(0)
-    d.queueBuild(6, 11, TowerKind.Single)
+    d.queueBuild(6, BUILD_ROW_MIN + 11, TowerKind.Single)
     expect(d.ghosts).toHaveLength(0)
   })
 
@@ -428,7 +426,7 @@ describe('local prediction', () => {
     const { d } = lockstepDriver()
     run(d, 5)
     const before = d.hashes.entries().at(-1)!.hash
-    d.queueBuild(6, 11, TowerKind.Single)
+    d.queueBuild(6, BUILD_ROW_MIN + 11, TowerKind.Single)
     expect(d.ghosts).toHaveLength(1)
     expect(d.hashes.entries().at(-1)!.hash).toBe(before)
   })

@@ -1,7 +1,7 @@
 # ADR-0020 — Towers anchor on the 1-tile creep grid, not a 2-tile tower grid
 
 - **Date:** 2026-09-13
-- **Status:** Accepted — not implemented
+- **Status:** Accepted — implemented 2026-09-13
 
 ## Context
 

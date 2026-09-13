@@ -1,5 +1,6 @@
 import { beforeAll, afterAll } from 'vitest'
-import { createState, type GameState } from '../src/state'
+import { createState, insertTower, type GameState } from '../src/state'
+import { buildField } from '../src/field'
 import { step, Kind, type Command } from '../src/step'
 import {
   TowerKind,
@@ -7,6 +8,7 @@ import {
   liveBalanceData,
   type BalanceData,
 } from '../src/data'
+import { BUILD_ROW_MIN, GRID_W, TOWER_SIZE } from '../src/grid'
 
 /**
  * Shared test rig.
@@ -18,7 +20,14 @@ import {
  * By convention throughout the suite: **player 0 defends lane 0** and is the
  * subject of most assertions; **player 1 is the aggressor** whose sends land in
  * lane 0.
+ *
+ * Geometry: a tower is 2x2 and anchors on its top-left tile (ADR-0019/0020).
+ * `R` is the first buildable row; tests place towers at `R + n` rather than
+ * at literals so the spawn zone's depth is never baked into an assertion.
  */
+
+/** First buildable row. Anchors at `R` cover rows R and R+1. */
+export const R = BUILD_ROW_MIN
 
 /**
  * Turn off the opening build phase for one test file.
@@ -106,6 +115,27 @@ export function runUntil(
   return a
 }
 
+/**
+ * Advance `n` ticks from `s`, double-buffered, returning the final state.
+ *
+ * `s` is not written; the returned state is a fresh buffer the caller owns.
+ * Prefer this over `tick` in a loop, which allocates a whole state per call.
+ */
+export function advance(s: GameState, n: number): GameState {
+  let a = s
+  let b = createState()
+  let spare: GameState | null = null
+  for (let t = 0; t < n; t++) {
+    const out = step(a, [], b)
+    // The first step must not reuse `s` as a buffer; after that, two buffers
+    // rotate freely.
+    b = spare ?? createState()
+    spare = a === s ? null : a
+    a = out
+  }
+  return a
+}
+
 /** Give a player gold without going through the economy, for setup. */
 export function withGold(s: GameState, player: number, gold: number): GameState {
   ;(s.players[player] as { gold: number }).gold = gold
@@ -115,4 +145,51 @@ export function withGold(s: GameState, player: number, gold: number): GameState 
 /** Advance one tick, returning the new state. Buffers rotate internally. */
 export function tick(s: GameState, commands: Command[] = []): GameState {
   return step(s, commands, createState())
+}
+
+/**
+ * Put a tower on the board by hand, bypassing gold and every rule.
+ *
+ * For setting up states the placement rules exist to prevent, which is the
+ * only way to test that they prevent them. Rebuilds the field so the state is
+ * consistent afterwards.
+ */
+export function place(
+  s: GameState,
+  lane: number,
+  ax: number,
+  ay: number,
+  kind: TowerKind = TowerKind.Single,
+  level = 1,
+): number {
+  const l = s.lanes[lane]!
+  const slot = insertTower(l, s.nextTowerId, ax, ay, kind)
+  s.nextTowerId += 1
+  l.towers.level[slot] = level
+  buildField(l.blocked, l.field)
+  return slot
+}
+
+/**
+ * A wall of 2x2 towers across lane `lane` at rows y..y+1, by hand.
+ *
+ * Anchors step across by TOWER_SIZE; any anchor whose footprint would touch a
+ * column in `open` is skipped, so `open: [14, 15]` leaves a 2-wide gap at the
+ * right and `open: []` seals the row.
+ */
+export function wall(s: GameState, lane: number, y: number, open: readonly number[]): void {
+  for (let ax = 0; ax + TOWER_SIZE <= GRID_W; ax += TOWER_SIZE) {
+    let skip = false
+    for (let dx = 0; dx < TOWER_SIZE; dx++) if (open.includes(ax + dx)) skip = true
+    if (!skip) place(s, lane, ax, y)
+  }
+}
+
+/** Number of ticks a creep of `speed` tiles/tick needs for one bare lap. */
+export function bareLapTicks(speed: number): number {
+  return Math.ceil((s0().lanes[0]!.field.dist[0] as number) / speed)
+}
+
+function s0(): GameState {
+  return createState()
 }

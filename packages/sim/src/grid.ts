@@ -4,56 +4,133 @@
  * The sim speaks only in tile coordinates. World units, pixels and camera space
  * belong to the renderer and must never appear here.
  *
+ * **The tile is the creep tile and the only unit.** A creep occupies 1 × 1, a
+ * tower 2 × 2, and no code path may assume the two are the same size (ADR-0019).
+ * Every geometric constant lives in this file; nothing else in the repo may
+ * hard-code a lane dimension.
+ *
  * The lane runs **vertically**: creeps enter at the top and walk down.
  *
- *        x=0                    x=7
- *   y=0  +IN IN-----------------+   entrance row, two tiles, left side
- *        |                      |
- *        |                      |   rows 1..22 are the buildable maze
- *        |                      |
- *  y=23  +---------------OUT OUT+   exit row, two tiles, right side
+ *        x=0                          x=15
+ *   y=0  +------------------------------+
+ *        |          SPAWN ZONE          |   SPAWN_ROWS rows. Creeps appear
+ *        |     (10 rows, not buildable) |   anywhere in here. Never built on.
+ *  y=10  +------------------------------+
+ *        |                              |
+ *        |        BUILDABLE AREA        |   LANE_LENGTH rows. Towers are 2x2
+ *        |     (LANE_LENGTH rows)       |   and anchor on any tile whose
+ *        |                              |   footprint stays inside this area.
+ *        |                              |
+ * y=210  +------------------------------+
+ *        |          EXIT ZONE           |   EXIT_ROWS rows. A creep whose
+ *        |      (3 rows, not buildable) |   position enters here has leaked.
+ * y=212  +------------------------------+
  *
- * Entrance and exit sit on **opposite sides**, so the bare-lane route is
- * diagonal — 29 tiles rather than the 23 a straight drop would give. Both of
- * those rows are reserved: nothing builds there, which keeps spawning and exit
- * detection free of the "a tower appeared on the spawn tile" class of bug and
- * guarantees a creep never materialises inside a wall.
+ * Why the zones are whole rows rather than a few tiles: a creep entering or
+ * leaving is then never adjacent to a wall at the moment it is being placed,
+ * and the player gets a rule they can see ("the ends are free") instead of a
+ * handful of magic tiles.
  *
- * Width is the maze-richness knob and length is the pace knob; change one at a
- * time. At 8 wide a range-3 tower covers three passes of a serpentine at once,
- * which is what makes placement a decision rather than a uniform tiling. At 24
- * long a bare lap is ~15s and a full maze ~50s, a 4x spread.
+ * Length derivation, for the record (ADR-0019): the Reforged map is 160 x 128
+ * terrain tiles, one terrain tile holds one tower, so a lane is 8 terrain tiles
+ * = 16 creep tiles wide and the map is 256 creep tiles tall; after the border
+ * and the two zones, about 200 buildable rows. Nothing in the code depends on
+ * it being exactly 200 -- but every lap time scales with it, which is what
+ * ADR-0025 is about.
  *
  * Row-major indexing throughout: index = y * GRID_W + x. Every ordered
  * iteration in the sim breaks ties on this index, so it is load-bearing for
  * determinism, not just convenience.
  */
 
-export const GRID_W = 8
-export const GRID_H = 24
+/** Tiles across. A full row is LANE_WIDTH / TOWER_SIZE towers. */
+export const LANE_WIDTH = 16
+/** A tower's footprint is TOWER_SIZE x TOWER_SIZE tiles. */
+export const TOWER_SIZE = 2
+/** A creep's footprint is CREEP_SIZE x CREEP_SIZE tiles. The unit itself. */
+export const CREEP_SIZE = 1
+/** Rows of the spawn zone, at the top of the lane. */
+export const SPAWN_ROWS = 10
+/** Rows of the exit zone, at the bottom. */
+export const EXIT_ROWS = 3
+/** Buildable rows between the two zones. `[proposed]` 200 -- see ADR-0019. */
+export const LANE_LENGTH = 200
+/**
+ * Tiles between the two lanes when they are drawn side by side. `[proposed]`.
+ * The sim never reads it -- lanes do not touch -- but it is a lane dimension,
+ * and lane dimensions live here.
+ */
+export const LANE_GAP = 4
+
+/**
+ * Side of a spatial-hash cell, in tiles, for tower targeting. `[proposed]` 4.
+ *
+ * Not geometry, but it is sized against the geometry: a tower's range query
+ * touches (2r / HASH_CELL)^2 cells, so at 4 a range-10 tower visits ~36 cells
+ * where per-tile buckets would visit ~440. See towers.ts.
+ */
+export const HASH_CELL = 4
+
+export const GRID_W = LANE_WIDTH
+export const GRID_H = SPAWN_ROWS + LANE_LENGTH + EXIT_ROWS
 export const TILE_COUNT = GRID_W * GRID_H
+
+/** First and last row (inclusive) a footprint may occupy. */
+export const BUILD_ROW_MIN = SPAWN_ROWS
+export const BUILD_ROW_MAX = SPAWN_ROWS + LANE_LENGTH - 1
+/** First row of the exit zone. */
+export const EXIT_ROW_MIN = SPAWN_ROWS + LANE_LENGTH
+
+/**
+ * Most towers a lane can hold: the buildable area divided by a footprint.
+ * Footprints never overlap, so this bounds the dense tower list whatever the
+ * anchors are.
+ */
+export const MAX_TOWERS = (LANE_WIDTH * LANE_LENGTH) / (TOWER_SIZE * TOWER_SIZE)
 
 export interface Tile {
   readonly x: number
   readonly y: number
 }
 
-/** The two rows that exist for arriving and leaving, and are never built on. */
+export enum Zone {
+  Spawn = 0,
+  Build = 1,
+  Exit = 2,
+}
+
+export function zoneOfRow(y: number): Zone {
+  if (y < SPAWN_ROWS) return Zone.Spawn
+  if (y >= EXIT_ROW_MIN) return Zone.Exit
+  return Zone.Build
+}
+
+/**
+ * Every cell of the spawn zone, row-major. The BFS reachability question is
+ * asked of these, and `spawnPointFor` places creeps among them.
+ */
+export const SPAWN_INDICES: readonly number[] = (() => {
+  const out: number[] = []
+  for (let y = 0; y < SPAWN_ROWS; y++) for (let x = 0; x < GRID_W; x++) out.push(y * GRID_W + x)
+  return out
+})()
+
+/** Every cell of the exit zone, row-major. The flow field is seeded from these. */
+export const EXIT_INDICES: readonly number[] = (() => {
+  const out: number[] = []
+  for (let y = EXIT_ROW_MIN; y < GRID_H; y++) for (let x = 0; x < GRID_W; x++) out.push(y * GRID_W + x)
+  return out
+})()
+
+/**
+ * Transitional exports for the client, which still draws an "entrance row"
+ * and an "exit row" from the old 8 x 24 board. Phase 3 of the restructure
+ * replaces them with the zones; nothing in the sim reads them.
+ */
 export const ENTRANCE_ROW = 0
 export const EXIT_ROW = GRID_H - 1
-
-/** Spawn and exit each occupy two tiles, per the design doc. */
-export const SPAWN_TILES: readonly Tile[] = [
-  { x: 0, y: ENTRANCE_ROW },
-  { x: 1, y: ENTRANCE_ROW },
-]
-export const EXIT_TILES: readonly Tile[] = [
-  { x: GRID_W - 2, y: EXIT_ROW },
-  { x: GRID_W - 1, y: EXIT_ROW },
-]
-
-export const SPAWN_INDICES: readonly number[] = SPAWN_TILES.map(tileIndex)
-export const EXIT_INDICES: readonly number[] = EXIT_TILES.map(tileIndex)
+export const SPAWN_TILES: readonly Tile[] = SPAWN_INDICES.map((i) => ({ x: tileX(i), y: tileY(i) }))
+export const EXIT_TILES: readonly Tile[] = EXIT_INDICES.map((i) => ({ x: tileX(i), y: tileY(i) }))
 
 /**
  * Neighbour order is N, E, S, W and never changes.
@@ -96,22 +173,61 @@ export function inBounds(x: number, y: number): boolean {
 }
 
 export function isSpawnIndex(index: number): boolean {
-  return SPAWN_INDICES.includes(index)
+  return tileY(index) < SPAWN_ROWS
 }
 
 export function isExitIndex(index: number): boolean {
-  return EXIT_INDICES.includes(index)
+  return tileY(index) >= EXIT_ROW_MIN
 }
 
-/**
- * Tiles no tower may occupy: the whole entrance row and the whole exit row.
- *
- * Wider than spawn-and-exit-tiles-only on purpose. Reserving the full rows
- * means a creep entering or leaving is never adjacent to a wall it has to path
- * around at the exact moment it is being teleported, and it gives the player a
- * rule they can see ("the two end rows are free") instead of two magic tiles.
- */
-export function isReservedIndex(index: number): boolean {
+/** Whether a tile may hold part of a tower: inside the buildable rows. */
+export function isBuildIndex(index: number): boolean {
   const y = tileY(index)
-  return y === ENTRANCE_ROW || y === EXIT_ROW
+  return y >= BUILD_ROW_MIN && y <= BUILD_ROW_MAX
+}
+
+// --- footprints --------------------------------------------------------------
+
+/** Cells of a footprint, always TOWER_SIZE squared. */
+export const FOOTPRINT_CELLS = TOWER_SIZE * TOWER_SIZE
+
+/**
+ * The tile indices a tower anchored at (ax, ay) occupies, row-major into
+ * `out`. The anchor is the footprint's top-left (lowest x, lowest y) tile.
+ *
+ * Callers must have checked `footprintInGrid` first: an anchor on the last
+ * column or row would wrap into the next row here, silently.
+ */
+export function footprintCells(ax: number, ay: number, out: Int32Array): void {
+  let n = 0
+  for (let dy = 0; dy < TOWER_SIZE; dy++) {
+    for (let dx = 0; dx < TOWER_SIZE; dx++) {
+      out[n] = (ay + dy) * GRID_W + (ax + dx)
+      n += 1
+    }
+  }
+}
+
+/** Whether the whole footprint lies inside the lane. */
+export function footprintInGrid(ax: number, ay: number): boolean {
+  return ax >= 0 && ay >= 0 && ax + TOWER_SIZE <= GRID_W && ay + TOWER_SIZE <= GRID_H
+}
+
+/** Whether the whole footprint lies inside the buildable rows. */
+export function footprintInBuildArea(ax: number, ay: number): boolean {
+  return footprintInGrid(ax, ay) && ay >= BUILD_ROW_MIN && ay + TOWER_SIZE - 1 <= BUILD_ROW_MAX
+}
+
+/** Whether (x, y) lies inside the footprint anchored at (ax, ay). */
+export function footprintContains(ax: number, ay: number, x: number, y: number): boolean {
+  return x >= ax && x < ax + TOWER_SIZE && y >= ay && y < ay + TOWER_SIZE
+}
+
+/** The tower's centre, which is where range is measured from. */
+export function footprintCentreX(ax: number): number {
+  return ax + TOWER_SIZE / 2
+}
+
+export function footprintCentreY(ay: number): number {
+  return ay + TOWER_SIZE / 2
 }

@@ -1,5 +1,5 @@
 import {
-  createState, step, buildField, tileIndex, templateAt, mazeLength,
+  createState, step, buildField, insertTower, footprintOverlapsTower, templateAt, mazeLength,
   CREEPS, TowerKind, Kind,
   type GameState, type Command, type CreepSpec,
 } from '@ltw/sim'
@@ -24,12 +24,10 @@ function fortify(s: GameState, towers: number, level: number): number {
   let placed = 0
   for (let i = 0; i < template.tiles.length && placed < towers; i++) {
     const t = template.tiles[i]!
-    const idx = tileIndex(t)
-    if (lane.blocked[idx] === 1) continue
-    lane.blocked[idx] = 1
-    lane.towers.kind[idx] = TowerKind.Single
-    lane.towers.level[idx] = level
-    lane.towers.cooldown[idx] = 0
+    if (footprintOverlapsTower(lane, t.x, t.y)) continue
+    const slot = insertTower(lane, s.nextTowerId, t.x, t.y, TowerKind.Single)
+    s.nextTowerId += 1
+    lane.towers.level[slot] = level
     placed += 1
   }
   buildField(lane.blocked, lane.field)

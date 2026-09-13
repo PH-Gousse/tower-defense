@@ -9,46 +9,65 @@ import {
   TILE_COUNT,
   GRID_W,
   GRID_H,
+  TOWER_SIZE,
+  BUILD_ROW_MIN,
+  EXIT_ROW_MIN,
   Dir,
   SPAWN_INDICES,
   EXIT_INDICES,
+  FOOTPRINT_CELLS,
+  footprintCells,
   tileIndex,
+  tileY,
 } from '../src/grid'
 
 const empty = () => new Uint8Array(TILE_COUNT)
+const cells = new Int32Array(FOOTPRINT_CELLS)
 
-/**
- * Steps from a spawn tile to the nearest exit tile down a bare lane.
- *
- * The lane is vertical with the entrance top-left and the exit bottom-right, so
- * the bare route is diagonal: the full drop plus the sideways crossing.
- */
-const bareDist = (spawnX: number) => GRID_H - 1 + (GRID_W - 2 - spawnX)
-
-/** A wall across the lane. `gap` is the one column left open, or -1 to seal. */
-function wall(b: Uint8Array, y: number, gap: number): void {
-  for (let x = 0; x < GRID_W; x++) if (x !== gap) b[tileIndex({ x, y })] = 1
+/** Mark a 2x2 footprint blocked. */
+function tower(b: Uint8Array, ax: number, ay: number): void {
+  footprintCells(ax, ay, cells)
+  for (let k = 0; k < FOOTPRINT_CELLS; k++) b[cells[k] as number] = 1
 }
 
+/**
+ * A wall of towers across the lane at rows y..y+1. Columns listed in `open`
+ * are left clear; an anchor whose footprint touches one is skipped.
+ */
+function wall(b: Uint8Array, y: number, open: readonly number[]): void {
+  for (let ax = 0; ax + TOWER_SIZE <= GRID_W; ax += TOWER_SIZE) {
+    if (open.includes(ax) || open.includes(ax + 1)) continue
+    tower(b, ax, y)
+  }
+}
+
+/** Steps from a spawn cell straight down to the exit zone on a bare lane. */
+const bareDist = (y: number) => EXIT_ROW_MIN - y
+
 describe('flow field', () => {
-  it('puts distance 0 on the exit tiles', () => {
+  it('puts distance 0 on every exit-zone cell', () => {
     const f = buildField(empty())
     for (const e of EXIT_INDICES) expect(f.dist[e]).toBe(0)
   })
 
-  it('measures an empty lane as the diagonal walk', () => {
+  it('measures an empty lane as a straight drop from each spawn cell', () => {
     const f = buildField(empty())
-    // Entrance top-left, exit bottom-right: drop the full height, cross the
-    // width. No detour, but not a straight line either.
-    SPAWN_INDICES.forEach((s, i) => expect(f.dist[s]).toBe(bareDist(i)))
-    // The score is the worst spawn, which is the one furthest from the exit.
+    for (const s of SPAWN_INDICES) expect(f.dist[s]).toBe(bareDist(tileY(s)))
+    // The score is the worst spawn cell: the far row of the zone.
     expect(mazeLength(f)).toBe(bareDist(0))
+  })
+
+  it('points every cell of an empty lane south', () => {
+    const f = buildField(empty())
+    for (let i = 0; i < TILE_COUNT; i++) {
+      if (tileY(i) >= EXIT_ROW_MIN) continue
+      expect(f.dir[i], `tile ${i}`).toBe(Dir.S)
+    }
   })
 
   it('points every reachable tile at a neighbour one step closer', () => {
     const b = empty()
-    b[tileIndex({ x: 3, y: 11 })] = 1
-    b[tileIndex({ x: 4, y: 11 })] = 1
+    tower(b, 6, BUILD_ROW_MIN + 5)
     const f = buildField(b)
     let checked = 0
     for (let i = 0; i < TILE_COUNT; i++) {
@@ -57,12 +76,12 @@ describe('flow field', () => {
       expect(f.dir[i]).not.toBe(Dir.None)
       checked++
     }
-    expect(checked).toBeGreaterThan(TILE_COUNT - 12)
+    expect(checked).toBe(TILE_COUNT - EXIT_INDICES.length - FOOTPRINT_CELLS)
   })
 
   it('is uniquely determined by N,E,S,W order — same input, same field', () => {
     const b = empty()
-    wall(b, 12, 0)
+    wall(b, BUILD_ROW_MIN + 4, [0, 1])
     const a = buildField(b)
     const c = buildField(b)
     expect(Array.from(a.dist)).toEqual(Array.from(c.dist))
@@ -71,17 +90,48 @@ describe('flow field', () => {
 
   it('lengthens the maze when a wall forces a detour', () => {
     const b = empty()
-    // A wall across the lane with its only gap on the far side of the drop
-    // forces the route to cross the lane twice instead of once.
-    wall(b, 12, GRID_W - 1)
+    wall(b, BUILD_ROW_MIN + 4, [GRID_W - 2, GRID_W - 1])
     const f = buildField(b)
     expect(spawnsReachable(f)).toBe(true)
     expect(mazeLength(f)).toBeGreaterThan(bareDist(0))
+    // The wall moved every spawn cell by the same detour, so the far-left
+    // corner is still the worst case and it walks the width to the gap.
+    expect(mazeLength(f)).toBe(bareDist(0) + (GRID_W - 2))
   })
 
-  it('reports the spawn unreachable when the lane is sealed', () => {
+  it('passes a 1-wide gap: creeps are one tile, so one tile is a corridor', () => {
+    // Towers at anchors 0 and 3 leave column 2 open between them -- the
+    // half-slot. The rest of the row is closed by the ordinary stride, and
+    // the odd column at the far right is closed by a tower one row down.
     const b = empty()
-    wall(b, 12, -1)
+    const y = BUILD_ROW_MIN + 4
+    tower(b, 0, y)
+    for (let ax = 3; ax + TOWER_SIZE <= GRID_W; ax += TOWER_SIZE) tower(b, ax, y)
+    tower(b, GRID_W - TOWER_SIZE, y + TOWER_SIZE)
+    const f = buildField(b)
+    expect(spawnsReachable(f)).toBe(true)
+    // The route runs through the slot and nowhere else on that row.
+    expect(f.dist[tileIndex({ x: 2, y })]).not.toBe(UNREACHABLE)
+    expect(f.dist[tileIndex({ x: 1, y })]).toBe(UNREACHABLE)
+    expect(f.dist[tileIndex({ x: 3, y })]).toBe(UNREACHABLE)
+    // Column 15 is open at the wall row but dead-ends under it.
+    expect(f.dist[tileIndex({ x: GRID_W - 1, y })]).toBeGreaterThan(f.dist[tileIndex({ x: 2, y })] as number)
+  })
+
+  it('does not pass a diagonal: towers touching at a corner seal the gap', () => {
+    // A staircase of towers from the left edge to the right, each touching the
+    // next only at a corner. Under 4-neighbour connectivity that is a wall.
+    const b = empty()
+    for (let k = 0; k < GRID_W / TOWER_SIZE; k++) {
+      tower(b, k * TOWER_SIZE, BUILD_ROW_MIN + 2 + k * TOWER_SIZE)
+    }
+    const f = buildField(b)
+    expect(spawnsReachable(f)).toBe(false)
+  })
+
+  it('reports the spawn zone unreachable when the lane is sealed', () => {
+    const b = empty()
+    wall(b, BUILD_ROW_MIN + 4, [])
     const f = buildField(b)
     expect(spawnsReachable(f)).toBe(false)
     for (const s of SPAWN_INDICES) expect(f.dist[s]).toBe(UNREACHABLE)
@@ -90,11 +140,19 @@ describe('flow field', () => {
 
   it('reuses caller buffers without leaking stale distances', () => {
     const sealed = new Uint8Array(TILE_COUNT)
-    wall(sealed, 12, -1)
+    wall(sealed, BUILD_ROW_MIN + 4, [])
     const reused = buildField(sealed)
     // Same buffers, now with an open lane: nothing from the sealed run survives.
     const open = buildField(empty(), reused)
     expect(spawnsReachable(open)).toBe(true)
     expect(open.dist[SPAWN_INDICES[0] as number]).toBe(bareDist(0))
+  })
+
+  it('covers the whole lane, not a smaller one', () => {
+    // A guard against a hard-coded 24 surviving somewhere: the field must
+    // reach the bottom of the spawn zone through GRID_H rows of cells.
+    const f = buildField(empty())
+    expect(f.dist.length).toBe(GRID_W * GRID_H)
+    expect(f.dist[0]).toBe(EXIT_ROW_MIN)
   })
 })

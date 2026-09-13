@@ -10,7 +10,7 @@
       "kind": "build",
       "tower": 0,
       "x": 0,
-      "y": 2
+      "y": 11
     },
     {
       "at": 0,
@@ -18,119 +18,119 @@
       "kind": "build",
       "tower": 0,
       "x": 0,
-      "y": 2
+      "y": 11
     },
     {
       "at": 10,
       "player": 0,
       "kind": "build",
       "tower": 0,
-      "x": 1,
-      "y": 2
+      "x": 2,
+      "y": 11
     },
     {
       "at": 10,
       "player": 1,
       "kind": "build",
       "tower": 0,
-      "x": 1,
-      "y": 2
+      "x": 2,
+      "y": 11
     },
     {
       "at": 20,
       "player": 0,
       "kind": "build",
       "tower": 0,
-      "x": 2,
-      "y": 2
+      "x": 4,
+      "y": 11
     },
     {
       "at": 20,
       "player": 1,
       "kind": "build",
       "tower": 0,
-      "x": 2,
-      "y": 2
+      "x": 4,
+      "y": 11
     },
     {
       "at": 30,
       "player": 0,
       "kind": "build",
       "tower": 1,
-      "x": 3,
-      "y": 2
+      "x": 6,
+      "y": 11
     },
     {
       "at": 30,
       "player": 1,
       "kind": "build",
       "tower": 1,
-      "x": 3,
-      "y": 2
+      "x": 6,
+      "y": 11
     },
     {
       "at": 40,
       "player": 0,
       "kind": "build",
       "tower": 2,
-      "x": 4,
-      "y": 2
+      "x": 8,
+      "y": 11
     },
     {
       "at": 40,
       "player": 1,
       "kind": "build",
       "tower": 2,
-      "x": 4,
-      "y": 2
+      "x": 8,
+      "y": 11
     },
     {
       "at": 50,
       "player": 0,
       "kind": "build",
       "tower": 0,
-      "x": 5,
-      "y": 2
+      "x": 10,
+      "y": 11
     },
     {
       "at": 50,
       "player": 1,
       "kind": "build",
       "tower": 0,
-      "x": 5,
-      "y": 2
+      "x": 10,
+      "y": 11
     },
     {
       "at": 60,
       "player": 0,
       "kind": "build",
       "tower": 0,
-      "x": 6,
-      "y": 2
+      "x": 12,
+      "y": 11
     },
     {
       "at": 60,
       "player": 1,
       "kind": "build",
       "tower": 0,
-      "x": 6,
-      "y": 2
+      "x": 12,
+      "y": 11
     },
     {
       "at": 70,
       "player": 0,
       "kind": "build",
       "tower": 0,
-      "x": 7,
-      "y": 5
+      "x": 14,
+      "y": 15
     },
     {
       "at": 70,
       "player": 1,
       "kind": "build",
       "tower": 0,
-      "x": 7,
-      "y": 5
+      "x": 14,
+      "y": 15
     },
     {
       "at": 400,
@@ -428,90 +428,6 @@
     },
     {
       "at": 410,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 430,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 430,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 450,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 450,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 460,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 460,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 500,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 520,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 520,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 550,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 550,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 580,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 580,
       "player": 1,
       "kind": "send",
       "creep": 0
@@ -529,8 +445,14 @@
       "creep": 0
     },
     {
-      "at": 700,
+      "at": 660,
       "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 660,
+      "player": 1,
       "kind": "send",
       "creep": 0
     },
@@ -715,31 +637,13 @@
       "creep": 0
     },
     {
-      "at": 700,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 730,
+      "at": 710,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 730,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 750,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 750,
+      "at": 710,
       "player": 1,
       "kind": "send",
       "creep": 0
@@ -757,158 +661,152 @@
       "creep": 0
     },
     {
-      "at": 800,
+      "at": 810,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 800,
+      "at": 810,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 830,
+      "at": 880,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 830,
+      "at": 880,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1000,
+      "at": 930,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1000,
+      "at": 930,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 980,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1000,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1000,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1000,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1000,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1000,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1000,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1000,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1000,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1000,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1000,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1000,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1000,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1000,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1000,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1000,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1000,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1000,
+      "at": 980,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
       "at": 1000,
-      "player": 1,
+      "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
       "at": 1000,
-      "player": 1,
+      "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
       "at": 1000,
-      "player": 1,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 0,
       "kind": "send",
       "creep": 0
     },
@@ -997,25 +895,31 @@
       "creep": 0
     },
     {
-      "at": 1030,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1030,
+      "at": 1000,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1050,
+      "at": 1000,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1000,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1010,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1050,
+      "at": 1010,
       "player": 1,
       "kind": "send",
       "creep": 0
@@ -1033,176 +937,170 @@
       "creep": 0
     },
     {
-      "at": 1100,
+      "at": 1110,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1100,
+      "at": 1110,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1130,
+      "at": 1170,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1130,
+      "at": 1170,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1300,
+      "at": 1220,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1300,
+      "at": 1220,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1270,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1300,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1300,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1300,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1300,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1300,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1300,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1300,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1300,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1300,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1300,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1300,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1300,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1300,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1300,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1300,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1300,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1300,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1300,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1300,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1300,
+      "at": 1270,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
       "at": 1300,
-      "player": 1,
+      "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
       "at": 1300,
-      "player": 1,
+      "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
       "at": 1300,
-      "player": 1,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
+      "player": 0,
       "kind": "send",
       "creep": 0
     },
@@ -1309,13 +1207,19 @@
       "creep": 0
     },
     {
-      "at": 1330,
-      "player": 0,
+      "at": 1300,
+      "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1330,
+      "at": 1300,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1300,
       "player": 1,
       "kind": "send",
       "creep": 0
@@ -1333,49 +1237,49 @@
       "creep": 0
     },
     {
-      "at": 1360,
+      "at": 1410,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1360,
+      "at": 1410,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1400,
+      "at": 1460,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1400,
+      "at": 1460,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1430,
+      "at": 1520,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1430,
+      "at": 1520,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1450,
+      "at": 1570,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1450,
+      "at": 1570,
       "player": 1,
       "kind": "send",
       "creep": 0
@@ -1509,12 +1413,6 @@
     {
       "at": 1600,
       "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1600,
-      "player": 1,
       "kind": "send",
       "creep": 0
     },
@@ -1645,49 +1543,19 @@
       "creep": 0
     },
     {
-      "at": 1610,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1610,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1610,
+      "at": 1600,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1610,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1630,
+      "at": 1620,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1630,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1660,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1660,
+      "at": 1620,
       "player": 1,
       "kind": "send",
       "creep": 0
@@ -1705,18 +1573,6 @@
       "creep": 0
     },
     {
-      "at": 1700,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1700,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
       "at": 1720,
       "player": 0,
       "kind": "send",
@@ -1724,18 +1580,6 @@
     },
     {
       "at": 1720,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1750,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1750,
       "player": 1,
       "kind": "send",
       "creep": 0
@@ -1753,6 +1597,30 @@
       "creep": 0
     },
     {
+      "at": 1830,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1830,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1880,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1880,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
       "at": 1900,
       "player": 0,
       "kind": "send",
@@ -2036,42 +1904,30 @@
     },
     {
       "at": 1910,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1910,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1910,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1920,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1910,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1910,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1910,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1910,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1910,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1910,
+      "at": 1920,
       "player": 1,
       "kind": "send",
       "creep": 0
@@ -2096,18 +1952,6 @@
     },
     {
       "at": 1960,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1980,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 1980,
       "player": 1,
       "kind": "send",
       "creep": 0
@@ -2149,13 +1993,37 @@
       "creep": 0
     },
     {
-      "at": 2090,
+      "at": 2110,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 2090,
+      "at": 2110,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2140,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2140,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2190,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2190,
       "player": 1,
       "kind": "send",
       "creep": 0
@@ -2163,318 +2031,390 @@
     {
       "at": 2200,
       "player": 0,
-      "kind": "build",
-      "tower": 0,
-      "x": 4,
-      "y": 5
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
     },
     {
       "at": 2200,
       "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2200,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2210,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2210,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2210,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2210,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2210,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2210,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2210,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2210,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2210,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2210,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2210,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2210,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2240,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2240,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2380,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2380,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2450,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2450,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2500,
+      "player": 0,
       "kind": "build",
       "tower": 0,
-      "x": 4,
-      "y": 5
-    },
-    {
-      "at": 2500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
+      "x": 6,
+      "y": 15
     },
     {
       "at": 2500,
       "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2500,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2510,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2510,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2510,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2510,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2510,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2510,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
+      "kind": "build",
+      "tower": 0,
+      "x": 6,
+      "y": 15
     },
     {
       "at": 2510,
@@ -2501,145 +2441,49 @@
       "creep": 0
     },
     {
-      "at": 2510,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2510,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2510,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2510,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2510,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2510,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2530,
+      "at": 2520,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 2530,
+      "at": 2520,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 2560,
+      "at": 2580,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 2560,
+      "at": 2580,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 2570,
+      "at": 2630,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 2570,
+      "at": 2630,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 2600,
+      "at": 2700,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 2600,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2620,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2620,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2650,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2650,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2670,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2670,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2690,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2690,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2720,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2720,
+      "at": 2700,
       "player": 1,
       "kind": "send",
       "creep": 0
@@ -2649,22 +2493,16 @@
       "player": 0,
       "kind": "build",
       "tower": 0,
-      "x": 3,
-      "y": 5
+      "x": 12,
+      "y": 15
     },
     {
       "at": 2800,
       "player": 1,
       "kind": "build",
       "tower": 0,
-      "x": 3,
-      "y": 5
-    },
-    {
-      "at": 2810,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
+      "x": 12,
+      "y": 15
     },
     {
       "at": 2810,
@@ -2691,19 +2529,13 @@
       "creep": 0
     },
     {
-      "at": 2810,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2820,
+      "at": 3040,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 2820,
+      "at": 3040,
       "player": 1,
       "kind": "send",
       "creep": 0
@@ -2713,28 +2545,16 @@
       "player": 0,
       "kind": "build",
       "tower": 0,
-      "x": 2,
-      "y": 5
+      "x": 10,
+      "y": 15
     },
     {
       "at": 3100,
       "player": 1,
       "kind": "build",
       "tower": 0,
-      "x": 2,
-      "y": 5
-    },
-    {
-      "at": 3110,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3110,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
+      "x": 10,
+      "y": 15
     },
     {
       "at": 3110,
@@ -2761,25 +2581,13 @@
       "creep": 0
     },
     {
-      "at": 3110,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3110,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3120,
+      "at": 3300,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 3120,
+      "at": 3300,
       "player": 1,
       "kind": "send",
       "creep": 0
@@ -2789,312 +2597,62 @@
       "player": 0,
       "kind": "build",
       "tower": 0,
-      "x": 1,
-      "y": 8
+      "x": 8,
+      "y": 14
     },
     {
       "at": 3400,
       "player": 1,
-      "kind": "send",
-      "creep": 0
+      "kind": "build",
+      "tower": 0,
+      "x": 8,
+      "y": 14
     },
     {
-      "at": 3400,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3400,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3400,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3400,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3400,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3400,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3400,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3400,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3400,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3400,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3400,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3400,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3400,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3400,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3400,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3400,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3400,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3400,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3400,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3400,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3400,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3410,
+      "at": 3550,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 3410,
+      "at": 3550,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 3410,
+      "at": 3550,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 3410,
+      "at": 3550,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 3410,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3410,
+      "at": 3550,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 3410,
+      "at": 3550,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 3410,
+      "at": 3550,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 3410,
+      "at": 3550,
       "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3410,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3410,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3410,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3410,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3410,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3410,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3410,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3410,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3410,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3430,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3440,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3450,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3460,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3470,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3500,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3530,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3560,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3590,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3600,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3620,
-      "player": 0,
       "kind": "send",
       "creep": 0
     },
@@ -3103,16 +2661,140 @@
       "player": 0,
       "kind": "build",
       "tower": 0,
-      "x": 2,
-      "y": 8
+      "x": 6,
+      "y": 19
     },
     {
       "at": 3700,
       "player": 1,
-      "kind": "build",
-      "tower": 0,
-      "x": 1,
-      "y": 8
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3700,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
     },
     {
       "at": 3710,
@@ -3134,102 +2816,126 @@
     },
     {
       "at": 3710,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3710,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3710,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3710,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3710,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3710,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3710,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3710,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3710,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3710,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3710,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3790,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 3710,
+      "at": 3810,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3860,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 3710,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3710,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3710,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3710,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3710,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3710,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3710,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3710,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3720,
+      "at": 3880,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 3720,
+      "at": 3910,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3930,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3950,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3980,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 3980,
       "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3740,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3770,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3780,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 3840,
-      "player": 0,
       "kind": "send",
       "creep": 0
     }
   ],
-  "expectedHash": "b8b5b547",
+  "expectedHash": "a54e337e",
   "data": {
     "sellRefund": 0.6,
     "archetypes": [

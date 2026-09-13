@@ -1,7 +1,14 @@
-import { TILE_COUNT, SPAWN_INDICES, tileX, tileY } from './grid'
+import {
+  MAX_TOWERS,
+  SPAWN_INDICES,
+  tileX,
+  tileY,
+  footprintCentreX,
+  footprintCentreY,
+} from './grid'
 import { pathFrom } from './path'
 import { TowerKind, CREEPS, ARCHETYPES, levelOf, type CreepSpec, type TowerArchetype } from './data'
-import type { Lane } from './state'
+import type { Lane, Towers } from './state'
 
 /**
  * How many creeps a maze lets through: the bot's model of a maze's strength.
@@ -39,12 +46,23 @@ import type { Lane } from './state'
  * size, splash against numbers, slow against speed. `SPREAD` is the one fitted
  * constant, and how it was fitted is written on it.
  *
+ * Towers are read from the lane's dense tower list, and range is measured
+ * from the footprint centre, exactly as `fireTowers` measures it (ADR-0019).
+ * The calibration below was fitted on the old 8 x 24 board with one-tile
+ * towers; it has NOT been re-fitted for this one, and `pnpm --filter
+ * @ltw/harness flood` is how to do that. Issue #41 / ADR-0025.
+ *
  * Deterministic and allocation-free after module load, because it runs inside
  * the sim package under the sim's arithmetic rules: `+ - * /`, `ceil`, `min`
  * and `max`, distances compared squared.
  */
 
-/** A tower to imagine in place of whatever stands on its tile: a candidate build or upgrade. */
+/**
+ * A tower to imagine in place of whatever stands there: a candidate build or
+ * upgrade. `tile` is an ANCHOR index. If a tower already covers that tile the
+ * override replaces its kind and level (an upgrade); otherwise it is one more
+ * tower anchored there (a build).
+ */
 export interface TowerOverride {
   readonly tile: number
   readonly kind: TowerKind
@@ -68,15 +86,19 @@ export interface TowerOverride {
  */
 const SPREAD = 0.2
 
+/** One extra slot for an override that adds a tower. */
+const SCRATCH_TOWERS = MAX_TOWERS + 1
 /** Route tiles within range of each tower, scratch. */
-const reach = new Int32Array(TILE_COUNT)
-const kindAt = new Int8Array(TILE_COUNT)
-const levelAt = new Int8Array(TILE_COUNT)
+const reach = new Int32Array(SCRATCH_TOWERS)
+const kindAt = new Int8Array(SCRATCH_TOWERS)
+const levelAt = new Int8Array(SCRATCH_TOWERS)
+const centreX = new Float64Array(SCRATCH_TOWERS)
+const centreY = new Float64Array(SCRATCH_TOWERS)
 const MAX_ROSTER = 64
 const lanePop = new Int32Array(MAX_ROSTER)
 const wavePop = new Int32Array(MAX_ROSTER)
 
-/** The route creeps walk in a lane, entrance to exit. */
+/** The route creeps walk in a lane, from the first spawn cell to the exit. */
 export function routeOf(lane: Lane, out: number[] = []): number[] {
   return pathFrom(lane.field, SPAWN_INDICES[0] as number, out)
 }
@@ -98,61 +120,79 @@ export function population(lane: Lane, out: Int32Array): number {
 }
 
 /**
+ * Copy the towers into the scratch arrays, applying the override. Returns how
+ * many towers the scratch holds.
+ */
+function loadTowers(towers: Towers, override: TowerOverride | null): number {
+  let n = towers.count
+  for (let s = 0; s < n; s++) {
+    kindAt[s] = towers.kind[s] as number
+    levelAt[s] = towers.level[s] as number
+    centreX[s] = footprintCentreX(towers.anchorX[s] as number)
+    centreY[s] = footprintCentreY(towers.anchorY[s] as number)
+  }
+  if (override) {
+    const slot = towers.at[override.tile] as number
+    if (slot !== -1) {
+      kindAt[slot] = override.kind
+      levelAt[slot] = override.level
+    } else {
+      kindAt[n] = override.kind
+      levelAt[n] = override.level
+      centreX[n] = footprintCentreX(tileX(override.tile))
+      centreY[n] = footprintCentreY(tileY(override.tile))
+      n += 1
+    }
+  }
+  return n
+}
+
+/**
  * Creeps predicted to survive one lap of this maze, out of a population of
  * `counts[i]` creeps of roster entry `i`. Fractional: 2.4 means two leak and a
  * third nearly does.
  *
- * `kinds` and `levels` are the lane's tower arrays; `override` stands a
- * different tower on one tile without touching them, which is how a candidate
- * is costed before it is bought.
+ * `override` stands a different tower on one anchor without touching the lane,
+ * which is how a candidate is costed before it is bought.
  */
 export function floodLeaks(
   route: readonly number[],
-  kinds: ArrayLike<number>,
-  levels: ArrayLike<number>,
+  towers: Towers,
   counts: ArrayLike<number>,
   override: TowerOverride | null = null,
 ): number {
   const routeLen = route.length
   // A sealed lane has no route and nothing leaks from it; the sim sends the
-  // creeps back to the entrance instead.
+  // creeps back to the spawn zone instead.
   if (routeLen === 0) return 0
   const roster = CREEPS.length < counts.length ? CREEPS.length : counts.length
   let total = 0
   for (let i = 0; i < roster; i++) total += counts[i] as number
   if (total <= 0) return 0
 
-  for (let t = 0; t < TILE_COUNT; t++) {
-    kindAt[t] = kinds[t] as number
-    levelAt[t] = levels[t] as number
-  }
-  if (override) {
-    kindAt[override.tile] = override.kind
-    levelAt[override.tile] = override.level
-  }
+  const n = loadTowers(towers, override)
 
   // Pass one: how much of the route each tower reaches, and how much of it
-  // the slows cover between them.
+  // the slows cover between them. Route cells are measured at their centres,
+  // towers at theirs, the same geometry `findTarget` uses.
   let slowTiles = 0
   let slowPct = 0
-  for (let t = 0; t < TILE_COUNT; t++) {
-    reach[t] = 0
+  for (let t = 0; t < n; t++) {
     const kind = kindAt[t] as number
-    if (kind === -1) continue
     const lv = levelOf(kind as TowerKind, levelAt[t] as number)
     const r2 = lv.range * lv.range
-    const tx = tileX(t)
-    const ty = tileY(t)
-    let n = 0
+    const tx = centreX[t] as number
+    const ty = centreY[t] as number
+    let hits = 0
     for (let i = 0; i < routeLen; i++) {
       const r = route[i] as number
-      const dx = tileX(r) - tx
-      const dy = tileY(r) - ty
-      if (dx * dx + dy * dy <= r2) n += 1
+      const dx = tileX(r) + 0.5 - tx
+      const dy = tileY(r) + 0.5 - ty
+      if (dx * dx + dy * dy <= r2) hits += 1
     }
-    reach[t] = n
+    reach[t] = hits
     if (kind === TowerKind.Slow) {
-      slowTiles += n
+      slowTiles += hits
       const pct = lv.slowPercent ?? 0
       if (pct > slowPct) slowPct = pct
     }
@@ -177,13 +217,13 @@ export function floodLeaks(
 
   let leaks = 0
   for (let i = 0; i < roster; i++) {
-    const n = counts[i] as number
-    if (n <= 0) continue
+    const count = counts[i] as number
+    if (count <= 0) continue
     const spec = CREEPS[i] as CreepSpec
     let speed = spec.speed * slowFactor
     if (speed < 0.001) speed = 0.001
     const lap = routeLen / speed
-    const share = n / total
+    const share = count / total
 
     // Splash lands on every creep near its target, so what it does to one
     // creep it does to the crowd: the same per-creep damage however many
@@ -192,7 +232,7 @@ export function floodLeaks(
     // killed 794 of 880 streamed tanks where twenty single-target towers
     // killed 122.
     let splash = 0
-    for (let t = 0; t < TILE_COUNT; t++) {
+    for (let t = 0; t < n; t++) {
       if (kindAt[t] !== TowerKind.Splash) continue
       const r = reach[t] as number
       if (r === 0) continue
@@ -208,9 +248,9 @@ export function floodLeaks(
     // half of it on average.
     const hpLeft = spec.hp - splash * 0.5
     let kills = 0
-    for (let t = 0; t < TILE_COUNT; t++) {
+    for (let t = 0; t < n; t++) {
       const kind = kindAt[t] as number
-      if (kind === -1 || kind === TowerKind.Splash) continue
+      if (kind === TowerKind.Splash) continue
       const r = reach[t] as number
       if (r === 0) continue
       const lv = levelOf(kind as TowerKind, levelAt[t] as number)
@@ -219,7 +259,7 @@ export function floodLeaks(
       const shots = firing / (lv.cooldownTicks + 1)
       kills += (shots * share) / Math.ceil(hpLeft / lv.damage)
     }
-    if (n > kills) leaks += n - kills
+    if (count > kills) leaks += count - kills
   }
   return leaks
 }
@@ -235,7 +275,7 @@ export function floodLeaks(
  */
 export function laneThreat(lane: Lane, route: readonly number[], override: TowerOverride | null = null): number {
   population(lane, lanePop)
-  return floodLeaks(route, lane.towers.kind, lane.towers.level, lanePop, override)
+  return floodLeaks(route, lane.towers, lanePop, override)
 }
 
 /**
@@ -246,6 +286,6 @@ export function waveLeaks(lane: Lane, route: readonly number[], creep: number, c
   const before = laneThreat(lane, route)
   population(lane, wavePop)
   wavePop[creep] = (wavePop[creep] as number) + count
-  const after = floodLeaks(route, lane.towers.kind, lane.towers.level, wavePop)
+  const after = floodLeaks(route, lane.towers, wavePop)
   return after > before ? after - before : 0
 }

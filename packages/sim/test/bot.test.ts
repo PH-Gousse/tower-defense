@@ -1,38 +1,54 @@
 import { describe, it, expect } from 'vitest'
 import { createState, type GameState } from '../src/state'
 import { botCommand, BOT_NORMAL, BOT_HARD } from '../src/bot'
-import { tierUnlockTick } from '../src/data'
+import { tierUnlockTick, creepSpec } from '../src/data'
 import { MAZE_TEMPLATES, templateAt } from '../src/maze'
 import { step, Kind, Refusal, checkBuild, checkUpgrade, checkSend, type Command } from '../src/step'
 import { hashState } from '../src/hash'
-import { GRID_W, GRID_H, tileIndex, SPAWN_INDICES } from '../src/grid'
+import { GRID_W, GRID_H, TOWER_SIZE, FOOTPRINT_CELLS, BUILD_ROW_MIN, BUILD_ROW_MAX, footprintCells, SPAWN_INDICES } from '../src/grid'
 import { buildField, spawnsReachable } from '../src/field'
 import { send, run, TANK, withoutBuildPhase } from './helpers'
 
 // Not a test of the opening: see withoutBuildPhase.
 withoutBuildPhase()
 
+const cells = new Int32Array(FOOTPRINT_CELLS)
+function occupy(blocked: Uint8Array, ax: number, ay: number): void {
+  footprintCells(ax, ay, cells)
+  for (let k = 0; k < FOOTPRINT_CELLS; k++) blocked[cells[k] as number] = 1
+}
+
 describe('maze templates', () => {
-  it('never proposes a tile that would seal the lane', () => {
+  it('never proposes an anchor that would seal the lane', () => {
     // A template that seals is a bot that stalls: every decision retries the
-    // same refused tile forever.
+    // same refused anchor forever.
     for (const t of MAZE_TEMPLATES) {
       const blocked = new Uint8Array(GRID_W * GRID_H)
       for (const tile of t.tiles) {
-        blocked[tileIndex(tile)] = 1
+        occupy(blocked, tile.x, tile.y)
         expect(spawnsReachable(buildField(blocked)), `${t.name} at ${tile.x},${tile.y}`).toBe(true)
       }
     }
   })
 
-  it('proposes only in-bounds tiles, never on spawn or exit', () => {
+  it('proposes only anchors whose footprint is inside the buildable rows', () => {
     for (const t of MAZE_TEMPLATES) {
       for (const tile of t.tiles) {
         expect(tile.x).toBeGreaterThanOrEqual(0)
-        expect(tile.x).toBeLessThan(GRID_W)
-        expect(tile.y).toBeGreaterThanOrEqual(0)
-        expect(tile.y).toBeLessThan(GRID_H)
-        expect(SPAWN_INDICES).not.toContain(tileIndex(tile))
+        expect(tile.x + TOWER_SIZE).toBeLessThanOrEqual(GRID_W)
+        expect(tile.y).toBeGreaterThanOrEqual(BUILD_ROW_MIN)
+        expect(tile.y + TOWER_SIZE - 1).toBeLessThanOrEqual(BUILD_ROW_MAX)
+      }
+    }
+  })
+
+  it('never proposes two anchors whose footprints overlap', () => {
+    for (const t of MAZE_TEMPLATES) {
+      const blocked = new Uint8Array(GRID_W * GRID_H)
+      for (const tile of t.tiles) {
+        footprintCells(tile.x, tile.y, cells)
+        for (let k = 0; k < FOOTPRINT_CELLS; k++) expect(blocked[cells[k] as number], t.name).toBe(0)
+        occupy(blocked, tile.x, tile.y)
       }
     }
   })
@@ -40,9 +56,12 @@ describe('maze templates', () => {
   it('actually lengthens the walk', () => {
     for (const t of MAZE_TEMPLATES) {
       const blocked = new Uint8Array(GRID_W * GRID_H)
-      for (const tile of t.tiles) blocked[tileIndex(tile)] = 1
+      for (const tile of t.tiles) occupy(blocked, tile.x, tile.y)
       const field = buildField(blocked)
-      expect(field.dist[SPAWN_INDICES[0] as number] as number, t.name).toBeGreaterThan(GRID_W)
+      const bare = buildField(new Uint8Array(GRID_W * GRID_H))
+      expect(field.dist[SPAWN_INDICES[0] as number] as number, t.name).toBeGreaterThan(
+        (bare.dist[SPAWN_INDICES[0] as number] as number) + GRID_W,
+      )
     }
   })
 
@@ -117,8 +136,10 @@ describe('bot', () => {
       into = from
       return out
     }
-    // March the tank round until it leaks at least once.
-    for (let t = 0; t < 3000 && s.lanes[0]!.creeps.laps[0]! < 1; t++) s = advance(s)
+    // March the tank round until it leaks at least once. The horizon is a
+    // lap and a half at the tank's speed, not a literal from the old board.
+    const horizon = Math.ceil((1.5 * GRID_H) / creepSpec(TANK).speed)
+    for (let t = 0; t < horizon && s.lanes[0]!.creeps.laps[0]! < 1; t++) s = advance(s)
     expect(s.lanes[0]!.creeps.laps[0] as number).toBeGreaterThanOrEqual(1)
 
     // Align to a decision tick, then the bot must act on its own lane.
@@ -190,9 +211,7 @@ describe('bot', () => {
         into = s
         s = out
       }
-      let towers = 0
-      for (const k of s.lanes[0]!.towers.kind) if (k !== -1) towers += 1
-      return towers
+      return s.lanes[0]!.towers.count
     }
     // Measured before the tower cap binds. The target is now a function of
     // income rather than of the tier clock, and income compounds fast enough
@@ -224,8 +243,12 @@ describe('bot', () => {
     const cmds = botCommand(s, 0, BOT_NORMAL)
     expect(cmds.length).toBeGreaterThan(0)
     expect(cmds.every((c) => c.kind === Kind.Send)).toBe(true)
-    // And the same purse with the opponent healthy goes into the maze first.
-    ;(s.players[1] as { lives: number }).lives = 20
+    // And the same purse with the opponent out of reach goes into the maze
+    // first. "Out of reach" rather than "healthy": on this lane an opening
+    // wall on the first buildable row cannot touch creeps walking the top of
+    // the spawn zone, so the model reads twenty lives as one wave away and is
+    // right to. A thousand lives is what "no wave ends this" looks like.
+    ;(s.players[1] as { lives: number }).lives = 1000
     const calm = botCommand(s, 0, BOT_NORMAL)
     expect(calm.some((c) => c.kind === Kind.Build || c.kind === Kind.Upgrade)).toBe(true)
   })
@@ -256,6 +279,10 @@ describe('bot', () => {
       s = out
     }
     ;(s.players[0] as { gold: number }).gold = 5_000
+    // The opponent is out of reach of any wave this purse buys (see the
+    // lethal-wave test above for why twenty lives is not), so the decision is
+    // about the bot's own lane.
+    ;(s.players[1] as { lives: number }).lives = 1000
     // At least the sixty; the opponent's own opening sends may be in the lane
     // too. None of them has lapped, which is what keeps the emergency branch out.
     const inLane = s.lanes[0]!.creeps
@@ -281,8 +308,7 @@ describe('bot', () => {
       const cmds = botCommand(s, 0, cfg)
       if (cmds.some((c) => c.kind === Kind.Send)) {
         firstSendTick = t
-        towersAtFirstSend = 0
-        for (const k of s.lanes[0]!.towers.kind) if (k !== -1) towersAtFirstSend += 1
+        towersAtFirstSend = s.lanes[0]!.towers.count
       }
       const out = step(s, cmds, into)
       into = s

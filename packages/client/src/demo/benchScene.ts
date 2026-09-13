@@ -203,9 +203,7 @@ function main(): void {
 
   function towerCount(): number {
     let n = 0
-    for (const lane of driver.current.lanes) {
-      for (let i = 0; i < lane.towers.kind.length; i++) if (lane.towers.kind[i] !== -1) n++
-    }
+    for (const lane of driver.current.lanes) n += lane.towers.count
     return n
   }
 

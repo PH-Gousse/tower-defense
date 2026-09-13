@@ -1,14 +1,15 @@
 {
-  "_comment": "FROZEN. Do not edit to make a red test green \u2014 find out what diverged. The hash moves only when the SIMULATION legitimately changes; the history below records every time it has. As of step 8 this fixture also pins the balance data it was recorded under, in \"data\", and the replay installs it. That is what makes the hash independent of tuning: a red golden test now means the arithmetic diverged, never that someone edited a creep. Regenerating it requires changing \"data\" on purpose.",
+  "_comment": "FROZEN. Do not edit to make a red test green \u2014 find out what diverged. Recorded on the 16-wide, 213-row lane with 2x2 towers (ADR-0019): build coordinates are ANCHORS, upgrade and sell may name any footprint cell. Pins its own balance data in \"data\", so a red hash means the arithmetic diverged and never that somebody retuned a number. Plays a rounded match: building, upgrading, selling, sends from both sides, kills, a leak.",
   "_hashHistory": [
     "ad3da200 - step 2/3, movement only",
     "ded775ca - step 4, towers began shooting (real behaviour change)",
     "adc38458 - step 5, leaks cost lives AND hashState was fixed to cover gold/towers/lives, which it had silently never covered",
     "f390d440 - step 6, two lanes, real creep roster, economy; creeps now arrive from sends rather than a config",
     "ce02e89d - step 9, the lane turned vertical and shrank to 8 x 24 (a real geometry change: every route, every tower range overlap and every leak timing moved). The command log was remapped onto the new board; the schedule and the balance data in \"data\" are untouched.",
-    "bd025b5c - the spawn queue was removed. A send used to enqueue its creeps and the lane released one every four ticks; it now spawns them on the tick the command applies, because gold is meant to be the only thing rationing a send. Separation between simultaneous arrivals moved from the queue's timing to spawnPointFor's along-path offset, so every creep in this replay enters at a different position than it used to and the whole match diverges from tick one. A real behaviour change; the command log and the balance data in \"data\" are untouched."
+    "bd025b5c - the spawn queue was removed. A send used to enqueue its creeps and the lane released one every four ticks; it now spawns them on the tick the command applies, because gold is meant to be the only thing rationing a send. Separation between simultaneous arrivals moved from the queue's timing to spawnPointFor's along-path offset, so every creep in this replay enters at a different position than it used to and the whole match diverges from tick one. A real behaviour change; the command log and the balance data in \"data\" are untouched.",
+    "6231cf95 - re-recorded for the 16x213 lane and 2x2 towers (ADR-0019), with the derived flow field dropped from hashState; every earlier hash was the 8x24 board"
   ],
-  "_coverage": "Runs the full 2600 ticks without either player reaching zero, so the sim never freezes and everything after that tick keeps being exercised. Both lanes are live: player 0 ends on 14 lives / 6 leaks / 23 kills / income 39, player 1 on 14 lives / 6 leaks / 15 kills / income 53. Exercises building, upgrading, selling, sends from both sides, sends spawning on the spot, tower fire, kill bounty, leaks costing lives, income ticks and tier-1 unlocks.",
+  "_coverage": "2600 ticks: p0 kills 5, p1 leaks 2, both lanes live, match still playing",
   "ticks": 2600,
   "commands": [
     {
@@ -16,16 +17,16 @@
       "player": 0,
       "kind": "build",
       "tower": 0,
-      "x": 5,
-      "y": 4
+      "x": 0,
+      "y": 10
     },
     {
       "at": 15,
       "player": 0,
       "kind": "build",
       "tower": 0,
-      "x": 5,
-      "y": 5
+      "x": 0,
+      "y": 13
     },
     {
       "at": 25,
@@ -33,125 +34,103 @@
       "kind": "build",
       "tower": 2,
       "x": 4,
-      "y": 8
+      "y": 16
+    },
+    {
+      "at": 35,
+      "player": 0,
+      "kind": "build",
+      "tower": 1,
+      "x": 0,
+      "y": 18
     },
     {
       "at": 30,
       "player": 1,
       "kind": "build",
       "tower": 0,
-      "x": 7,
-      "y": 4
-    },
-    {
-      "at": 45,
-      "player": 1,
-      "kind": "build",
-      "tower": 0,
-      "x": 7,
-      "y": 5
+      "x": 12,
+      "y": 10
     },
     {
       "at": 55,
       "player": 1,
       "kind": "build",
       "tower": 1,
-      "x": 5,
-      "y": 9
+      "x": 10,
+      "y": 14
     },
     {
-      "at": 60,
+      "at": 420,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 120,
-      "player": 0,
+      "at": 425,
+      "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 200,
-      "player": 0,
-      "kind": "build",
-      "tower": 1,
-      "x": 5,
-      "y": 13
+      "at": 430,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
     },
     {
-      "at": 320,
+      "at": 450,
+      "player": 0,
+      "kind": "send",
+      "creep": 1
+    },
+    {
+      "at": 600,
+      "player": 0,
+      "kind": "upgrade",
+      "x": 0,
+      "y": 10
+    },
+    {
+      "at": 650,
+      "player": 1,
+      "kind": "upgrade",
+      "x": 13,
+      "y": 11
+    },
+    {
+      "at": 700,
+      "player": 0,
+      "kind": "send",
+      "creep": 1
+    },
+    {
+      "at": 900,
       "player": 1,
       "kind": "send",
       "creep": 2
     },
     {
-      "at": 400,
-      "player": 0,
-      "kind": "upgrade",
-      "x": 5,
-      "y": 4
-    },
-    {
-      "at": 620,
+      "at": 1200,
       "player": 0,
       "kind": "send",
-      "creep": 1
+      "creep": 0
     },
     {
-      "at": 700,
+      "at": 1300,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 900,
+      "at": 1500,
       "player": 0,
       "kind": "sell",
-      "x": 4,
-      "y": 8
-    },
-    {
-      "at": 1000,
-      "player": 1,
-      "kind": "upgrade",
-      "x": 7,
-      "y": 4
-    },
-    {
-      "at": 1250,
-      "player": 1,
-      "kind": "send",
-      "creep": 1
-    },
-    {
-      "at": 1400,
-      "player": 0,
-      "kind": "send",
-      "creep": 3
-    },
-    {
-      "at": 1600,
-      "player": 1,
-      "kind": "send",
-      "creep": 3
-    },
-    {
-      "at": 1900,
-      "player": 0,
-      "kind": "build",
-      "tower": 0,
       "x": 5,
-      "y": 18
-    },
-    {
-      "at": 2200,
-      "player": 1,
-      "kind": "send",
-      "creep": 1
+      "y": 17
     }
   ],
-  "expectedHash": "bd025b5c",
+  "expectedHash": "6231cf95",
   "data": {
     "sellRefund": 0.6,
     "archetypes": [
@@ -161,21 +140,21 @@
         "answers": "tanks",
         "levels": [
           {
-            "cost": 60,
+            "cost": 600,
             "damage": 30,
-            "range": 6.0,
+            "range": 3,
             "cooldownTicks": 25
           },
           {
-            "cost": 90,
+            "cost": 900,
             "damage": 55,
-            "range": 6.5,
+            "range": 3.25,
             "cooldownTicks": 24
           },
           {
-            "cost": 140,
+            "cost": 1400,
             "damage": 84,
-            "range": 7.0,
+            "range": 3.5,
             "cooldownTicks": 22
           }
         ]
@@ -187,21 +166,21 @@
         "splashRadius": 1.2,
         "levels": [
           {
-            "cost": 110,
+            "cost": 1100,
             "damage": 12,
-            "range": 3.0,
+            "range": 1.5,
             "cooldownTicks": 12
           },
           {
-            "cost": 160,
+            "cost": 1600,
             "damage": 20,
-            "range": 3.4,
+            "range": 1.7,
             "cooldownTicks": 12
           },
           {
-            "cost": 240,
+            "cost": 2400,
             "damage": 32,
-            "range": 3.8,
+            "range": 1.9,
             "cooldownTicks": 11
           }
         ]
@@ -213,99 +192,141 @@
         "slowTicks": 20,
         "levels": [
           {
-            "cost": 80,
+            "cost": 800,
             "damage": 4,
-            "range": 4.5,
+            "range": 2.25,
             "cooldownTicks": 10,
             "slowPercent": 30
           },
           {
-            "cost": 120,
+            "cost": 1200,
             "damage": 6,
-            "range": 4.8,
+            "range": 2.4,
             "cooldownTicks": 10,
             "slowPercent": 40
           },
           {
-            "cost": 180,
+            "cost": 1800,
             "damage": 9,
-            "range": 5.2,
+            "range": 2.6,
             "cooldownTicks": 10,
             "slowPercent": 50
           }
         ]
       }
     ],
-    "unlockEveryTicks": 1200,
-    "_purseComment": "Added when the opening purse became freezable. These are the values this match was recorded under, in the pre-x10 scale. Pinning them is what keeps expectedHash at ce02e89d across the x10 rescale, and that the hash did not move is the proof the rescale changed no arithmetic.",
-    "startingGold": 600,
-    "startingIncome": 25,
+    "unlockEveryTicks": 6000,
+    "sendUnlockTicks": 400,
+    "startingGold": 6000,
+    "startingIncome": 250,
     "creeps": [
       {
         "key": "swarm",
         "name": "Swarm",
+        "archetype": 0,
         "tier": 0,
         "cost": 20,
-        "count": 6,
-        "hp": 90,
+        "count": 1,
+        "hp": 20,
         "speed": 0.075,
-        "incomeBonus": 3,
-        "bounty": 2
+        "incomeBonus": 2,
+        "bounty": 5
       },
       {
         "key": "runner",
         "name": "Runner",
+        "archetype": 1,
         "tier": 0,
-        "cost": 45,
+        "cost": 250,
         "count": 1,
-        "hp": 220,
-        "speed": 0.145,
-        "incomeBonus": 4,
-        "bounty": 5
+        "hp": 40,
+        "speed": 0.15,
+        "incomeBonus": 20,
+        "bounty": 60
       },
       {
         "key": "tank",
         "name": "Tank",
+        "archetype": 2,
         "tier": 0,
-        "cost": 140,
+        "cost": 600,
         "count": 1,
-        "hp": 1400,
-        "speed": 0.055,
-        "incomeBonus": 7,
-        "bounty": 16
+        "hp": 250,
+        "speed": 0.05,
+        "incomeBonus": 40,
+        "bounty": 150
       },
       {
         "key": "swarm2",
         "name": "Swarm II",
+        "archetype": 0,
         "tier": 1,
-        "cost": 55,
-        "count": 8,
-        "hp": 240,
-        "speed": 0.08,
-        "incomeBonus": 7,
-        "bounty": 5
+        "cost": 100,
+        "count": 1,
+        "hp": 100,
+        "speed": 0.075,
+        "incomeBonus": 10,
+        "bounty": 20
       },
       {
         "key": "runner2",
         "name": "Runner II",
+        "archetype": 1,
         "tier": 1,
-        "cost": 120,
+        "cost": 1250,
         "count": 1,
-        "hp": 620,
-        "speed": 0.16,
-        "incomeBonus": 9,
-        "bounty": 13
+        "hp": 200,
+        "speed": 0.15,
+        "incomeBonus": 100,
+        "bounty": 240
       },
       {
         "key": "tank2",
         "name": "Tank II",
+        "archetype": 2,
         "tier": 1,
-        "cost": 360,
+        "cost": 3000,
         "count": 1,
-        "hp": 4200,
-        "speed": 0.06,
-        "incomeBonus": 15,
-        "bounty": 40
+        "hp": 1250,
+        "speed": 0.05,
+        "incomeBonus": 200,
+        "bounty": 600
+      },
+      {
+        "key": "swarm3",
+        "name": "Swarm III",
+        "archetype": 0,
+        "tier": 2,
+        "cost": 500,
+        "count": 1,
+        "hp": 500,
+        "speed": 0.075,
+        "incomeBonus": 50,
+        "bounty": 80
+      },
+      {
+        "key": "runner3",
+        "name": "Runner III",
+        "archetype": 1,
+        "tier": 2,
+        "cost": 6250,
+        "count": 1,
+        "hp": 1000,
+        "speed": 0.15,
+        "incomeBonus": 500,
+        "bounty": 960
+      },
+      {
+        "key": "tank3",
+        "name": "Tank III",
+        "archetype": 2,
+        "tier": 2,
+        "cost": 15000,
+        "count": 1,
+        "hp": 6250,
+        "speed": 0.05,
+        "incomeBonus": 1000,
+        "bounty": 2400
       }
     ]
   }
