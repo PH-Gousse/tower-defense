@@ -9,5 +9,5 @@ params:
   roof: spire
   parts: [gold_ring]
 palette: { tier_shift: 0.5, trim: true }
-game: { cost: 1400, damage: 84, range: 3.5, cooldownTicks: 22 }
+game: { cost: 1400, damage: 84, range: 10.5, cooldownTicks: 22 }
 source: { kind: generated, licence: own, author: asset-factory }

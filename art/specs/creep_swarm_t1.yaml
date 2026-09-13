@@ -28,7 +28,7 @@ audio:
   death: sfx_death_small_1
 game:
   # The live roster's numbers (packages/sim/data/creeps.json); nothing proposed.
-  speed_tiles_per_s: 1.5
+  speed_tiles_per_s: 4.5
   hp: 20
   cost: 20
   income: 2

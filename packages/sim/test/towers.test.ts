@@ -204,12 +204,12 @@ describe('towers', () => {
   })
 
   it('splash damages several creeps from one shot', () => {
-    // Placed by hand rather than walked in. A creep walks the centre of its
-    // tile and a tower's centre sits on a grid vertex, so the closest a creep
-    // ever passes is 1.5 tiles -- exactly the level-1 splash range, a knife
-    // edge that ADR-0025's range conversion is what removes. This test is
-    // about the splash rule, not about that edge: four creeps stand inside
-    // range, clustered within the blast radius, and one shot hurts them all.
+    // Placed by hand rather than walked in. Before ADR-0025 the closest a
+    // walking creep ever passed a tower was 1.5 tiles, exactly the level-1
+    // splash range, and a walked-in version of this test sat on that knife
+    // edge. The range is 4.5 now, but this test is about the splash rule, not
+    // about ranges: four creeps stand inside range, clustered within the
+    // blast radius, and one shot hurts them all.
     const s = createState()
     const lane = s.lanes[0]!
     insertTower(lane, 1, 4, R + 4, TowerKind.Splash)

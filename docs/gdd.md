@@ -273,10 +273,20 @@ agree; nothing currently enforces that. [Issue #9](https://github.com/PH-Gousse/
 
 ---
 
-## 11. Economy numbers — **all `[proposed]`**
+## 11. Economy numbers — **all `[proposed]` and `[retune]`**
 
 Every figure below is a placeholder with the right *shape*, not a tuned number. Tuning is
 what `/balance` and `balance-batch` exist for. Nothing here is confirmed.
+
+**`[retune]` (ADR-0025, 2026-09-13):** the lane went from 8×24 to 16×213 with 2×2 towers
+(ADR-0019). Every speed, range, income tick and tier unlock below was tuned on the old board
+and is **void** until `/balance` has run on the new one. No balance finding recorded before
+2026-09-13 applies. What has been done so far is a *geometric conversion*, not a tuning:
+creep speed ×3, tower range ×3, splash radius ×3, everything else untouched, so every ratio
+the roster was tuned on (HP per gold, gold per damage, bounty tax) survives and there is
+one factor to argue about. The conversion is the original's units: its creeps move at
+4.2–5.5 creep tiles/s and its towers reach 9–14 creep tiles, about three times what we
+had.
 
 Source of truth: `packages/sim/data/towers.json`, `packages/sim/data/creeps.json`, and
 `packages/sim/src/data.ts` / `state.ts` for the three that are still TypeScript constants.
@@ -286,12 +296,12 @@ Source of truth: `packages/sim/data/towers.json`, `packages/sim/data/creeps.json
 | Constant | Value | Where | Note |
 |---|---|---|---|
 | Tick rate | 20 Hz | `step.ts` `TICK_HZ` | `[confirmed]` — a determinism invariant, not balance |
-| Starting gold | 6 000 | `data.ts` `STARTING_GOLD` | not in a JSON file yet |
-| Starting income | 250 | `data.ts` `STARTING_INCOME` | not in a JSON file yet |
+| Starting gold | 6 000 | `data.ts` `STARTING_GOLD` | not in a JSON file yet · `[retune]` |
+| Starting income | 250 | `data.ts` `STARTING_INCOME` | not in a JSON file yet · `[retune]` |
 | Starting lives | 20 | `state.ts` `STARTING_LIVES` | not in a JSON file yet; "one bad leak is a crisis with time to respond" is the intent |
-| Income interval | 300 ticks (15 s) | `state.ts` `INCOME_EVERY_TICKS` | interval `[confirmed]`, anchor `[proposed]` |
-| Build phase | 400 ticks (20 s) | `creeps.json` `sendUnlockTicks` | |
-| Tier unlock spacing | 6 000 ticks (5 min) | `creeps.json` `unlockEveryTicks` | tiers at 0:00 / 5:00 / 10:00 |
+| Income interval | 300 ticks (15 s) | `state.ts` `INCOME_EVERY_TICKS` | interval `[confirmed]` on the old board, now `[retune]`: 3 to 5 payouts per bare lap instead of 1 or 2; anchor `[proposed]` |
+| Build phase | 400 ticks (20 s) | `creeps.json` `sendUnlockTicks` | `[retune]` — a 16-wide opening maze costs more than an 8-wide one |
+| Tier unlock spacing | 6 000 ticks (5 min) | `creeps.json` `unlockEveryTicks` | tiers at 0:00 / 5:00 / 10:00 · `[retune]` — the expected first `/balance` mover |
 | Max tier | 2 (→ three tiers, 0–2) | `creeps.json` `maxTier` | |
 | Sell refund | 0.60 | `towers.json` `sellRefund` | ⚠️ stated default is 0.75 |
 | Max tower level | 3 | `data.ts` `MAX_LEVEL` | `[confirmed]` |
@@ -300,33 +310,42 @@ Source of truth: `packages/sim/data/towers.json`, `packages/sim/data/creeps.json
 without rounding away a tenth of a card, and a half-gold bounty can exist at all. Gold is
 hashed as a 32-bit integer, so sub-unit prices are unavailable at any scale.
 
-### Towers (all `[proposed]`)
+### Towers (all `[proposed]` `[retune]`)
 
 | Archetype | Lvl | Cost | Damage | Range | Cooldown | Extra |
 |---|---|---|---|---|---|---|
-| Single-target | 1 | 600 | 30 | 3.00 | 25 t | |
-| | 2 | 900 | 55 | 3.25 | 24 t | |
-| | 3 | 1 400 | 84 | 3.50 | 22 t | |
-| Splash | 1 | 1 100 | 12 | 1.50 | 12 t | splash radius 1.2 |
-| | 2 | 1 600 | 20 | 1.70 | 12 t | |
-| | 3 | 2 400 | 32 | 1.90 | 11 t | |
-| Slow | 1 | 800 | 4 | 2.25 | 10 t | slow 30%, 20 t |
-| | 2 | 1 200 | 6 | 2.40 | 10 t | slow 40% |
-| | 3 | 1 800 | 9 | 2.60 | 10 t | slow 50% |
+| Single-target | 1 | 600 | 30 | 9.00 | 25 t | |
+| | 2 | 900 | 55 | 9.75 | 24 t | |
+| | 3 | 1 400 | 84 | 10.50 | 22 t | |
+| Splash | 1 | 1 100 | 12 | 4.50 | 12 t | splash radius 3.6 |
+| | 2 | 1 600 | 20 | 5.10 | 12 t | |
+| | 3 | 2 400 | 32 | 5.70 | 11 t | |
+| Slow | 1 | 800 | 4 | 6.75 | 10 t | slow 30%, 20 t |
+| | 2 | 1 200 | 6 | 7.20 | 10 t | slow 40% |
+| | 3 | 1 800 | 9 | 7.80 | 10 t | slow 50% |
 
-Ranges were **halved** when the lane went from 40×24 horizontal to 8×24 vertical: range is
-in tiles, so shrinking the board made every tower cover far more of the route without a
-number changing.
+Range is in tiles from the footprint centre, so it moves with the board. It was **halved**
+when the lane went from 40×24 horizontal to 8×24 vertical (a range-6 single-target covered
+three quarters of an 8-wide lane), and **tripled** when the lane went to 16 wide with 2×2
+towers (ADR-0025): at 1.5–3.5 tiles a tower's range was shorter than the tower, and the
+original's 600–900 units are 9–14 creep tiles. A level-1 single-target now covers a little
+over half the lane's width from a wall; a level-1 splash reaches the corridor on either
+side of its own wall and no further.
 
-### Creeps — tier 0 base (all `[proposed]`)
+### Creeps — tier 0 base (all `[proposed]` `[retune]`)
 
-| Archetype | Cost | Count | HP | Speed (tiles/tick) | Income | Bounty |
-|---|---|---|---|---|---|---|
-| Swarm | 20 | 1 | 20 | 0.075 | 2 | 5 |
-| Runner | 250 | 1 | 40 | 0.150 | 20 | 60 |
-| Tank | 600 | 1 | 250 | 0.050 | 40 | 150 |
+| Archetype | Cost | Count | HP | Speed (tiles/tick) | Speed (tiles/s) | Bare lap (213 rows) | Income | Bounty |
+|---|---|---|---|---|---|---|---|---|
+| Swarm | 20 | 1 | 20 | 0.225 | 4.5 | 47 s | 2 | 5 |
+| Runner | 250 | 1 | 40 | 0.450 | 9.0 | 24 s | 20 | 60 |
+| Tank | 600 | 1 | 250 | 0.150 | 3.0 | 71 s | 40 | 150 |
 
-### Growth per tier (all `[proposed]`)
+Speeds are ×3 the old 0.075 / 0.150 / 0.050 (ADR-0025). Before the conversion a swarm's bare
+lap on the 213-row lane was 142 s, nine income payouts; a full half-slot maze may still take
+several minutes a lap, which is why the tier clock and the income interval are the expected
+first `/balance` proposals rather than the speeds.
+
+### Growth per tier (all `[proposed]` `[retune]`)
 
 | Field | Multiplier | Intent |
 |---|---|---|

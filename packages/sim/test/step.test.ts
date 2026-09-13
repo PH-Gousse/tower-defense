@@ -24,7 +24,7 @@ import { UNREACHABLE, buildField, mazeLength } from '../src/field'
 import { hashState } from '../src/hash'
 import { TowerKind, levelOf, creepSpec } from '../src/data'
 import {
-  build, upgrade, sell, send, run, runUntil, tick, advance, place, wall, withGold,
+  build, upgrade, sell, send, run, runUntil, tick, advance, stepper, place, wall, withGold,
   R, SWARM, RUNNER, TANK, withoutBuildPhase,
 } from './helpers'
 
@@ -260,8 +260,9 @@ describe('the half-slot rule', () => {
     // Unkillable: the wall's towers shoot, and this is a test of the route.
     s.lanes[0]!.creeps.hp[0] = 1e9
     let passedSlot = false
+    const next = stepper(s)
     for (let t = 0; t < 1500 && (s.lanes[0]!.creeps.y[0] as number) < R + 8; t++) {
-      s = advance(s, 1)
+      s = next()
       const cx = Math.floor(s.lanes[0]!.creeps.x[0] as number)
       const cy = Math.floor(s.lanes[0]!.creeps.y[0] as number)
       if (cx === 2 && (cy === R + 4 || cy === R + 5)) passedSlot = true
@@ -416,8 +417,9 @@ describe('leaking', () => {
     // Watched tick by tick: leaks and laps move together, one at a time.
     let s = tick(createState(), [send(RUNNER)])
     let leaks = 0
+    const next = stepper(s)
     for (let t = 0; t < 4000; t++) {
-      s = advance(s, 1)
+      s = next()
       const now = s.players[0]!.leaks
       expect(now - leaks).toBeLessThanOrEqual(1)
       if (now > leaks) {

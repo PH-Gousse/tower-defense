@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { performance } from 'node:perf_hooks'
 import { createState, type GameState } from '../src/state'
-import { step, checkBuild, Kind, TICK_MS, type Command } from '../src/step'
+import { step, checkBuild, Kind, Refusal, TICK_MS, type Command } from '../src/step'
 import { templateAt } from '../src/maze'
 import { TowerKind } from '../src/data'
-import { GRID_W, TOWER_SIZE } from '../src/grid'
+import { GRID_W, TOWER_SIZE, BUILD_ROW_MAX } from '../src/grid'
 import { place, R, SWARM, RUNNER, TANK, withoutBuildPhase } from './helpers'
 
 withoutBuildPhase()
@@ -26,13 +26,24 @@ withoutBuildPhase()
 describe('tick budget', () => {
   function fullMaze(): GameState {
     const s = createState()
+    ;(s.players[0] as { gold: number }).gold = 1e9
     const tiles = templateAt(1).tiles
     let placed = 0
+    const kindFor = (i: number) => (i % 5 === 3 ? TowerKind.Splash : i % 5 === 4 ? TowerKind.Slow : TowerKind.Single)
     for (let i = 0; i < tiles.length && placed < 400; i++) {
       const t = tiles[i]!
-      const kind = i % 5 === 3 ? TowerKind.Splash : i % 5 === 4 ? TowerKind.Slow : TowerKind.Single
-      place(s, 0, t.x, t.y, kind, 1 + (i % 3))
+      place(s, 0, t.x, t.y, kindFor(i), 1 + (i % 3))
       placed += 1
+    }
+    // The tight half-slot serpentine fills the lane at 320 towers. The rest
+    // go into its pockets -- the dead space behind each plug -- which is
+    // where a player's extra towers end up too: they shoot, they do not maze.
+    for (let ay = R; placed < 400 && ay + TOWER_SIZE - 1 <= BUILD_ROW_MAX; ay++) {
+      for (let ax = 0; placed < 400 && ax + TOWER_SIZE <= GRID_W; ax++) {
+        if (checkBuild(s, 0, ax, ay, TowerKind.Single).refusal !== Refusal.None) continue
+        place(s, 0, ax, ay, kindFor(placed), 1 + (placed % 3))
+        placed += 1
+      }
     }
     expect(s.lanes[0]!.towers.count).toBe(400)
     return s
@@ -50,9 +61,18 @@ describe('tick budget', () => {
     let out = step(s, wave, into)
     into = s
     s = out
-    // A few die on the spawn tick: towers on the first buildable row reach
-    // into the spawn zone, and a swarm does not survive one shot.
-    expect(s.lanes[0]!.creeps.count).toBeGreaterThan(450)
+    // Some die on the spawn tick: with a 9-tile range the first walls reach
+    // most of the way up the spawn zone, and a swarm does not survive one
+    // shot. About sixty of five hundred, measured; what matters for the
+    // timing below is that the crowd is still a crowd.
+    expect(s.lanes[0]!.creeps.count).toBeGreaterThan(400)
+
+    // Unkillable from here: four hundred towers with a 9-tile range clear five
+    // hundred creeps inside three hundred ticks, and a budget test with no
+    // crowd left measures nothing. With the HP out of the way every tower
+    // fires on every cooldown, which is the worst tick the board can produce.
+    const c = s.lanes[0]!.creeps
+    for (let i = 0; i < c.count; i++) c.hp[i] = 1e9
 
     // Let the crowd spread into the maze before timing, so the hash has real
     // work to do rather than a spawn zone full of creeps.
@@ -61,7 +81,7 @@ describe('tick budget', () => {
       into = s
       s = out
     }
-    expect(s.lanes[0]!.creeps.count).toBeGreaterThan(100)
+    expect(s.lanes[0]!.creeps.count).toBeGreaterThan(400)
 
     const ticks = 200
     const start = performance.now()

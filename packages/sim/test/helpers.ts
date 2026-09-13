@@ -121,6 +121,28 @@ export function runUntil(
  * `s` is not written; the returned state is a fresh buffer the caller owns.
  * Prefer this over `tick` in a loop, which allocates a whole state per call.
  */
+/**
+ * A tick-at-a-time stepper that allocates nothing after its two buffers.
+ *
+ * `advance(s, 1)` in a loop pays for two fresh states per tick, and a state
+ * is 65,536 creep slots wide: four thousand of them is tens of gigabytes
+ * through the allocator and a test that times out under load. This rotates
+ * three buffers instead. Only the state most recently returned is valid --
+ * the one before it, and `start` itself, are reused as buffers.
+ */
+export function stepper(start: GameState): () => GameState {
+  let a = start
+  let b = createState()
+  let c = createState()
+  return () => {
+    const out = step(a, [], b)
+    b = c
+    c = a
+    a = out
+    return out
+  }
+}
+
 export function advance(s: GameState, n: number): GameState {
   let a = s
   let b = createState()

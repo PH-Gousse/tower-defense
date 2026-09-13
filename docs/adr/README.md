@@ -19,7 +19,7 @@ Write one through `/decide`. A decision that changes a **game rule** also needs
 | [0005](0005-ai-opponent-is-a-command-source.md) | The AI opponent is a command source | Accepted |
 | [0006](0006-no-send-queue.md) | No send queue, no in-flight cap | Accepted |
 | [0007](0007-creeps-loop-until-killed.md) | Creeps loop until towers kill them | Accepted |
-| [0008](0008-leak-credits-the-sender.md) | A leak credits the sender a life | Accepted — **not implemented** |
+| [0008](0008-leak-credits-the-sender.md) | A leak credits the sender a life | Accepted — conversion applied 2026-09-13; every §11 constant `[retune]` until `/balance` |
 | [0009](0009-income-clock-anchored-to-send-unlock.md) | The income clock starts when sending opens | Accepted — pending confirmation |
 | [0010](0010-seeds-are-reserved-not-consumed.md) | Seeds are reserved, not consumed | Accepted — provisional |
 | [0011](0011-dump-ts-is-a-declared-boundary.md) | `dump.ts` is a declared serialisation boundary | Accepted |
@@ -36,7 +36,7 @@ Write one through `/decide`. A decision that changes a **game rule** also needs
 | [0022](0022-spawns-spread-across-the-zone-with-a-fractional-setback.md) | Spawns spread across the zone and keep the fractional setback | Accepted |
 | [0023](0023-placement-on-a-creep-is-refused.md) | A placement whose footprint holds a creep is refused | Accepted; supersedes half of ADR-0012 |
 | [0024](0024-camera-scrolls-and-zoom-caps-at-40-rows.md) | The camera scrolls, zoom caps at 40 rows, a minimap shows the rest | Accepted |
-| [0025](0025-balance-constants-are-void-until-retuned-on-the-new-lane.md) | Geometric conversion of the constants, then void until `/balance` | Accepted — **not implemented** |
+| [0025](0025-balance-constants-are-void-until-retuned-on-the-new-lane.md) | Geometric conversion of the constants, then void until `/balance` | Accepted — conversion applied 2026-09-13; every §11 constant `[retune]` until `/balance` |
 
 ## Status vocabulary
 

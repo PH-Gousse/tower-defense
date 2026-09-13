@@ -99,13 +99,13 @@ describe('floodLeaks', () => {
     // well past either. Splash is costed per creep, so the mortars' answer
     // does not depend on the crowd at all -- which is the shape being pinned.
     //
-    // At level 3, not 1. A creep walks the centre of its tile and a tower's
-    // centre sits on a grid vertex, so the nearest a route cell's centre comes
-    // to a 2x2 tower is sqrt(2.5) = 1.58 tiles -- past the level-1 splash
-    // range of 1.5. Until ADR-0025's range conversion lands, a level-1 mortar
-    // reaches nothing on this board, in the model and in the sim alike.
-    const guards = fortified(singles(20), 3)
-    const withMortars = fortified(mix(20), 3)
+    // At level 1. Before ADR-0025's range conversion this had to run at level
+    // 3: a creep walks the centre of its tile and a tower's centre sits on a
+    // grid vertex, so the nearest a route cell's centre comes to a 2x2 tower
+    // is sqrt(2.5) = 1.58 tiles, past the old level-1 splash range of 1.5,
+    // and a level-1 mortar reached nothing on this board. At 4.5 it does.
+    const guards = fortified(singles(20))
+    const withMortars = fortified(mix(20))
     expect(leaksOf(guards, SWARM, 5000)).toBeGreaterThan(300)
     expect(leaksOf(withMortars, SWARM, 5000)).toBe(0)
   })

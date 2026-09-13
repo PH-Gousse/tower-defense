@@ -28,7 +28,7 @@ audio:
   death: sfx_death_medium_1
 game:
   # Proposed only. The live values are in packages/sim/data/creeps.json.
-  speed_tiles_per_s: 3.0
+  speed_tiles_per_s: 9.0
   hp: 40
   cost: 250
 source:

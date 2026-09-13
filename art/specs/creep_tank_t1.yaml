@@ -30,7 +30,7 @@ audio:
   spawn: sfx_spawn_large_1
   death: sfx_death_large_1
 game:
-  speed_tiles_per_s: 1.0
+  speed_tiles_per_s: 3.0
   hp: 250
   cost: 600
   income: 40

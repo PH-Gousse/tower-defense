@@ -13,7 +13,7 @@ const base = (over: Partial<AssetSpec>): AssetSpec => ({ id: 'creep_runner_t1', 
 describe('the game-data proposal', () => {
   it('reports a spec that agrees with the live roster and writes no patch', () => {
     const d = dir()
-    const r = propose('creep_runner_t1', base({ game: { speed_tiles_per_s: 3.0, hp: 40, cost: 250 } }), d)
+    const r = propose('creep_runner_t1', base({ game: { speed_tiles_per_s: 9.0, hp: 40, cost: 250 } }), d)
     expect(r.status).toBe('matches')
     expect(readFileSync(join(d, 'constants.patch'), 'utf8')).toMatch(/^# no change/)
     expect(readFileSync(join(d, 'gdd-stub.md'), 'utf8')).toContain('[proposed]')

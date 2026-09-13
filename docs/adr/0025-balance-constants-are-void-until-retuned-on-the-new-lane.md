@@ -1,7 +1,7 @@
 # ADR-0025 — Balance constants get a geometric conversion and are void until `/balance` runs on the new lane
 
 - **Date:** 2026-09-13
-- **Status:** Accepted — not implemented
+- **Status:** Accepted — geometric conversion applied 2026-09-13 (creeps.json v7, towers.json v4); the `[retune]` pass is pending `/balance`
 
 ## Context
 

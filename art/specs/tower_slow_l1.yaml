@@ -22,5 +22,5 @@ animations:
   Upgrade: { gen: upgrade_flash, duration: 0.5 }
   Sell:    { gen: sell_sink, duration: 0.6 }
 audio: { shot: sfx_shot_slow_1 }
-game: { cost: 800, damage: 4, range: 2.25, cooldownTicks: 10, slowPercent: 30 }
+game: { cost: 800, damage: 4, range: 6.75, cooldownTicks: 10, slowPercent: 30 }
 source: { kind: generated, licence: own, author: asset-factory }
