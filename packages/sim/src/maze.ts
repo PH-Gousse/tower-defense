@@ -14,27 +14,33 @@ import {
  * usable maze on their own, because the bot will often only afford the first
  * handful.
  *
- * Towers are 2x2 (ADR-0019), so a wall is TWO rows of tiles and an anchor
- * steps across the lane by TOWER_SIZE. A serpentine alternates which end the
- * gap is at:
+ * Towers are 2x2 (ADR-0019) on a 1-tile grid (ADR-0020), and that is what
+ * makes the half-slot possible: a wall of seven towers covers 14 of the 16
+ * tiles and leaves a 2-wide gap, and a 2-wide gap cannot be narrowed by
+ * another tower in the same rows -- 15 is odd. So the eighth tower sits in
+ * the rows BELOW the wall, offset by one tile from the wall's grid, and it is
+ * that offset that turns the 2-wide gap into a 1-wide slot:
  *
  *        x=0                          x=15
- *   y=10  SPAWN ZONE above; creeps arrive spread across the whole width
- *        ████████████████████████████  ..     7 towers, gap at the RIGHT
- *        ████████████████████████████  ..
- *         .                             ↓     one open row: the corridor
- *         ..  ████████████████████████████    gap at the LEFT
- *         ..  ████████████████████████████
- *         ↓
+ *   y    ██████████████████████████████  ..    7 towers at even x: gap at 14-15
+ *   y+1  ██████████████████████████████  ..
+ *   y+2   . . . . . . . . . . . . .  ██  .     the plug at x=13: slot at 15, one creep wide
+ *   y+3   . . . . . . . . . . . . .  ██  .
+ *   y+4   . . . . . . . . . . . . . . . .     one open row: the corridor
+ *   y+5   ..  ██████████████████████████████  gap at 0-1, plug at x=1, slot at 0
+ *   y+6   ..  ██████████████████████████████
  *
- * A wall of 7 towers covers 14 of the 16 tiles and leaves a 2-wide gap. It
- * cannot leave a 1-wide gap on its own -- 15 is odd -- and it does not try:
- * these templates are the MINIMUM that keeps the bot functional on the new
- * board, so the harness and determinism-check have an opponent. Designing
- * half-slot mazes for it (offset towers that narrow a 2-wide gap to one creep,
- * ADR-0020) and measuring them is issue #41, a precondition for `/balance`
- * (ADR-0025). Nothing here has been measured against the old templates'
- * figures, and the comments that carried those figures are gone with them.
+ * The plug's other side leaves a 13-tile pocket (rows y+2..y+3, x 0..12) that
+ * is reachable only from the corridor and leads nowhere; the flow field walks
+ * around it and it is free real estate for towers that shoot but do not maze.
+ *
+ * Eight towers per crossing, five rows per crossing. A plain 7-tower wall with
+ * a 2-wide gap is cheaper (7 per crossing, 3 rows), and there is no collision
+ * in the sim (ADR-0021) so a 1-wide slot does not queue creeps -- the
+ * half-slot buys the game its shape, not the bot a stronger maze. It is here
+ * because the bot has to build the maze the rules are for (issue #41), and
+ * because a full lane of it is 40 walls and 320 towers, which is the board
+ * `/balance` is measured on.
  *
  * Templates are generated rather than stored as data because the shape is a
  * rule, not a set of numbers, and a rule stays correct if the grid is resized.
@@ -47,31 +53,38 @@ import {
 /** Anchors across a full row of towers. */
 const TOWERS_ACROSS = GRID_W / TOWER_SIZE
 
+/** Rows one half-slot wall occupies: the wall and its plug. */
+export const HALF_SLOT_ROWS = 2 * TOWER_SIZE
+
 /**
- * Build a serpentine template.
+ * Build a half-slot serpentine.
  *
- * `gapAtRight` alternates per wall so the route has to cross the lane and cross
- * back. Anchors within a wall are emitted from the CLOSED end toward the gap —
- * that is, starting from the side the previous wall's gap dumped the creeps
- * onto. A half-built wall then still blocks the tiles the route is actually
- * using; emitting from the gap end instead would leave the current route wide
- * open until the very last tower, so the bot would pay for most of a wall and
- * get nothing for it.
+ * `gapAtRight` alternates per wall so the route has to cross the lane and
+ * cross back. Anchors within a wall are emitted from the CLOSED end toward
+ * the gap -- that is, starting from the side the previous wall's slot dumped
+ * the creeps onto. A half-built wall then still blocks the tiles the route is
+ * actually using; emitting from the gap end instead would leave the current
+ * route wide open until the very last tower, so the bot would pay for most of
+ * a wall and get nothing for it. The plug comes last: it narrows a gap that
+ * has to exist first.
  *
- * `spacing` is rows from one wall's anchor row to the next; TOWER_SIZE + 1 is
- * the tightest that leaves a corridor.
+ * `spacing` is rows from one wall's anchor row to the next; HALF_SLOT_ROWS + 1
+ * is the tightest that leaves a corridor.
  */
-function serpentine(startY: number, spacing: number, walls: number): Tile[] {
+function halfSlotSerpentine(startY: number, spacing: number, walls: number): Tile[] {
   const out: Tile[] = []
   for (let w = 0; w < walls; w++) {
     const y = startY + w * spacing
-    if (y + TOWER_SIZE - 1 > BUILD_ROW_MAX) break
+    if (y + HALF_SLOT_ROWS - 1 > BUILD_ROW_MAX) break
     const gapAtRight = w % 2 === 0
-    // One tower short of the full row, leaving TOWER_SIZE tiles open at the gap end.
     if (gapAtRight) {
+      // Wall covers x 0..13; the plug covers 13..14 two rows down, leaving 15.
       for (let a = 0; a < TOWERS_ACROSS - 1; a++) out.push({ x: a * TOWER_SIZE, y })
+      out.push({ x: GRID_W - TOWER_SIZE - 1, y: y + TOWER_SIZE })
     } else {
+      // Wall covers x 2..15; the plug covers 1..2 two rows down, leaving 0.
       for (let a = TOWERS_ACROSS - 1; a >= 1; a--) out.push({ x: a * TOWER_SIZE, y })
+      out.push({ x: 1, y: y + TOWER_SIZE })
     }
   }
   return out
@@ -88,8 +101,9 @@ function serpentine(startY: number, spacing: number, walls: number): Tile[] {
  *   ████████░░░░    from the left, past centre, right side open
  *   ░░░░████████    from the right, past centre, left side open
  *
- * Cheaper per tower than a full serpentine wall and it never risks sealing,
- * which suits a bot that spends most of its gold on sending.
+ * Cheaper per tower than a full wall and it never risks sealing, which suits
+ * a bot that spends most of its gold on sending. No half-slot: a tooth's open
+ * side is the whole other half of the lane.
  */
 function posts(startY: number, spacing: number, count: number, reach: number): Tile[] {
   const out: Tile[] = []
@@ -111,14 +125,20 @@ export interface MazeTemplate {
 }
 
 /**
- * Spacings are in rows. A wall is TOWER_SIZE rows tall, so TOWER_SIZE + 1 is
- * a wall every third row with a one-row corridor, and TOWER_SIZE + 2 leaves a
- * two-row corridor. Wall counts are ceilings; the generators stop at the exit
- * zone.
+ * Spacings are in rows. A half-slot wall is HALF_SLOT_ROWS tall, so
+ * HALF_SLOT_ROWS + 1 is a wall every fifth row with a one-row corridor, and
+ * HALF_SLOT_ROWS + 2 leaves a two-row corridor. Wall counts are ceilings; the
+ * generators stop at the exit zone. The tight serpentine fills the lane: 40
+ * walls, 320 towers, 200 rows.
+ *
+ * Index 1 is what the presets build (bot.ts). Nothing here has been measured
+ * against the pre-ADR-0019 templates' figures; the numbers in bot.ts that
+ * compare "template 0" with "template 1" were taken on an 8-wide lane and are
+ * history until `/balance` runs on this one (ADR-0025).
  */
 export const MAZE_TEMPLATES: readonly MazeTemplate[] = [
-  { name: 'serpentine', tiles: serpentine(BUILD_ROW_MIN + 1, TOWER_SIZE + 2, 64) },
-  { name: 'tight serpentine', tiles: serpentine(BUILD_ROW_MIN, TOWER_SIZE + 1, 80) },
+  { name: 'half-slot serpentine', tiles: halfSlotSerpentine(BUILD_ROW_MIN + 1, HALF_SLOT_ROWS + 2, 64) },
+  { name: 'tight half-slot serpentine', tiles: halfSlotSerpentine(BUILD_ROW_MIN, HALF_SLOT_ROWS + 1, 80) },
   { name: 'posts', tiles: posts(BUILD_ROW_MIN + 1, TOWER_SIZE + 1, 80, TOWERS_ACROSS / 2) },
 ]
 
