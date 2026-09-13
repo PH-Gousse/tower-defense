@@ -2,12 +2,10 @@ import * as THREE from 'three'
 import {
   GRID_W,
   GRID_H,
-  SPAWN_TILES,
-  EXIT_TILES,
-  ENTRANCE_ROW,
-  EXIT_ROW,
+  SPAWN_ROWS,
+  EXIT_ROWS,
+  MAX_TOWERS,
   SPAWN_INDICES,
-  TILE_COUNT,
   MAX_CREEPS,
   UNREACHABLE,
   Refusal,
@@ -52,6 +50,7 @@ import { buildTerrain } from './render/terrain'
 import { CameraRig, DEFAULT_ROWS_IN_VIEW, type GroundBounds } from './render/CameraRig'
 import { minimapLayout, minimapToWorld, paintMinimap, type MinimapLayout, type MinimapView } from './minimap'
 import { EdgeAlerts } from './alerts'
+import { rowBand, towerSlotRange, inBand, type RowBand } from './render/band'
 import {
   spawnZoneCentre, exitZoneCentre, mirrorAcross, deepestCreep, highestLappers, nextLapper, clampToLane,
   type Point,
@@ -292,7 +291,11 @@ export function createScene(
   const scene = new THREE.Scene()
   // Sky through the gaps in the treeline, and what the field fades into.
   scene.background = new THREE.Color(0x7f9cc0)
-  scene.fog = new THREE.Fog(0x7f9cc0, 70, 150)
+  // Near and far are re-set every frame from the camera distance, so the
+  // zoom cap does not fog the whole board and the close zoom still fades the
+  // far end of the lane. See `followCamera`.
+  const fog = new THREE.Fog(0x7f9cc0, 70, 150)
+  scene.fog = fog
 
   /**
    * Side-by-side layout. Your lane occupies 0..GRID_W; the opponent's sits to
@@ -377,12 +380,7 @@ export function createScene(
 
   // ---- ground --------------------------------------------------------------
 
-  const ROWS = {
-    entranceRow: ENTRANCE_ROW,
-    exitRow: EXIT_ROW,
-    spawnTiles: SPAWN_TILES,
-    exitTiles: EXIT_TILES,
-  }
+  const ROWS = { spawnRows: SPAWN_ROWS, exitRows: EXIT_ROWS, towerSize: TOWER_SIZE }
 
   scene.add(buildTerrain({ bounds: CONTENT, lanes: [MY_LANE, THEIR_LANE] }))
   scene.add(buildBoard(MY_LANE, BOARD, ROWS))
@@ -419,9 +417,21 @@ export function createScene(
     count: number
   }
   const towerModels: Model[][] = KINDS.map((k) => [1, 2, 3].map((l) => towerModel(k, l)))
+  /**
+   * Procedural tower models were built for a 1 x 1 tile (0.84 across) and the
+   * footprint is 2 x 2 now (ADR-0019). They are scaled to it in the instance
+   * matrix: TOWER_SIZE across, and a little less than that up, because a
+   * tower twice as tall as it was would loom over a one-tile creep. The
+   * catalogue's towers get rebuilt at the new footprint in Phase 5 (#47);
+   * this is what the fallback draws until then.
+   */
+  const TOWER_HEIGHT_SCALE = 1.5
+  const TOWER_SCALE = new THREE.Vector3(TOWER_SIZE, TOWER_HEIGHT_SCALE, TOWER_SIZE)
+  const IDENTITY_Q = new THREE.Quaternion()
   const towerSets: TowerSet[][] = towerModels.map((levels) =>
     levels.map((model) => {
-      const lit = new THREE.InstancedMesh(model.lit as THREE.BufferGeometry, litMat, TILE_COUNT)
+      // Both lanes' towers share a mesh, so the ceiling is two lanes' worth.
+      const lit = new THREE.InstancedMesh(model.lit as THREE.BufferGeometry, litMat, MAX_TOWERS * 2)
       lit.count = 0
       lit.castShadow = true
       lit.receiveShadow = true
@@ -430,7 +440,7 @@ export function createScene(
       scene.add(lit)
       let glow: THREE.InstancedMesh | null = null
       if (model.glow) {
-        glow = new THREE.InstancedMesh(model.glow, glowMat, TILE_COUNT)
+        glow = new THREE.InstancedMesh(model.glow, glowMat, MAX_TOWERS * 2)
         glow.count = 0
         glow.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
         spanningInstances(glow)
@@ -473,6 +483,7 @@ export function createScene(
     const g = new THREE.Group()
     g.add(new THREE.Mesh(model.lit as THREE.BufferGeometry, hoverGhostMat))
     if (model.glow) g.add(new THREE.Mesh(model.glow, hoverGhostMat))
+    g.scale.copy(TOWER_SCALE)
     g.visible = false
     scene.add(g)
     return g
@@ -528,7 +539,7 @@ export function createScene(
     opacity: 0.35,
     depthWrite: false,
   })
-  const hover = new THREE.Mesh(new THREE.BoxGeometry(TILE * 0.92, 0.04, TILE * 0.92), hoverMaterial)
+  const hover = new THREE.Mesh(new THREE.BoxGeometry(TOWER_SIZE * 0.96, 0.04, TOWER_SIZE * 0.96), hoverMaterial)
   hover.visible = false
   hover.renderOrder = 3
   scene.add(hover)
@@ -973,7 +984,8 @@ const WAIT_COLOUR = 0xf3c650
       if (cmd.kind !== Kind.Build) continue
       const n = counts[cmd.tower] as number
       if (n >= 64) continue
-      scratch.makeTranslation(cmd.x + 0.5, 0, cmd.y + 0.5)
+      scratchV.set(cmd.x + TOWER_SIZE / 2, 0, cmd.y + TOWER_SIZE / 2)
+      scratch.compose(scratchV, IDENTITY_Q, TOWER_SCALE)
       ;(ghostMeshes[cmd.tower] as THREE.InstancedMesh).setMatrixAt(n, scratch)
       counts[cmd.tower] = n + 1
     }
@@ -983,17 +995,32 @@ const WAIT_COLOUR = 0xf3c650
     })
   }
 
-  /** Rebuild tower instances for both lanes, grouped by kind and level. */
-  function syncTowers(): number {
+  /**
+   * The rows in view, plus a margin, and the tick they were last synced at.
+   *
+   * Instances are written only for towers and creeps inside this band -- see
+   * `render/band.ts` for why three.js's own culling cannot do it. The band
+   * moves with the camera, so `syncTowers` runs when the band changes as well
+   * as when the tick does.
+   */
+  const band: RowBand = { first: 0, last: GRID_H - 1 }
+  const BAND_MARGIN = 3
+  let bandFirst = -1
+  let bandLast = -1
+  const slotRange = { start: 0, end: 0 }
+
+  /** Rebuild tower instances for both lanes, grouped by kind and level, inside the band. */
+  function syncTowers(): void {
     for (const levels of towerSets) for (const set of levels) set.count = 0
-    let mine = 0
     // Towers are a dense list of 2x2 anchors (ADR-0019). The asset layer keys
-    // a tower by its anchor tile index, which is unique while it stands; the
-    // model sits on the footprint centre. Tower models are still 1 unit wide
-    // here -- Phase 4 of the restructure rebuilds them at the new footprint.
+    // a tower by its anchor tile index, which is unique while it stands, and
+    // every catalogue tower is placed whatever the band: it is its own object
+    // and culls itself. The instanced fallback is banded; the list is sorted
+    // by anchor, so the band is one contiguous run of slots.
     for (let lane = 0; lane < 2; lane++) {
       const t = (driver.current.lanes[lane] as Lane).towers
       const ox = laneX(lane)
+      towerSlotRange(t, band.first - TOWER_SIZE, band.last, slotRange)
       for (let i = 0; i < t.count; i++) {
         const kind = t.kind[i] as number
         const level = t.level[i] as number
@@ -1002,15 +1029,18 @@ const WAIT_COLOUR = 0xf3c650
         const key = ay * GRID_W + ax
         const x = ox + ax + TOWER_SIZE / 2
         const z = ay + TOWER_SIZE / 2
-        if (lane === me()) mine += 1
         if (assets && assets.placeTower(lane, key, kind, level, x, z)) continue
+        if (i < slotRange.start || i >= slotRange.end) continue
         const set = (towerSets[kind] as TowerSet[])[level - 1] as TowerSet
-        scratch.makeTranslation(x, 0, z)
+        scratchV.set(x, 0, z)
+        scratch.compose(scratchV, IDENTITY_Q, TOWER_SCALE)
         set.lit.setMatrixAt(set.count, scratch)
         if (set.glow) set.glow.setMatrixAt(set.count, scratch)
         set.count += 1
       }
     }
+    bandFirst = band.first
+    bandLast = band.last
     assets?.syncTowers((lane, key) => towerSlotAt(driver.current.lanes[lane] as Lane, tileX(key), tileY(key)) !== -1)
     for (const levels of towerSets) {
       for (const set of levels) {
@@ -1022,7 +1052,36 @@ const WAIT_COLOUR = 0xf3c650
         }
       }
     }
-    return mine
+  }
+
+  /**
+   * Point the sun's shadow box and the fog at wherever the camera is looking.
+   *
+   * The shadow camera is an orthographic box a few dozen units across; over a
+   * 213-row lane a fixed one lit the middle of the lane and nothing else. The
+   * fog likewise was tuned to a camera that never sat past 71 units; at the
+   * 118-unit zoom cap it whited out the board. Both follow the target now,
+   * and the shadow box grows with the distance so the far rows keep their
+   * shadows when zoomed out.
+   */
+  let shadowHalf = 0
+  function followCamera(): void {
+    rig.getTarget(scratchV)
+    sun.target.position.set(scratchV.x, 0, scratchV.z)
+    sun.position.set(scratchV.x - 14, 34, scratchV.z + 12)
+    sun.target.updateMatrixWorld()
+    const half = Math.min(60, Math.max(22, rig.distance * 0.45))
+    if (half !== shadowHalf) {
+      shadowHalf = half
+      sun.shadow.camera.left = -half
+      sun.shadow.camera.right = half
+      sun.shadow.camera.top = half
+      sun.shadow.camera.bottom = -half
+      sun.shadow.camera.far = 40 + half * 2
+      sun.shadow.camera.updateProjectionMatrix()
+    }
+    fog.near = rig.distance * 1.15
+    fog.far = rig.distance * 2.4
   }
 
   /**
@@ -1155,7 +1214,7 @@ const WAIT_COLOUR = 0xf3c650
         if (slot === -1) continue
         let sx = ox + cx
         let sz = cz
-        let sy = muzzleHeight(kind as TowerKind, level)
+        let sy = muzzleHeight(kind as TowerKind, level) * TOWER_HEIGHT_SCALE
         const backed = assets?.towerFired(lane, anchor, scratchMuzzle) ?? false
         if (backed) {
           sx = scratchMuzzle.x
@@ -1373,6 +1432,14 @@ const WAIT_COLOUR = 0xf3c650
           const ahp = curr.hp[i] as number
           const amax = spec ? spec.hp : ahp
           if (ahp < amax) bars.add(wx, atop, wz, ahp / amax)
+          continue
+        }
+        // Off the band: remember where it is for a projectile to chase, and
+        // draw nothing. It is off-screen by more than the margin.
+        if (!inBand(y, band)) {
+          dxs[i] = wx
+          dys[i] = 0.35 * scale
+          dzs[i] = wz
           continue
         }
         scratchV.set(wx, bob, wz)
@@ -1646,6 +1713,7 @@ const WAIT_COLOUR = 0xf3c650
         dev,
         creepNames: CREEP_FILE.archetypes.map((a) => a.key),
         towerNames: ARCHETYPES.map((a) => a.key),
+        towerSize: TOWER_SIZE,
       })
       const missing = layer.missingFor(CREEP_FILE.archetypes.length, 3, ARCHETYPES.length, 3)
       if (missing.length && dev) console.warn(`[assets] catalogue lacks ${missing.length} of the match's assets (${missing.join(', ')}); those draw procedurally`)
@@ -1678,7 +1746,7 @@ const WAIT_COLOUR = 0xf3c650
         detectShots(nowMs)
         detectDeaths(nowMs)
         detectTowerChanges(nowMs)
-        const towerCount = syncTowers()
+        syncTowers()
         syncGhosts()
         lastSyncedTick = state.tick
         currentPath.set(pathFrom((state.lanes[me()] as Lane).field, SPAWN_INDICES[0] as number))
@@ -1710,7 +1778,7 @@ const WAIT_COLOUR = 0xf3c650
 
         const maze = mazeLength((state.lanes[me()] as Lane).field)
         statsCb({
-          towers: towerCount,
+          towers: (state.lanes[me()] as Lane).towers.count,
           creeps: (state.lanes[me()] as Lane).creeps.count,
           maze: maze === UNREACHABLE ? -1 : maze,
           tick: state.tick,
@@ -1745,6 +1813,12 @@ const WAIT_COLOUR = 0xf3c650
       // the tile under a stationary cursor changes when the camera moves.
       rig.update()
       refreshHover()
+      followCamera()
+      // The band the camera now shows. A change re-syncs the towers, which a
+      // tick alone would not do; creeps re-band every frame anyway.
+      rig.visibleBounds(viewBox)
+      rowBand(viewBox.minZ, viewBox.maxZ, BAND_MARGIN, GRID_H, band)
+      if (band.first !== bandFirst || band.last !== bandLast) syncTowers()
       // The listener sits where the camera looks; the frame's half-width in
       // world units is what a sound at the frame's edge is panned against.
       rig.getTarget(scratchV)

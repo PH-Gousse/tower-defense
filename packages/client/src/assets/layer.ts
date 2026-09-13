@@ -67,7 +67,13 @@ export class AssetLayer {
     private readonly scene: THREE.Scene,
     private readonly registry: AssetRegistry,
     private readonly sfx: SfxPlayer,
-    private readonly opts: { readonly dev: boolean; readonly creepNames: readonly string[]; readonly towerNames: readonly string[] },
+    private readonly opts: {
+      readonly dev: boolean
+      readonly creepNames: readonly string[]
+      readonly towerNames: readonly string[]
+      /** Tiles per tower side; catalogue towers built for one tile are scaled to it. */
+      readonly towerSize: number
+    },
   ) {}
 
   get active(): boolean {
@@ -237,6 +243,11 @@ export class AssetLayer {
     root.name = `${asset}@${lane}:${tile}`
     applyTeamMaterials(root, loaded.albedo, loaded.glowColour, lane as 0 | 1)
     root.position.set(x, 0, z)
+    // Transitional (ADR-0019): the catalogue's towers were built for a 1 x 1
+    // tile and the footprint is 2 x 2 now. Until the factory rebuilds them at
+    // the new footprint (issue #47) they are scaled up uniformly here, and the
+    // muzzle offset in `towerFired` scales with them.
+    root.scale.setScalar(this.towerScale(asset))
     const t: Tower = { lane, tile, asset, archetype: this.opts.towerNames[kind] ?? 'single', level, removeAt: 0, model: null as unknown as AnimatedModel }
     t.model = new AnimatedModel({
       root,
@@ -300,8 +311,19 @@ export class AssetLayer {
     if (b.clip) t.model.play(b.clip, { restart: true })
     this.record('fired', t.asset, b.clip, null)
     const m = this.registry.entry(t.asset)?.muzzle
-    out.set(t.model.root.position.x + (m?.[0] ?? 0), m?.[1] ?? 1, t.model.root.position.z + (m?.[2] ?? 0))
+    const k = this.towerScale(t.asset)
+    out.set(
+      t.model.root.position.x + (m?.[0] ?? 0) * k,
+      (m?.[1] ?? 1) * k,
+      t.model.root.position.z + (m?.[2] ?? 0) * k,
+    )
     return true
+  }
+
+  /** How much a catalogue tower is scaled to cover its footprint. See makeTower. */
+  private towerScale(asset: AssetId): number {
+    const footprint = this.registry.entry(asset)?.footprint || 1
+    return this.opts.towerSize / footprint
   }
 
   /** Whether the catalogue has a file sound for a tower event, so the scene can skip its synthesised one. */

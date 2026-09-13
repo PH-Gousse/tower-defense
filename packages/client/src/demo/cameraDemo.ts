@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { GRID_W, GRID_H, ENTRANCE_ROW, EXIT_ROW } from '@ltw/sim'
+import { GRID_W, GRID_H, SPAWN_ROWS, EXIT_ROWS, TOWER_SIZE } from '@ltw/sim'
 import { createRenderer, WebGLUnavailable } from '../render/renderer'
 import { CameraRig } from '../render/CameraRig'
 import { groundToTile, groundUnderNdc, ndcFromClient, type LaneLayout } from '../render/picking'
@@ -55,7 +55,7 @@ export function startCameraDemo(): void {
   scene.add(key)
 
   for (const lane of LANES) {
-    scene.add(buildBoard(lane, BOARD, { entranceRow: ENTRANCE_ROW, exitRow: EXIT_ROW }))
+    scene.add(buildBoard(lane, BOARD, { spawnRows: SPAWN_ROWS, exitRows: EXIT_ROWS, towerSize: TOWER_SIZE }))
     scene.add(placeholders(lane))
   }
 

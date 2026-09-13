@@ -131,72 +131,94 @@ export function grassTexture(seed = 1): THREE.CanvasTexture {
   return texture(c, true)
 }
 
+export type LaneZone = 'spawn' | 'build' | 'exit'
+
 export interface LaneTextureOptions {
   readonly width: number
-  readonly length: number
-  readonly entranceRow: number
-  readonly exitRow: number
-  readonly spawnTiles: readonly { readonly x: number; readonly y: number }[]
-  readonly exitTiles: readonly { readonly x: number; readonly y: number }[]
+  /** Rows in this slab, not in the lane: the floor is baked in chunks. */
+  readonly rows: number
+  readonly zone: LaneZone
+  /** Tiles per tower side: the build turf gets a firmer line at this pitch. */
+  readonly towerSize: number
   /** Lightness of the turf. The opponent's lane is drawn a shade cooler. */
   readonly hue: number
   readonly light: number
-  /** CSS colour of the glow on the tiles creeps actually use. */
+  /** CSS colour of the glow washing each zone's flagstones. */
   readonly spawnGlow: string
   readonly exitGlow: string
 }
 
-/** Pixels per tile in the baked lane. On screen a tile is ~30px at the default framing and ~75px zoomed in. */
+/** Pixels per tile in the baked lane. On screen a tile is ~27px at the zoom cap and ~75px zoomed in. */
 export const LANE_PX = 64
 
 /**
- * One lane's floor, baked: turf with a countable grid, a cobbled entrance row
- * with glowing spawn runes and a cobbled exit row with glowing exit runes.
+ * One slab of a lane's floor, baked (see `board.ts` for why slabs).
  *
- * Baked rather than assembled from tile meshes because the floor never
- * changes: what used to be five instanced meshes and a line set is one quad and
- * one draw call, and the grid can be drawn as a soft groove between tiles
- * rather than a hard line floating above them.
+ * Build turf: slightly checkered so a tile can be counted, grooves between
+ * tiles, and a firmer line every `towerSize` tiles -- the 2x2 grid a footprint
+ * snaps to, faint enough to read as texture until you look for it.
+ *
+ * Zones: worn flagstones under a wash of the zone's colour, strongest at the
+ * seam with the build area where creeps cross it. A zone is a place, not a
+ * row of runes.
  */
 export function laneTexture(o: LaneTextureOptions, seed = 11): THREE.CanvasTexture {
   const W = o.width * LANE_PX
-  const H = o.length * LANE_PX
+  const H = o.rows * LANE_PX
   const [c, ctx] = canvas(W, H)
   const rnd = seeded(seed)
 
-  // Turf, slightly checkered so a tile can be counted at a glance.
-  for (let y = 0; y < o.length; y++) {
-    for (let x = 0; x < o.width; x++) {
-      const even = (x + y) % 2 === 0
-      ctx.fillStyle = hsl(o.hue, 0.36, o.light + (even ? 0.02 : -0.02))
-      ctx.fillRect(x * LANE_PX, y * LANE_PX, LANE_PX, LANE_PX)
+  if (o.zone === 'build') {
+    // Turf, slightly checkered so a tile can be counted at a glance.
+    for (let y = 0; y < o.rows; y++) {
+      for (let x = 0; x < o.width; x++) {
+        const even = (x + y) % 2 === 0
+        ctx.fillStyle = hsl(o.hue, 0.36, o.light + (even ? 0.02 : -0.02))
+        ctx.fillRect(x * LANE_PX, y * LANE_PX, LANE_PX, LANE_PX)
+      }
     }
+    mottle(ctx, rnd, W, H, o.width * o.rows * 0.5, o.hue)
+    grassBlades(ctx, rnd, 0, 0, W, H, 0.05, o.hue, o.light + 0.08)
+
+    // Grid grooves. Drawn after the turf so they sit in it rather than on it.
+    ctx.strokeStyle = 'rgba(10, 22, 8, 0.28)'
+    ctx.lineWidth = 2
+    for (let x = 0; x <= o.width; x++) line(ctx, x * LANE_PX, 0, x * LANE_PX, H)
+    for (let y = 0; y <= o.rows; y++) line(ctx, 0, y * LANE_PX, W, y * LANE_PX)
+    ctx.strokeStyle = 'rgba(200, 230, 160, 0.10)'
+    ctx.lineWidth = 1
+    for (let x = 0; x <= o.width; x++) line(ctx, x * LANE_PX + 1.5, 0, x * LANE_PX + 1.5, H)
+    for (let y = 0; y <= o.rows; y++) line(ctx, 0, y * LANE_PX + 1.5, W, y * LANE_PX + 1.5)
+
+    // The footprint grid: a firmer line every towerSize tiles. Slabs are a
+    // multiple of towerSize rows, so the pitch lines up across seams.
+    const step = Math.max(1, o.towerSize)
+    ctx.strokeStyle = 'rgba(10, 22, 8, 0.22)'
+    ctx.lineWidth = 3
+    for (let x = 0; x <= o.width; x += step) line(ctx, x * LANE_PX, 0, x * LANE_PX, H)
+    for (let y = 0; y <= o.rows; y += step) line(ctx, 0, y * LANE_PX, W, y * LANE_PX)
+    return texture(c, false)
   }
-  mottle(ctx, rnd, W, H, o.width * o.length * 0.5, o.hue)
-  grassBlades(ctx, rnd, 0, 0, W, H, 0.05, o.hue, o.light + 0.08)
 
-  // Reserved rows: worn cobbles.
-  cobbles(ctx, rnd, 0, o.entranceRow * LANE_PX, W, LANE_PX)
-  cobbles(ctx, rnd, 0, o.exitRow * LANE_PX, W, LANE_PX)
-
-  // Grid grooves. Drawn after the turf so they sit in it rather than on it.
-  ctx.strokeStyle = 'rgba(10, 22, 8, 0.28)'
-  ctx.lineWidth = 2
-  for (let x = 0; x <= o.width; x++) {
-    line(ctx, x * LANE_PX, 0, x * LANE_PX, H)
-  }
-  for (let y = 0; y <= o.length; y++) {
-    line(ctx, 0, y * LANE_PX, W, y * LANE_PX)
-  }
-  ctx.strokeStyle = 'rgba(200, 230, 160, 0.10)'
-  ctx.lineWidth = 1
-  for (let x = 0; x <= o.width; x++) line(ctx, x * LANE_PX + 1.5, 0, x * LANE_PX + 1.5, H)
-  for (let y = 0; y <= o.length; y++) line(ctx, 0, y * LANE_PX + 1.5, W, y * LANE_PX + 1.5)
-
-  // The tiles creeps really use, lit from beneath.
-  for (const t of o.spawnTiles) rune(ctx, t.x, t.y, o.spawnGlow)
-  for (const t of o.exitTiles) rune(ctx, t.x, t.y, o.exitGlow)
-
+  // A zone: flagstones, washed in the zone's colour, strongest at the seam
+  // with the build area -- the bottom of the spawn zone, the top of the exit.
+  cobbles(ctx, rnd, 0, 0, W, H)
+  const glow = o.zone === 'spawn' ? o.spawnGlow : o.exitGlow
+  const soft = glow.replace(/[\d.]+\)$/, '0.18)')
+  const none = glow.replace(/[\d.]+\)$/, '0)')
+  const g = o.zone === 'spawn'
+    ? ctx.createLinearGradient(0, 0, 0, H)
+    : ctx.createLinearGradient(0, H, 0, 0)
+  g.addColorStop(0, none)
+  g.addColorStop(0.6, soft)
+  g.addColorStop(1, glow.replace(/[\d.]+\)$/, '0.42)'))
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, W, H)
+  // A border of the zone colour along the seam, so the edge reads as a line.
+  ctx.strokeStyle = glow
+  ctx.lineWidth = 4
+  const seamY = o.zone === 'spawn' ? H - 2 : 2
+  line(ctx, 0, seamY, W, seamY)
   return texture(c, false)
 }
 
@@ -251,39 +273,6 @@ function roundRect(
   ctx.arcTo(x, y + h, x, y, r)
   ctx.arcTo(x, y, x + w, y, r)
   ctx.closePath()
-}
-
-/** A glowing circle with an inner ring, centred on a tile. */
-function rune(ctx: CanvasRenderingContext2D, tx: number, ty: number, colour: string): void {
-  const cx = (tx + 0.5) * LANE_PX
-  const cy = (ty + 0.5) * LANE_PX
-  const r = LANE_PX * 0.46
-  const g = ctx.createRadialGradient(cx, cy, r * 0.1, cx, cy, r)
-  g.addColorStop(0, colour)
-  g.addColorStop(0.55, colour.replace(/[\d.]+\)$/, '0.35)'))
-  g.addColorStop(1, 'rgba(0,0,0,0)')
-  ctx.fillStyle = g
-  ctx.fillRect(cx - r, cy - r, r * 2, r * 2)
-  ctx.strokeStyle = colour
-  ctx.lineWidth = 2.5
-  ctx.beginPath()
-  ctx.arc(cx, cy, r * 0.62, 0, Math.PI * 2)
-  ctx.stroke()
-  ctx.lineWidth = 1.5
-  ctx.beginPath()
-  ctx.arc(cx, cy, r * 0.3, 0, Math.PI * 2)
-  ctx.stroke()
-  // Four ticks, so the ring reads as a mark rather than a stain.
-  for (let k = 0; k < 4; k++) {
-    const a = (k * Math.PI) / 2 + Math.PI / 4
-    line(
-      ctx,
-      cx + Math.cos(a) * r * 0.62,
-      cy + Math.sin(a) * r * 0.62,
-      cx + Math.cos(a) * r * 0.82,
-      cy + Math.sin(a) * r * 0.82,
-    )
-  }
 }
 
 /** A soft radial glow. The one sprite every hit, flash and puff is built from. */
