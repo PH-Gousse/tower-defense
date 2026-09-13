@@ -1,7 +1,7 @@
 # ADR-0024 — The camera scrolls the lane, zoom caps at 40 rows, and a minimap shows the rest
 
 - **Date:** 2026-09-13
-- **Status:** Accepted — not implemented
+- **Status:** Accepted — implemented 2026-09-13 (issues #44, #45); the 20-row default and the input bindings remain `[proposed]`
 
 ## Context
 

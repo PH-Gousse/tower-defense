@@ -1,58 +1,57 @@
-import { GRID_W, GRID_H } from '@ltw/sim'
-import { fitGround, DEFAULT_FOV_DEG, DEFAULT_PITCH_DEG } from './render/CameraRig'
+import { LANE_WIDTH, LANE_GAP, GRID_W } from '@ltw/sim'
+import { DEFAULT_ROWS_IN_VIEW } from './render/CameraRig'
 
 /**
  * Where the HUD and the palette sit, and what that reserves from the camera.
  *
- * The board is 20 tiles across and 24 down, so on a landscape screen the
- * camera's fit is bound by HEIGHT and some horizontal space is free. That is
- * the argument for rails: the bars were costing 136px of 830 on the one axis
- * with no slack, and moving them sideways takes the board from 694px tall to
- * the full 830 (+44% area) without touching the camera's maths.
+ * The chrome is either two BARS (top and bottom) or two RAILS (left and
+ * right). Bars spend height; rails spend width. Which is free depends on the
+ * viewport's aspect against what the camera wants to show.
  *
- *   landscape, bars (before)          landscape, rails (after)
+ *   landscape, bars                    landscape, rails
  *   +---------------------------+     +---+-------------------+---+
  *   |########## HUD ############|     |###|                   |###|
  *   +---------------------------+     |###|                   |###|
- *   |                           |     |HUD|       board       |pal|
- *   |          board            |     |###|    (full height)  |###|
+ *   |                           |     |HUD|       lane        |pal|
+ *   |          lane             |     |###|    (full height)  |###|
  *   |                           |     |###|                   |###|
  *   +---------------------------+     |###|                   |###|
  *   |######## palette ##########|     +---+-------------------+---+
  *   +---------------------------+
  *   safeV = max(hud, palette)         safeH = rail, safeV = 0
- *   costs 2x the TALLER bar           costs nothing WHILE height-bound
  *
- * That last word is the whole difficulty. Take too much width and the fit flips
- * to width-bound, at which point the board starts SHRINKING while the UI looks
- * like it gained room -- the change makes things worse and looks like progress.
+ * Under the old 8x24 board the camera FIT the whole board, and the rail's
+ * width was the widest that kept that fit height-bound: `fitGround` was asked
+ * directly. The camera scrolls now (ADR-0024) and frames a fixed number of
+ * rows, so there is no fit to keep height-bound -- the question is what the
+ * default framing must still show ACROSS. The rule: after the rails, the
+ * usable view at `DEFAULT_ROWS_IN_VIEW` rows must still show your whole lane,
+ * the gap and a strip of the opponent's, with a tile of margin. That is
+ * `MIN_VIEW_ASPECT`, derived from the lane constants so a geometry change
+ * moves it rather than quietly invalidating a tuned number.
  *
- * The first version of this module capped the rail at a constant fraction of
- * the viewport width, measured at 25%. That was wrong twice over. It was
- * measured with the bars still in place, so `safeV` was still eating height and
- * the fit had slack it does not have once the bars move; and the free width is
- * not a property of WIDTH at all, it is a property of the viewport's ASPECT
- * against the board's. The board's rectangle is about 0.835 wide-to-tall, so a
- * 3440x1440 screen has ~30% per side free while a square 900x900 has ~2.8% --
- * a single fraction cannot describe both, and the one that fits a laptop
- * silently flips a square window to width-bound.
- *
- * So the rule is not a fraction. It asks the camera's own fit maths for the
- * widest rail that keeps the vertical constraint binding, and takes that. A
- * change to the field of view moves this automatically instead of quietly
- * invalidating a tuned number.
+ * Why a strip of the other lane rather than all of it: both lanes with margin
+ * are 38 tiles across against 20 rows, an aspect of 1.9, which no common
+ * screen reaches once any chrome is subtracted. Insisting on it would send
+ * every laptop to bars for a view they cannot have anyway. The minimap and the
+ * lane-swap hotkey are how the opponent's maze is read (ADR-0024).
  */
 
 /** Gap between the two lanes, in tiles. The camera and the layout must agree. */
-export const OPP_GAP = 4
+export const OPP_GAP = LANE_GAP
 
 /** Full content width in tiles: your lane, the gap, theirs. */
 export const CONTENT_W = GRID_W * 2 + OPP_GAP
 
-/** Margin `fitBounds` applies around the content rectangle. */
-const MARGIN = 1.06
+/**
+ * Tiles the default framing must show across: your lane, the gap, a margin
+ * tile each side, and TOWER-width strip of the opponent's lane so its edge is
+ * visibly there.
+ */
+export const MIN_VIEW_TILES = LANE_WIDTH + LANE_GAP + 2 + 2
 
-const DEG = Math.PI / 180
+/** The usable viewport aspect below which rails would cost the default view. */
+export const MIN_VIEW_ASPECT = MIN_VIEW_TILES / DEFAULT_ROWS_IN_VIEW
 
 /** Widest a rail may be. Beyond this the rail is padding, not content. */
 export const RAIL_MAX = 300
@@ -70,59 +69,30 @@ export const RAIL_MIN = 150
 /**
  * Safety factor on the computed ceiling.
  *
- * The exact crossover is where the two constraints are equal, and sitting on it
- * means any rounding lands on the wrong side. Nine tenths keeps the fit clearly
- * height-bound rather than marginally so.
+ * The exact crossover is where the usable aspect equals `MIN_VIEW_ASPECT`, and
+ * sitting on it means any rounding lands on the wrong side. Nine tenths keeps
+ * the default view clearly wide enough rather than marginally so.
  */
 const RAIL_SAFETY = 0.9
 
 /**
- * The widest rail, in px per side, that leaves the fit bound by height.
- *
- * Solved by asking `fitGround` rather than by algebra against it, so the two can
- * never disagree: whatever the rig computes is what this is measured against.
- * Returns 0 when even a zero-width rail would be width-bound, which cannot
- * happen on a landscape viewport but is the honest answer if it ever did.
+ * The widest rail, in px per side, that leaves the usable view at least
+ * `MIN_VIEW_ASPECT` wide for its height. 0 when even no rail would.
  */
-export function maxHeightBoundRail(viewW: number, viewH: number): number {
-  const halfW = (CONTENT_W / 2) * MARGIN
-  const halfD = (GRID_H / 2) * MARGIN
-  const pitch = DEFAULT_PITCH_DEG * DEG
-  const fov = DEFAULT_FOV_DEG * DEG
-
-  // In the rail layout the vertical safe area is zero, so `usableY` is 1 and
-  // `fitBounds`'s effective fov and aspect reduce to the raw ones.
-  const heightBound = (rail: number): boolean => {
-    const usableX = Math.max(0.2, (viewW - 2 * rail) / viewW)
-    const aspectEff = (viewW / viewH) * usableX
-    const both = fitGround(halfW, halfD, pitch, fov, aspectEff)
-    const verticalOnly = fitGround(0, halfD, pitch, fov, aspectEff)
-    return both.distance <= verticalOnly.distance + 1e-9
-  }
-
-  if (!heightBound(0)) return 0
-
-  // Bisect rather than step: exact to a pixel in ~11 iterations regardless of
-  // how wide the screen is, where a fixed step is either slow or coarse.
-  let lo = 0
-  let hi = Math.floor(viewW / 2)
-  while (hi - lo > 1) {
-    const mid = Math.floor((lo + hi) / 2)
-    if (heightBound(mid)) lo = mid
-    else hi = mid
-  }
-  return lo
+export function maxRail(viewW: number, viewH: number): number {
+  const free = viewW - MIN_VIEW_ASPECT * viewH
+  return free > 0 ? Math.floor(free / 2) : 0
 }
 
 /**
  * Rail width per side, or 0 when the chrome should stay in horizontal bars.
  *
- * Portrait gets bars: two rails plus a readable board does not fit across a
- * phone, and `scene.ts` already frames a single lane there for the same reason.
+ * Portrait gets bars: two rails plus a readable lane does not fit across a
+ * phone, and the camera already frames your lane alone there.
  */
 export function railWidth(viewW: number, viewH: number): number {
   if (viewH > viewW) return 0
-  const free = Math.floor(maxHeightBoundRail(viewW, viewH) * RAIL_SAFETY)
+  const free = Math.floor(maxRail(viewW, viewH) * RAIL_SAFETY)
   const w = Math.min(RAIL_MAX, free)
   return w >= RAIL_MIN ? w : 0
 }

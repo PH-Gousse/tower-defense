@@ -126,3 +126,42 @@ export function groundToTile(
   out.y = Math.floor(lz)
   return out
 }
+
+/**
+ * A ground point to the anchor of a `size`-tile-square footprint, snapped to
+ * the nearest grid VERTEX, or `null` when the footprint would leave the lane.
+ *
+ * A footprint of even size has its centre on a vertex, not in a tile, so the
+ * natural pick is the vertex nearest the cursor: the footprint then sits
+ * centred under the pointer rather than hanging off its corner, and moving the
+ * cursor half a tile flips the anchor -- which is the 1-tile grid ADR-0020
+ * asks for, felt as "the ghost follows the cursor". `Math.round`, then back by
+ * half the size, gives that; `floor` would give the hovered-tile anchor, which
+ * puts the pointer on the footprint's top-left cell and reads as an offset.
+ *
+ * `[proposed]` over the brief's hovered-tile rule; the sim is indifferent.
+ */
+export function groundToAnchor(
+  point: { x: number; z: number },
+  lane: LaneLayout,
+  size: number,
+  out: TileCoord,
+): TileCoord | null {
+  const lx = (point.x - lane.originX) / lane.tile
+  const lz = (point.z - lane.originZ) / lane.tile
+  // Outside the lane altogether: no anchor, even one whose footprint would
+  // still overlap the edge.
+  if (lx < 0 || lz < 0 || lx >= lane.width || lz >= lane.length) return null
+  const half = size / 2
+  let ax = Math.round(lx) - half
+  let ay = Math.round(lz) - half
+  // Clamp so the footprint stays inside the lane: a cursor in the last half
+  // tile still anchors the last legal footprint rather than none.
+  if (ax < 0) ax = 0
+  if (ay < 0) ay = 0
+  if (ax > lane.width - size) ax = lane.width - size
+  if (ay > lane.length - size) ay = lane.length - size
+  out.x = ax
+  out.y = ay
+  return out
+}

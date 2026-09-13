@@ -155,30 +155,22 @@ export const DEFAULT_FOV_DEG = 18
 export const DEFAULT_PITCH_DEG = 70
 
 /**
- * Ceiling on how far back the camera may sit.
+ * How much of the lane is in frame, in rows (ADR-0024).
  *
- * **This constant is tuned to `DEFAULT_FOV_DEG` and must move with it.** A
- * narrower lens has to sit further back to see the same board, and `fitBounds`
- * clamps the fitted distance rather than widening this limit -- deliberately,
- * see the comment there. So a fov change that outgrows this does not throw or
- * warn: it silently renders a cropped board.
+ * The lane is 213 rows and no framing that shows it all is readable, so the
+ * camera SCROLLS and the zoom is stated in rows rather than in distance:
+ * `MAX_ROWS_IN_VIEW` is the furthest out the player may go, about five screens
+ * per lane; `DEFAULT_ROWS_IN_VIEW` is where a match opens, about ten. At 40
+ * rows on a 1080p screen a row is 27px, so a 2x2 tower is a readable shape and
+ * a creep a clear dot; at 60 they were judged colour rather than shape. The
+ * numbers were reasoned from the rig's own factors rather than rendered, which
+ * is why the default is still `[proposed]`.
  *
- * The binding case is a SHORT viewport, not a typical one. Required distance
- * across the viewports the guard test walks, at fov 18 / pitch 70:
- *
- *     3440x1440    83.1
- *     iPad  820x1180    85.1
- *     iPhone 390x844    89.8
- *     1456x830          90.0
- *     1280x800          90.7
- *     1024x640          95.6
- *     1024x500         103.5   <- binds
- *
- * 115 is that worst case with 10% of headroom. At the previous 70, fov 18 would
- * have cropped every one of these -- the 1456x830 case to 78% of the board.
- * `camera.test.ts` walks the same table and fails if any fit exceeds this.
+ * Portrait is width-bound: 20 rows on a 390x844 phone shows nine tiles of a
+ * sixteen-wide lane, so `frameRows` backs off until the lane fits across.
  */
-export const DEFAULT_MAX_DISTANCE = 115
+export const MAX_ROWS_IN_VIEW = 40
+export const DEFAULT_ROWS_IN_VIEW = 20
 
 function factors(pitchRad: number, fovRad: number) {
   const t = Math.tan(fovRad / 2)
@@ -189,6 +181,46 @@ function factors(pitchRad: number, fovRad: number) {
   const kf = denom > t / HORIZON_CAP ? t / denom : HORIZON_CAP
   return { t, cosP, kn, kf }
 }
+
+/**
+ * The distance at which `rows` of ground fill the frame top to bottom.
+ *
+ * The visible depth along the gaze is `distance * (kn + kf)` -- see
+ * `groundWindow` -- so this is its inverse. Linear in rows, so "half the rows"
+ * is exactly "half the distance", which is what makes a rows-stated zoom read
+ * the same at every level.
+ */
+export function distanceForRows(rows: number, pitchRad: number, fovRad: number): number {
+  const { kn, kf } = factors(pitchRad, fovRad)
+  return rows / (kn + kf)
+}
+
+/**
+ * The half-width of ground visible at the far edge of the frame at `distance`.
+ *
+ * `groundWindow` reports the same number; this is the closed form, exposed so
+ * the width-bound framing can invert it without a search.
+ */
+export function halfWidthAt(distance: number, pitchRad: number, fovRad: number, aspect: number): number {
+  const { t, cosP, kf } = factors(pitchRad, fovRad)
+  return t * aspect * distance * (1 + kf * cosP)
+}
+
+/**
+ * Ceiling on how far back the camera may sit: the distance at which
+ * `MAX_ROWS_IN_VIEW` rows are in frame at the shipped pose.
+ *
+ * Derived rather than tuned. It used to be 115, the distance that fitted the
+ * whole 24-row board on the shortest viewport in the guard table; the lane no
+ * longer fits on any viewport, so the ceiling is a readability limit instead
+ * of a fit. **It moves with `DEFAULT_FOV_DEG` and `DEFAULT_PITCH_DEG`**, which
+ * is the point of deriving it: a retune cannot leave it stale.
+ */
+export const DEFAULT_MAX_DISTANCE = distanceForRows(
+  MAX_ROWS_IN_VIEW,
+  DEFAULT_PITCH_DEG * DEG,
+  DEFAULT_FOV_DEG * DEG,
+)
 
 export interface GroundWindow {
   /** Ground distance from the target to the bottom edge of the screen. */
@@ -475,6 +507,81 @@ export class CameraRig {
   }
 
   /**
+   * Frame `rows` of the lane, with the top of `topZ` at the top of the usable
+   * view and `[minX, maxX]` centred across it (ADR-0024).
+   *
+   * Rows first, width second: the distance is what puts `rows` in the usable
+   * height, then backed off if that leaves the rectangle wider than the view --
+   * a tile of margin each side -- which is the portrait case. If the wider
+   * rectangle `[wideMinX, wideMaxX]` also fits at that distance, the view is
+   * centred on it instead; that is how a landscape screen opens on both lanes
+   * when it can and on yours when it cannot.
+   *
+   * The safe area is honoured the way `fitBounds` honours it: as an effective
+   * field of view and aspect, so "the top of the view" means the top of what
+   * the chrome leaves visible.
+   */
+  frameRows(
+    rows: number,
+    minX: number,
+    maxX: number,
+    topZ: number,
+    wideMinX = minX,
+    wideMaxX = maxX,
+    margin = 1,
+  ): void {
+    const usableY = Math.max(0.2, (this.viewH - 2 * this.safeV) / this.viewH)
+    const usableX = Math.max(0.2, (this.viewW - 2 * this.safeH) / this.viewW)
+    const t = Math.tan((this.camera.fov * DEG) / 2)
+    const fovEff = 2 * Math.atan(t * usableY)
+    const aspectEff = (this.aspect * usableX) / usableY
+    const pitch = this._pitchDeg * DEG
+
+    let d = distanceForRows(rows, pitch, fovEff)
+    const need = (maxX - minX) / 2 + margin
+    if (halfWidthAt(d, pitch, fovEff, aspectEff) < need) {
+      d = need / halfWidthAt(1, pitch, fovEff, aspectEff)
+    }
+    this._distance = clamp(d, this.minDistance, this.maxDistance)
+
+    const wideNeed = (wideMaxX - wideMinX) / 2 + margin
+    const wide = halfWidthAt(this._distance, pitch, fovEff, aspectEff) >= wideNeed
+    const cx = wide ? (wideMinX + wideMaxX) / 2 : (minX + maxX) / 2
+
+    // The view reaches `far` beyond the target along the gaze; put the top of
+    // the framed area, less its margin, at that edge.
+    const { far } = groundWindow(this._distance, pitch, fovEff, aspectEff)
+    this.axes()
+    const topEdge = topZ - margin
+    this.target.set(cx - _forward.x * far, 0, topEdge - _forward.z * far)
+    this.clampTarget()
+    this.applyPose()
+  }
+
+  /**
+   * World-axis bounding box of the ground the usable view shows, for the
+   * minimap's viewport rectangle and the off-screen alerts. Yaw 0 only in the
+   * game, but written through the basis so a yawed demo gets a sane box.
+   */
+  visibleBounds(out: { minX: number; minZ: number; maxX: number; maxZ: number }): void {
+    const usableY = Math.max(0.2, (this.viewH - 2 * this.safeV) / this.viewH)
+    const usableX = Math.max(0.2, (this.viewW - 2 * this.safeH) / this.viewW)
+    const t = Math.tan((this.camera.fov * DEG) / 2)
+    const fovEff = 2 * Math.atan(t * usableY)
+    const aspectEff = (this.aspect * usableX) / usableY
+    const { near, far, halfW } = groundWindow(this._distance, this._pitchDeg * DEG, fovEff, aspectEff)
+    this.axes()
+    const fx = _forward.x
+    const fz = _forward.z
+    const wx = halfW * Math.abs(_right.x)
+    const wz = halfW * Math.abs(_right.z)
+    out.minX = this.target.x - wx + Math.min(-near * fx, far * fx)
+    out.maxX = this.target.x + wx + Math.max(-near * fx, far * fx)
+    out.minZ = this.target.z - wz + Math.min(-near * fz, far * fz)
+    out.maxZ = this.target.z + wz + Math.max(-near * fz, far * fz)
+  }
+
+  /**
    * Advance keyboard and edge panning. Call once a frame.
    *
    * `dt` is seconds; omitted, it is measured from the wall clock and capped, so
@@ -493,11 +600,18 @@ export class CameraRig {
     let dx = this.keyX
     let dz = this.keyZ
 
+    // Edge bands sit just inside the USABLE area, not the window: the chrome
+    // covers the window's edges, so a band there would only ever fire while
+    // the pointer was leaving the canvas for a button.
     if (this.edgeSize > 0 && this.edgeActive) {
-      if (this.edgeX >= 0 && this.edgeX < this.edgeSize) dx -= 1
-      else if (this.edgeX > this.viewW - this.edgeSize && this.edgeX <= this.viewW) dx += 1
-      if (this.edgeY >= 0 && this.edgeY < this.edgeSize) dz += 1
-      else if (this.edgeY > this.viewH - this.edgeSize && this.edgeY <= this.viewH) dz -= 1
+      const x0 = this.safeH
+      const x1 = this.viewW - this.safeH
+      const y0 = this.safeV
+      const y1 = this.viewH - this.safeV
+      if (this.edgeX >= x0 && this.edgeX < x0 + this.edgeSize) dx -= 1
+      else if (this.edgeX > x1 - this.edgeSize && this.edgeX <= x1) dx += 1
+      if (this.edgeY >= y0 && this.edgeY < y0 + this.edgeSize) dz += 1
+      else if (this.edgeY > y1 - this.edgeSize && this.edgeY <= y1) dz -= 1
     }
 
     if (dx === 0 && dz === 0) return
@@ -562,6 +676,12 @@ export class CameraRig {
   get isDisposed(): boolean { return this.disposed }
 
   // --- derived pose --------------------------------------------------------
+
+  /** Visible ground depth per unit of distance at the current pose: kn + kf. */
+  private depthFactor(): number {
+    const { kn, kf } = factors(this._pitchDeg * DEG, this.camera.fov * DEG)
+    return kn + kf
+  }
 
   /** Fill `_forward` and `_right` with the gaze basis on the ground plane. */
   private axes(): void {
@@ -806,12 +926,38 @@ export class CameraRig {
     // a menu popping up over the lane.
     on(el, 'contextmenu', (ev: Event) => ev.preventDefault())
 
+    // The wheel zooms; the wheel with Shift held scrolls ALONG the lane, and a
+    // sideways wheel (a trackpad's two-finger swipe) scrolls across it. On a
+    // 213-row lane the scroll is the input a player reaches for most, and a
+    // modifier is the one gesture that does not steal the zoom (ADR-0024,
+    // `[proposed]`). Pixels are converted at the visible depth per screen
+    // height, so a notch moves the same fraction of the screen at every zoom.
     on(
       el,
       'wheel',
       (ev: WheelEvent) => {
         ev.preventDefault()
-        this.zoomBy(Math.pow(this.zoomSpeed, ev.deltaY / 100), ev.clientX, ev.clientY)
+        const unit = ev.deltaMode === 1 ? 16 : 1
+        const perPixel = (this._distance * this.depthFactor()) / Math.max(1, this.viewH)
+        this.axes()
+        if (ev.shiftKey) {
+          // Wheel down walks down the lane: against the gaze, toward the exit.
+          // Chrome and Firefox rewrite a shifted vertical wheel as a HORIZONTAL
+          // one -- deltaX carries the notch and deltaY is zero -- so whichever
+          // axis has the delta is the one to read. Measured in Chrome 140: five
+          // shifted notches arrived as deltaX 500, deltaY 0.
+          const raw = ev.deltaY !== 0 ? ev.deltaY : ev.deltaX
+          const along = raw * unit * perPixel * WHEEL_SCROLL_GAIN
+          this.pan(-_forward.x * along, -_forward.z * along)
+          return
+        }
+        if (ev.deltaX !== 0) {
+          const across = ev.deltaX * unit * perPixel * WHEEL_SCROLL_GAIN
+          this.pan(_right.x * across, _right.z * across)
+        }
+        if (ev.deltaY !== 0) {
+          this.zoomBy(Math.pow(this.zoomSpeed, (ev.deltaY * unit) / 100), ev.clientX, ev.clientY)
+        }
       },
       { passive: false },
     )
@@ -880,6 +1026,14 @@ export class CameraRig {
 }
 
 const ARROW_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'] as const
+
+/**
+ * Screen fractions a wheel scroll moves per pixel of delta, relative to the
+ * visible depth. 1.5 makes a typical 100px notch move about an eighth of the
+ * usable height at any zoom; a mouse wheel's clicks land in the same place a
+ * trackpad's swipe does.
+ */
+const WHEEL_SCROLL_GAIN = 1.5
 
 /**
  * How far past the strict limit the camera may be pushed, as a fraction of the

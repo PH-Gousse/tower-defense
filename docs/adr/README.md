@@ -35,7 +35,7 @@ Write one through `/decide`. A decision that changes a **game rule** also needs
 | [0021](0021-creeps-do-not-collide.md) | Creeps do not collide with each other | Accepted |
 | [0022](0022-spawns-spread-across-the-zone-with-a-fractional-setback.md) | Spawns spread across the zone and keep the fractional setback | Accepted |
 | [0023](0023-placement-on-a-creep-is-refused.md) | A placement whose footprint holds a creep is refused | Accepted; supersedes half of ADR-0012 |
-| [0024](0024-camera-scrolls-and-zoom-caps-at-40-rows.md) | The camera scrolls, zoom caps at 40 rows, a minimap shows the rest | Accepted — **not implemented** |
+| [0024](0024-camera-scrolls-and-zoom-caps-at-40-rows.md) | The camera scrolls, zoom caps at 40 rows, a minimap shows the rest | Accepted |
 | [0025](0025-balance-constants-are-void-until-retuned-on-the-new-lane.md) | Geometric conversion of the constants, then void until `/balance` | Accepted — **not implemented** |
 
 ## Status vocabulary

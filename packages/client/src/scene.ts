@@ -16,6 +16,7 @@ import {
   tileY,
   TOWER_SIZE,
   FOOTPRINT_CELLS,
+  EXIT_ROW_MIN,
   footprintCells,
   towerSlotAt,
   checkBuild,
@@ -48,8 +49,14 @@ import { PathLine } from './pathline'
 import { createRenderer } from './render/renderer'
 import { buildBoard, BOARD, BOARD_THEIRS } from './render/board'
 import { buildTerrain } from './render/terrain'
-import { CameraRig, type GroundBounds } from './render/CameraRig'
-import { groundToTile, screenToGround, type LaneLayout } from './render/picking'
+import { CameraRig, DEFAULT_ROWS_IN_VIEW, type GroundBounds } from './render/CameraRig'
+import { minimapLayout, minimapToWorld, paintMinimap, type MinimapLayout, type MinimapView } from './minimap'
+import { EdgeAlerts } from './alerts'
+import {
+  spawnZoneCentre, exitZoneCentre, mirrorAcross, deepestCreep, highestLappers, nextLapper, clampToLane,
+  type Point,
+} from './navigation'
+import { groundToTile, groundToAnchor, screenToGround, type LaneLayout } from './render/picking'
 import {
   towerModel,
   creepModel,
@@ -183,8 +190,17 @@ export interface Icons {
   readonly creeps: readonly string[]
 }
 
+/** Where a jump hotkey goes. See `navigation.ts`. */
+export type Jump = 'spawn' | 'exit' | 'across' | 'deepest' | 'next'
+
 export interface Scene {
   readonly onTileHover: (cb: (h: HoverInfo) => void) => void
+  /** Centre the camera on a landmark or the deepest creep (ADR-0024). */
+  readonly jump: (where: Jump) => void
+  /** Give the minimap its canvas. The scene sizes and repaints it. */
+  readonly attachMinimap: (canvas: HTMLCanvasElement) => void
+  /** Give the off-screen alerts their layer. */
+  readonly attachAlerts: (host: HTMLElement) => void
   readonly onStats: (cb: (s: Stats) => void) => void
   readonly onSelect: (cb: (sel: Selection | null) => void) => void
   /** A predicted command was refused or lost. Tell the player, once. */
@@ -318,10 +334,10 @@ export function createScene(
      * the field of view narrowed from 35 to 18.
      */
     minDistance: 16,
-    // Edge scrolling is off: the board already fits on screen at the default
-    // framing, so the only thing edge scroll would reliably do is slide the
-    // lane out from under a cursor that was reaching for the palette.
-    edgeSize: 0,
+    // Edge scrolling is on: the lane is ten screens tall (ADR-0024), and the
+    // rig keeps the bands inside the usable area so a cursor reaching for the
+    // palette does not drag the lane away on its way past.
+    edgeSize: 24,
   })
   const camera = rig.camera
   const PITCH = rig.pitchDeg
@@ -519,6 +535,8 @@ export function createScene(
 
   const OK_COLOUR = 0x6fb6ff
   const REFUSED_COLOUR = 0xe0483c
+/** Blocked by a creep: a wait, not a no. Amber, between the two. */
+const WAIT_COLOUR = 0xf3c650
 
   // ---- creeps ------------------------------------------------------------
   //
@@ -725,6 +743,19 @@ export function createScene(
   }
 
   /**
+   * The 2x2 anchor under a screen point, snapped to the nearest grid vertex,
+   * or null. Building asks this; selecting asks `tileAt`, because a tower is
+   * selected by any cell of its footprint and the anchor under the cursor may
+   * belong to a different one.
+   */
+  function anchorAt(clientX: number, clientY: number): Tile | null {
+    const hit = screenToGround(camera, clientX, clientY, rig.viewportRect, pickPoint, pickNdc)
+    if (!hit) return null
+    const a = groundToAnchor(hit, MY_LANE, TOWER_SIZE, pickTile)
+    return a ? { x: a.x, y: a.y } : null
+  }
+
+  /**
    * Re-resolve the hovered tile from the last pointer position.
    *
    * Called on pointer movement AND once a frame, because the camera moves:
@@ -734,7 +765,7 @@ export function createScene(
    */
   function refreshHover(): void {
     if (!pointerInside) return
-    const t = tileAt(pointerX, pointerY)
+    const t = anchorAt(pointerX, pointerY)
     if (t?.x === hovered?.x && t?.y === hovered?.y) return
     hovered = t
     previewTile(t)
@@ -760,6 +791,11 @@ export function createScene(
     const state = driver.current
     const check = checkBuild(state, me(), t.x, t.y, tool, probeField)
     const allowed = check.refusal === Refusal.None
+    // Three states, not two (ADR-0023): a creep on the footprint is a "wait",
+    // not a "no", and it flickers as creeps walk, so it must not look like the
+    // permanent refusals or every mass send reads as the maze breaking.
+    const waiting = check.refusal === Refusal.CreepOnFootprint
+    const tint = allowed ? OK_COLOUR : waiting ? WAIT_COLOUR : REFUSED_COLOUR
 
     // A 2x2 footprint: the ghost, the ring and the hover quad sit on the
     // footprint's centre, not the anchor tile's. Phase 3 of the restructure
@@ -767,7 +803,7 @@ export function createScene(
     const hx = t.x + TOWER_SIZE / 2
     const hz = t.y + TOWER_SIZE / 2
     hover.position.set(hx, 0.03, hz)
-    hoverMaterial.color.setHex(allowed ? OK_COLOUR : REFUSED_COLOUR)
+    hoverMaterial.color.setHex(tint)
     hover.visible = true
 
     if (check.refusal === Refusal.OverlapsTower) {
@@ -779,11 +815,11 @@ export function createScene(
       const ghost = hoverGhosts[tool] as THREE.Group
       ghost.position.set(hx, 0, hz)
       ghost.visible = true
-      hoverGhostMat.color.setHex(allowed ? 0xbfe0ff : 0xff8a80)
+      hoverGhostMat.color.setHex(allowed ? 0xbfe0ff : waiting ? 0xffe0a0 : 0xff8a80)
       const reach = levelOf(tool, 1).range
       hoverRange.position.set(hx, 0.042, hz)
       hoverRange.scale.set(reach, reach, 1)
-      ;(hoverRange.material as THREE.MeshBasicMaterial).color.setHex(allowed ? OK_COLOUR : REFUSED_COLOUR)
+      ;(hoverRange.material as THREE.MeshBasicMaterial).color.setHex(tint)
       hoverRange.visible = true
     }
 
@@ -857,8 +893,9 @@ export function createScene(
       return
     }
     select(null)
-    if (checkBuild(state, me(), t.x, t.y, tool, probeField).refusal === Refusal.None) {
-      driver.queueBuild(t.x, t.y, tool)
+    const a = anchorAt(ev.clientX, ev.clientY)
+    if (a && checkBuild(state, me(), a.x, a.y, tool, probeField).refusal === Refusal.None) {
+      driver.queueBuild(a.x, a.y, tool)
     } else {
       audio.refused()
     }
@@ -1126,6 +1163,7 @@ export function createScene(
           sz = scratchMuzzle.z
         }
         const id = (driver.previous.lanes[lane] as Lane).creeps.id[slot] as number
+        alerts?.raise('fire', sx, sz, viewBox, lane, now)
         ;(projectiles[kind] as ProjectilePool).fire(
           lane,
           id,
@@ -1411,19 +1449,113 @@ export function createScene(
 
   /**
    * Default framing, re-applied on every resize until the player moves the
-   * camera themselves. Landscape frames both boards; portrait frames your lane
-   * alone, and the pan bounds still span both.
+   * camera themselves: DEFAULT_ROWS_IN_VIEW rows with the top of your lane at
+   * the top of the view, both lanes across when the screen has the width and
+   * yours alone when it does not (ADR-0024). Portrait ends up width-bound
+   * inside `frameRows`. The pan bounds span both lanes regardless.
    */
   let cameraMoved = false
 
   function frame(): void {
     if (cameraMoved) return
-    if (window.innerWidth >= window.innerHeight) {
-      rig.fitBounds(0, 0, CONTENT_W, GRID_H)
-    } else {
-      rig.fitBounds(0, 0, GRID_W, GRID_H)
-    }
+    const mine = laneX(me())
+    rig.frameRows(DEFAULT_ROWS_IN_VIEW, mine, mine + GRID_W, 0, 0, CONTENT_W)
+    layoutMinimap()
+    alerts?.relayout()
   }
+
+  // ---- navigation: minimap, jumps, alerts ------------------------------------
+
+  const viewBox: MinimapView = { minX: 0, minZ: 0, maxX: 0, maxZ: 0 }
+  let minimap: HTMLCanvasElement | null = null
+  let minimapCtx: CanvasRenderingContext2D | null = null
+  let minimapAt: MinimapLayout = minimapLayout(CONTENT_W, 1, 1)
+  let minimapPaintedAt = -1e9
+  /** Repaint cadence. Four times a second, never per frame. */
+  const MINIMAP_EVERY_MS = 250
+  let alerts: EdgeAlerts | null = null
+  let safe = { top: 0, right: 0, bottom: 0, left: 0 }
+
+  function layoutMinimap(): void {
+    if (!minimap) return
+    // The room between the chrome, less a margin, and a fixed width budget.
+    const availH = Math.max(120, window.innerHeight - safe.top - safe.bottom - 48)
+    minimapAt = minimapLayout(CONTENT_W, 120, availH)
+    const dpr = Math.min(window.devicePixelRatio || 1, 2)
+    minimap.width = Math.round(minimapAt.width * dpr)
+    minimap.height = Math.round(minimapAt.height * dpr)
+    minimap.style.width = `${minimapAt.width}px`
+    minimap.style.height = `${minimapAt.height}px`
+    minimapCtx?.setTransform(dpr, 0, 0, dpr, 0, 0)
+    minimapPaintedAt = -1e9
+  }
+
+  function paintMinimapNow(now: number): void {
+    if (!minimap || !minimapCtx) return
+    if (now - minimapPaintedAt < MINIMAP_EVERY_MS) return
+    minimapPaintedAt = now
+    rig.visibleBounds(viewBox)
+    paintMinimap(minimapCtx, minimapAt, driver.current, laneX, viewBox)
+  }
+
+  /** A press or drag on the minimap puts that point under the camera. */
+  function minimapJump(ev: PointerEvent): void {
+    if (!minimap) return
+    const r = minimap.getBoundingClientRect()
+    const p = minimapToWorld(minimapAt, ev.clientX - r.left, ev.clientY - r.top, jumpPoint)
+    jumpTo(p.x, p.z)
+    minimapPaintedAt = -1e9
+  }
+
+  const jumpPoint: Point = { x: 0, z: 0 }
+  let minimapDragging = false
+
+  function jumpTo(x: number, z: number): void {
+    rig.setTarget(x, z)
+    cameraMoved = true
+  }
+
+  /** The id Space last visited, so the cycle survives creeps changing slots. */
+  let cycleLastId = -1
+  const lappers: number[] = []
+
+  function jump(where: Jump): void {
+    const lane = driver.current.lanes[me()] as Lane
+    const ox = laneX(me())
+    if (where === 'spawn') {
+      spawnZoneCentre(jumpPoint)
+      jumpTo(ox + jumpPoint.x, jumpPoint.z)
+      return
+    }
+    if (where === 'exit') {
+      exitZoneCentre(jumpPoint)
+      jumpTo(ox + jumpPoint.x, jumpPoint.z)
+      return
+    }
+    if (where === 'across') {
+      rig.getTarget(scratchV)
+      jumpTo(mirrorAcross(scratchV.x, laneX(0), laneX(1)), scratchV.z)
+      return
+    }
+    // Space: the deepest creep first, then the others on the same lap in id
+    // order, wrapping. A fresh cycle (nothing visited yet) starts at the one
+    // that matters most rather than at the lowest id.
+    let i = -1
+    if (where === 'deepest' || cycleLastId === -1) {
+      i = deepestCreep(lane)
+    } else {
+      i = nextLapper(lane, highestLappers(lane, lappers), cycleLastId)
+    }
+    cycleLastId = i === -1 ? -1 : (lane.creeps.id[i] as number)
+    if (i === -1) return
+    jumpPoint.x = lane.creeps.x[i] as number
+    jumpPoint.z = lane.creeps.y[i] as number
+    clampToLane(jumpPoint)
+    jumpTo(ox + jumpPoint.x, jumpPoint.z)
+  }
+
+  /** Leaks per player at the last tick, for the off-screen leak alert. */
+  const lastLeaksBoth = [0, 0]
 
   host.onResize((w, h) => {
     rig.setViewport(w, h)
@@ -1450,6 +1582,30 @@ export function createScene(
 
   return {
     onTileHover: (cb) => { hoverCb = cb },
+    jump,
+    attachMinimap: (canvas) => {
+      minimap = canvas
+      minimapCtx = canvas.getContext('2d')
+      canvas.addEventListener('pointerdown', (ev) => {
+        if (ev.button !== 0) return
+        minimapDragging = true
+        try { canvas.setPointerCapture(ev.pointerId) } catch { /* synthetic */ }
+        minimapJump(ev)
+        ev.preventDefault()
+      })
+      canvas.addEventListener('pointermove', (ev) => { if (minimapDragging) minimapJump(ev) })
+      const end = (ev: PointerEvent): void => {
+        minimapDragging = false
+        try { canvas.releasePointerCapture(ev.pointerId) } catch { /* never captured */ }
+      }
+      canvas.addEventListener('pointerup', end)
+      canvas.addEventListener('pointercancel', end)
+      layoutMinimap()
+    },
+    attachAlerts: (hostEl) => {
+      alerts = new EdgeAlerts(hostEl)
+      alerts.setSafeArea(safe.top, safe.right, safe.bottom, safe.left)
+    },
     onStats: (cb) => { statsCb = cb },
     onSelect: (cb) => { selectCb = cb },
     onGhostFailed: (cb) => { ghostCb = cb },
@@ -1459,6 +1615,10 @@ export function createScene(
     },
     setSafeArea: (top, right, bottom, left) => {
       rig.setSafeArea(top, right, bottom, left)
+      safe = { top, right, bottom, left }
+      alerts?.setSafeArea(top, right, bottom, left)
+      alerts?.relayout()
+      layoutMinimap()
       frame()
       // Before the match starts nothing drives the loop, so the start screen
       // would sit over a black canvas. One still frame puts the field behind
@@ -1537,6 +1697,16 @@ export function createScene(
         }
         lastLeaks = state.players[me()]!.leaks
         if (state.tick > leakTrailUntil) leakTrail.hide()
+        // A leak anywhere off-screen, in either lane, gets an arrow. The
+        // event's point is the lane's exit zone, which is where it happened.
+        rig.visibleBounds(viewBox)
+        for (let l = 0; l < 2; l++) {
+          const leaksNow = state.players[l]!.leaks
+          if (leaksNow > (lastLeaksBoth[l] as number)) {
+            alerts?.raise('leak', laneX(l) + GRID_W / 2, EXIT_ROW_MIN, viewBox, l, nowMs)
+          }
+          lastLeaksBoth[l] = leaksNow
+        }
 
         const maze = mazeLength((state.lanes[me()] as Lane).field)
         statsCb({
@@ -1569,6 +1739,8 @@ export function createScene(
       currentPath.update(nowMs)
       candidatePath.update(nowMs)
       leakTrail.update(nowMs)
+      alerts?.update(nowMs)
+      paintMinimapNow(nowMs)
       // Keyboard panning is integrated here, then the hover is re-resolved:
       // the tile under a stationary cursor changes when the camera moves.
       rig.update()

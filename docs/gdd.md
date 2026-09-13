@@ -21,8 +21,9 @@ Related: engineering rules in [`invariants.md`](invariants.md) · decisions in
 - **1v1 only.** Human vs human online, or human vs AI opponent. `[confirmed]`
 - **Two lanes, one per player, side by side.** Player `i` defends lane `i`. `[confirmed]`
   (`GameState.lanes`, `packages/sim/src/state.ts`)
-- Both lanes are drawn at full size simultaneously — you cannot counter-pick a maze you
-  cannot read. `[proposed]` (README, `packages/client/src/scene.ts`)
+- Both lanes are drawn side by side at the same scale and the camera can pan to either —
+  you cannot counter-pick a maze you cannot read. The frame holds 20 rows of them; the
+  minimap shows the rest (§9). `[proposed]`
 - **First player to zero lives loses.** `[confirmed]`
 - If both players hit zero on the same tick the match is a **draw**. `[proposed]` — the
   confirmed win condition does not mention draws; the code implements `MatchResult.Draw`
@@ -218,6 +219,28 @@ for both players.** `[confirmed]`
 
 - **Warcraft 3-style:** a real 3D scene, fixed high-angle perspective camera, **fixed yaw,
   zoom and pan only.** `[confirmed]`
+- **The camera scrolls the lane; it never shows all of it.** Zoom is stated in rows in
+  frame: at most **40 rows**, and a match opens on **20 `[proposed]`** with the top of your
+  lane at the top of the view. Portrait viewports are width-bound: the framing backs off
+  until your whole lane fits across, which lands near 35 rows on a phone. `[confirmed]`
+  ([ADR-0024](adr/0024-camera-scrolls-and-zoom-caps-at-40-rows.md))
+- Pan along the lane is the primary input: drag (any button, one finger on touch), arrow
+  keys, edge scroll inside the usable area, and **Shift + wheel `[proposed]`**; a sideways
+  wheel pans across. Plain wheel zooms. WASD stays with sending (`q w e r t y`, `d`), which
+  is why the camera does not take it. `[proposed]`
+- The view is clamped so it never leaves the two lanes plus a tile of margin. `[confirmed]`
+- **A minimap** shows both lanes full-length: zones, tower footprints, creep dots in the
+  sender's colour, and the viewport rectangle. Click or drag on it to jump. It repaints from
+  the snapshot four times a second, never per frame. `[confirmed]`
+- **Jump keys `[proposed]`:** `Home` my spawn zone, `End` my exit zone, `Tab` the other lane
+  at the same row, `Space` the deepest creep in my lane, then the next creep on the same lap.
+- **Off-screen alerts:** an arrow at the edge of the view when a creep leaks or a tower fires
+  out of sight, pointing along the lane. Leaks linger; fire is throttled. `[confirmed]`
+- **Picking snaps a 2×2 footprint to the nearest grid vertex** `[proposed]`, so the ghost sits
+  centred under the cursor; any cell of a footprint selects its tower. The ghost has three
+  colours: legal, refused, and blocked-by-creep (a wait, not a no — ADR-0023). The refusal
+  text follows the cursor as well as sitting in the HUD.
+- Both lanes are always rendered and reachable by panning or `Tab`. `[confirmed]`
 - Pose is a single source of truth — pitch, yaw and distance — with camera position
   *derived*, so pitch/yaw/roll cannot drift whatever order events arrive in. `[proposed]`
   (`packages/client/src/render/CameraRig.ts`)
@@ -225,7 +248,11 @@ for both players.** `[confirmed]`
   picking path divides by `tan(fov/2)`, so an orthographic camera is a rewrite of it.
   `[proposed]`
 - Shipped pose: fov 18, pitch 70 (Warcraft 3's own pitch is 56; raised with the narrowed
-  fov to keep the near/far scale ratio near 1). `[proposed]`
+  fov to keep the near/far scale ratio near 1). The zoom cap is derived from the 40-row
+  limit at this pose, about 118 units, and moves with it. `[proposed]`
+
+Superseded: "both lanes are drawn at full size simultaneously" as a framing rule (§1) — they
+are both drawn, but the frame holds 20 rows of them. Recorded in ADR-0024.
 
 ## 10. Refusals
 

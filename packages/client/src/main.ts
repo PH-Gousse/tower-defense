@@ -4,7 +4,7 @@ import { holdToRepeat } from './hold'
 import { createSender } from './send'
 import { STALL_TICKS } from '@ltw/sim'
 import {
-  TowerKind, levelOf, MAX_LEVEL, TICK_HZ, MatchResult,
+  TowerKind, levelOf, MAX_LEVEL, TICK_HZ, MatchResult, Refusal,
   CREEPS, tierUnlockTick, SEND_UNLOCK_TICKS, INCOME_EVERY_TICKS,
   BOT_EASY, BOT_NORMAL, BOT_HARD, type BotConfig,
 } from '@ltw/sim'
@@ -454,24 +454,82 @@ window.addEventListener('keydown', (ev) => {
 // placed is not there, and silence reads as the game ignoring them.
 scene.onGhostFailed((text) => toast(text))
 
+/**
+ * The placement verdict follows the cursor as well as sitting in the HUD:
+ * on a lane ten screens tall the HUD cell can be a long way from where the
+ * player is looking, and a refusal they do not see is a click they do not
+ * understand. The note tracks the last pointer position over the canvas.
+ */
+const cursorNote = el('cursorNote')
+let cursorX = 0
+let cursorY = 0
+window.addEventListener('pointermove', (ev) => {
+  cursorX = ev.clientX
+  cursorY = ev.clientY
+  if (cursorNote && !cursorNote.hidden) {
+    cursorNote.style.left = `${cursorX}px`
+    cursorNote.style.top = `${cursorY}px`
+  }
+}, { passive: true })
+
 scene.onTileHover((h) => {
   if (tile) tile.textContent = h.tile ? `${h.tile.x}, ${h.tile.y}` : '—'
   if (!note) return
   if (!h.tile) {
     note.textContent = 'hover a tile'
     note.removeAttribute('data-refused')
+    if (cursorNote) cursorNote.hidden = true
     return
   }
+  let text: string
+  let mode: 'ok' | 'refused' | 'wait'
   if (h.refusalText) {
     // The no-block rule is invisible until you hit it. Saying why beats a
-    // silent no-op, which teaches nothing.
-    note.textContent = h.refusalText
-    note.setAttribute('data-refused', 'true')
-    return
+    // silent no-op, which teaches nothing. A creep on the footprint is the
+    // one refusal that clears on its own, and it is styled as a wait.
+    text = h.refusalText
+    mode = h.refusal === Refusal.CreepOnFootprint ? 'wait' : 'refused'
+  } else {
+    text = h.mazeDelta === null ? 'click to build' : `+${h.mazeDelta} tiles · click to build`
+    mode = 'ok'
   }
-  note.removeAttribute('data-refused')
-  note.textContent =
-    h.mazeDelta === null ? 'click to build' : `+${h.mazeDelta} tiles · click to build`
+  note.textContent = text
+  if (mode === 'refused') note.setAttribute('data-refused', 'true')
+  else note.removeAttribute('data-refused')
+  if (cursorNote) {
+    cursorNote.textContent = text
+    cursorNote.hidden = false
+    cursorNote.style.left = `${cursorX}px`
+    cursorNote.style.top = `${cursorY}px`
+    if (mode === 'refused') cursorNote.setAttribute('data-refused', 'true')
+    else cursorNote.removeAttribute('data-refused')
+    if (mode === 'wait') cursorNote.setAttribute('data-wait', 'true')
+    else cursorNote.removeAttribute('data-wait')
+  }
+})
+
+// --- navigation: minimap, jump keys ------------------------------------------
+//
+// The lane is ten screens tall, so getting around it is its own set of
+// controls (ADR-0024). Bindings are `[proposed]`: the letters are all taken by
+// sending and the palette, which is also why the camera pans on arrows only.
+const minimapEl = el('minimap') as HTMLCanvasElement | null
+if (minimapEl) scene.attachMinimap(minimapEl)
+const alertsEl = el('alerts')
+if (alertsEl) scene.attachAlerts(alertsEl)
+
+window.addEventListener('keydown', (ev) => {
+  if (ev.metaKey || ev.ctrlKey || ev.altKey) return
+  const t = ev.target as HTMLElement | null
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+  switch (ev.code) {
+    case 'Home': scene.jump('spawn'); break
+    case 'End': scene.jump('exit'); break
+    case 'Tab': scene.jump('across'); break
+    case 'Space': if (!ev.repeat) scene.jump('next'); break
+    default: return
+  }
+  ev.preventDefault()
 })
 
 // --- playing a friend --------------------------------------------------------

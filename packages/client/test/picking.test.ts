@@ -184,3 +184,72 @@ describe('groundToTile', () => {
     }
   })
 })
+
+/**
+ * Anchor picking for a 2x2 footprint (ADR-0020, `[proposed]` vertex snap).
+ *
+ * The footprint's centre is a grid vertex, so the pick snaps to the nearest
+ * vertex and the anchor is that vertex less half the size. Two things have to
+ * hold at every zoom: the centre of the screen picks the anchor whose centre
+ * is nearest the camera target, and the snap flips exactly at the half-tile.
+ */
+import { groundToAnchor } from '../src/render/picking'
+
+describe('groundToAnchor', () => {
+  const LANE16: LaneLayout = { originX: 0, originZ: 0, width: 16, length: 213, tile: 1 }
+  const a = { x: 0, y: 0 }
+
+  it('snaps to the nearest vertex and steps back half the footprint', () => {
+    // A cursor at (4.1, 20.2) is nearest vertex (4, 20): anchor (3, 19), so
+    // the footprint covers 3..4 x 19..20 and is centred on the vertex.
+    expect(groundToAnchor({ x: 4.1, z: 20.2 }, LANE16, 2, a)).toEqual({ x: 3, y: 19 })
+    // Past the half tile the vertex flips.
+    expect(groundToAnchor({ x: 4.6, z: 20.2 }, LANE16, 2, a)).toEqual({ x: 4, y: 19 })
+    expect(groundToAnchor({ x: 4.1, z: 20.6 }, LANE16, 2, a)).toEqual({ x: 3, y: 20 })
+  })
+
+  it('differs from the hovered tile by the half-size step', () => {
+    // The hovered-tile rule would anchor at (4, 20) here; the snap anchors at
+    // (3, 19) so the pointer sits at the footprint's centre, not its corner.
+    const t = { x: 0, y: 0 }
+    groundToTile({ x: 4.1, z: 20.2 }, LANE16, t)
+    expect(t).toEqual({ x: 4, y: 20 })
+    groundToAnchor({ x: 4.1, z: 20.2 }, LANE16, 2, a)
+    expect(a).toEqual({ x: 3, y: 19 })
+  })
+
+  it('clamps at the lane edges so the last footprint is still reachable', () => {
+    expect(groundToAnchor({ x: 0.2, z: 20 }, LANE16, 2, a)).toEqual({ x: 0, y: 19 })
+    expect(groundToAnchor({ x: 15.9, z: 20 }, LANE16, 2, a)).toEqual({ x: 14, y: 19 })
+    expect(groundToAnchor({ x: 8, z: 212.9 }, LANE16, 2, a)).toEqual({ x: 7, y: 211 })
+    expect(groundToAnchor({ x: 8, z: 0.1 }, LANE16, 2, a)).toEqual({ x: 7, y: 0 })
+  })
+
+  it('returns null outside the lane, even where a footprint could overlap the edge', () => {
+    expect(groundToAnchor({ x: -0.3, z: 20 }, LANE16, 2, a)).toBeNull()
+    expect(groundToAnchor({ x: 16.2, z: 20 }, LANE16, 2, a)).toBeNull()
+    expect(groundToAnchor({ x: 8, z: -0.1 }, LANE16, 2, a)).toBeNull()
+    expect(groundToAnchor({ x: 8, z: 213 }, LANE16, 2, a)).toBeNull()
+  })
+
+  it('honours the lane origin and tile size', () => {
+    const shifted: LaneLayout = { originX: 20, originZ: 0, width: 16, length: 213, tile: 1 }
+    expect(groundToAnchor({ x: 24.1, z: 20.2 }, shifted, 2, a)).toEqual({ x: 3, y: 19 })
+    const scaled: LaneLayout = { originX: 0, originZ: 0, width: 16, length: 213, tile: 2 }
+    expect(groundToAnchor({ x: 8.2, z: 40.4 }, scaled, 2, a)).toEqual({ x: 3, y: 19 })
+  })
+
+  it('picks the same anchor from the screen centre at every zoom level', () => {
+    // The centre pixel lands on the camera target regardless of distance, so
+    // the anchor it picks must not change as the player zooms: a footprint
+    // that jumped a tile on zoom would be a misplaced 600g tower.
+    const want = { x: 0, y: 0 }
+    groundToAnchor({ x: 7.3, z: 40.6 }, LANE16, 2, want)
+    for (const [distance, pitch] of [[16, 70], [40, 70], [59, 70], [118, 70], [32, 56]] as const) {
+      const camera = poseCamera(7.3, 40.6, distance, pitch, 18)
+      const hit = screenToGround(camera, VIEW.width / 2, VIEW.height / 2, VIEW, out, ndc)
+      expect(hit).not.toBeNull()
+      expect(groundToAnchor(hit!, LANE16, 2, a), `distance ${distance}`).toEqual(want)
+    }
+  })
+})
