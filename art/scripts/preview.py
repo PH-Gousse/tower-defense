@@ -40,7 +40,11 @@ ap.add_argument("--result", help="write the JSON result here as well as to stdou
 args = ap.parse_args(argv)
 
 TEAM = {"blue": palette.linear(palette.rgb("team_blue")), "red": palette.linear(palette.rgb("team_red"))}
-FITTED_DISTANCE = 71.0  # the client's fitted camera distance for two lanes, style sheet §2
+# The distance at which the client's default framing puts 20 rows in frame at
+# fov 18, pitch 70: rows / (kn + kf) = 20 / 0.3382 (ADR-0024, style sheet §2).
+# It was the fitted distance for the whole 24-row board, 71, until the lane
+# became 213 rows and the camera began to scroll.
+FITTED_DISTANCE = 59.1
 PX_PER_UNIT_1080 = 1080 / (2 * FITTED_DISTANCE * math.tan(math.radians(R.FOV_DEG) / 2))
 
 

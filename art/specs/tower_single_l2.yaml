@@ -4,7 +4,7 @@ class: tower
 archetype: single
 level: 2
 derived_from: tower_single_l1
-params: { height: 1.32, roof: spire }
+params: { height: 0.72, roof: spire }
 palette: { tier_shift: 0.25 }
 game: { cost: 900, damage: 55, range: 3.25, cooldownTicks: 24 }
 source: { kind: generated, licence: own, author: asset-factory }

@@ -29,6 +29,7 @@ Own work, part of this repository and covered by its licence.
 - `tile_exit` (tile, generated)
 - `tile_leak` (tile, generated)
 - `tile_normal` (tile, generated)
+- `tile_wait` (tile, generated)
 - `tower_single_l1` (tower, generated)
 - `tower_single_l2` (tower, generated)
 - `tower_single_l3` (tower, generated)

@@ -63,13 +63,16 @@ def orb(p: dict, rng) -> Layout:
     return lay
 
 
-@body_plan("tile_flat", "tile", {"inset": P(0.02, 0.0, 0.1, doc="Gap to the tile edge.")}, attachments=[], slots=["face"], doc="""
-tile_flat -- a 1 × 1 slab, 2 cm thick, for the entrance and exit tiles and
-the blocked-placement preview. Colour comes from the palette role.
+@body_plan("tile_flat", "tile", {
+    "inset": P(0.02, 0.0, 0.1, doc="Gap to the tile edge."),
+    "size": P(1, 1, 2, doc="Tiles per side: 1 for a lane tile, 2 for a tower footprint."),
+}, attachments=[], slots=["face"], doc="""
+tile_flat -- a `size` × `size` slab, 2 cm thick: a lane tile at 1, a tower
+footprint at 2 (the placement cursor). Colour comes from the palette role.
 """)
 def tile_flat(p: dict, rng) -> Layout:
     lay = Layout()
-    s = 1.0 - 2 * p["inset"]
+    s = p["size"] - 2 * p["inset"]
     lay.add(Prim("box", (s, 0.02, s), (0, 0.01, 0), slot="face", seg=1, name="face"))
     lay.height = 0.02
     lay.footprint = s
@@ -79,15 +82,18 @@ def tile_flat(p: dict, rng) -> Layout:
 @body_plan("tile_marker", "tile", {
     "rune": P("arrow", enum=("arrow", "cross", "ring", "chevron"), doc="The glyph raised on the tile."),
     "height": P(0.03, 0.01, 0.2, doc="How far the glyph stands above the slab."),
+    "size": P(1, 1, 2, doc="Tiles per side: 1 for a zone marker, 2 for a tower footprint."),
 }, attachments=[], slots=["face", "rune"], doc="""
-tile_marker -- a slab with a raised glyph: an arrow for the entrance, a
-ring for the exit, a cross for a blocked tile, a chevron for the leak
-marker. The glyph is the glow material so it reads on any turf.
+tile_marker -- a slab with a raised glyph: an arrow for the spawn seam, a
+ring for the exit seam, a cross for a refused footprint, a chevron for the
+leak marker. The glyph is the glow material so it reads on any turf. At
+`size` 2 the slab and the glyph cover a tower's footprint.
 """)
 def tile_marker(p: dict, rng) -> Layout:
     lay = Layout()
     h = p["height"]
-    lay.add(Prim("box", (0.96, 0.02, 0.96), (0, 0.01, 0), slot="face", seg=1, name="face"))
+    size = p["size"]
+    lay.add(Prim("box", (0.96 * size, 0.02, 0.96 * size), (0, 0.01, 0), slot="face", seg=1, name="face"))
     k = p["rune"]
     if k == "arrow":
         lay.add(Prim("box", (0.12, h, 0.4), (0, 0.02 + h / 2, -0.1), slot="rune", seg=1, name="stem"))
@@ -102,5 +108,13 @@ def tile_marker(p: dict, rng) -> Layout:
         for side in (-1, 1):
             lay.add(Prim("box", (0.1, h, 0.45), (side * 0.15, 0.02 + h / 2, 0), (0, side * 0.6, 0), slot="rune", seg=1, name="arm"))
     lay.height = 0.02 + h
-    lay.footprint = 0.96
+    lay.footprint = 0.96 * size
+    if size != 1:
+        # The glyph was drawn for one tile; scale it to the slab, keeping the
+        # slab's own thickness.
+        glyph = [q for q in lay.prims if q.slot == "rune"]
+        lay.prims = [q for q in lay.prims if q.slot != "rune"]
+        grown = Layout(prims=glyph).placed((0.0, 0.0, 0.0), scale=size)
+        for q in grown.prims:
+            lay.add(q)
     return lay

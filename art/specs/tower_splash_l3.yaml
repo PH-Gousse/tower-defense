@@ -4,7 +4,7 @@ class: tower
 archetype: splash
 level: 3
 derived_from: tower_splash_l2
-params: { height: 1.08, barrels: 2, barrel_length: 0.36, parts: [iron_bands, gold_ring] }
+params: { height: 0.84, barrels: 2, barrel_length: 0.36, parts: [iron_bands, gold_ring] }
 palette: { tier_shift: 0.5, trim: true }
 game: { cost: 2400, damage: 32, range: 1.9, cooldownTicks: 11 }
 source: { kind: generated, licence: own, author: asset-factory }

@@ -43,17 +43,22 @@ Assets are read from the fixed high-angle camera (ADR-0014). The numbers in code
 | Field of view | 18° vertical | `DEFAULT_FOV_DEG`, `CameraRig.ts` |
 | Pitch | 70° below horizontal | `DEFAULT_PITCH_DEG` |
 | Yaw | 0, fixed; the camera looks toward −z | `CameraRig.ts` |
-| Fitted distance, both lanes | ≈ 71 units | `fitGround` at the shipped pose; the 24-tile lane length is the binding edge at every aspect ratio |
-| Zoom range | 16 to 115 units | `minDistance` in `scene.ts`, `DEFAULT_MAX_DISTANCE` |
+| Default framing | 20 rows in frame, ≈ 59 units | `DEFAULT_ROWS_IN_VIEW`, `distanceForRows` (ADR-0024); the lane is 213 rows and the camera scrolls |
+| Zoom range | 16 to ≈ 118 units (5 to 40 rows) | `minDistance` in `scene.ts`, `DEFAULT_MAX_DISTANCE`, derived from `MAX_ROWS_IN_VIEW` |
 
-At the fitted distance on a 1080p screen, one world unit is about 48 px tall. So:
+At the default framing on a 1080p screen a row of ground is 54 px and one world unit of
+height about 58 px; at the 40-row cap, 27 px and 29 px. So:
 
-| Asset | Height (units) | On screen at default zoom |
-|---|---|---|
-| Swarm creep, tier 1 | 0.36 | ≈ 17 px |
-| Runner creep, tier 1 | 0.55 | ≈ 26 px |
-| Tank creep, tier 1 | 1.05 | ≈ 50 px |
-| Tower, level 1 | 1.1 to 1.4 | ≈ 55 to 65 px |
+| Asset | Height (units) | On screen at default zoom | At the cap |
+|---|---|---|---|
+| Swarm creep, tier 1 | 0.36 | ≈ 21 px | ≈ 10 px |
+| Runner creep, tier 1 | 0.55 | ≈ 32 px | ≈ 16 px |
+| Tank creep, tier 1 | 1.05 | ≈ 61 px | ≈ 30 px |
+| Tower, level 1 | 2.2 to 2.8 | ≈ 130 to 160 px | ≈ 65 to 80 px |
+
+A tower is two tiles across (§8), so its footprint is 108 px wide at the default
+framing and 54 px at the cap: the maze reads as shapes at every zoom, and a creep at the
+cap is a dot with a colour, which is what the minimap is for.
 
 This is why the silhouette test in §4 runs at a **normalised** 32 px and separately at true
 game scale: a swarm creep can never be 32 px tall at the default zoom, and the test must
@@ -124,8 +129,12 @@ archetype. Open question: whether the runner archetype needs a top-down signatur
 colour, a trail, a pip) the silhouette cannot give it. `[proposed]`
 
 Creep heights at tier 1 are those already in the game: swarm 0.36, runner 0.55, tank 1.05
-units. A tower's footprint stays inside 0.84 × 0.84 of its 1 × 1 tile so the maze's
-corridors stay visible; height 1.1 to 1.9 units by level.
+units. **A tower's footprint is 2 × 2 tiles** (ADR-0019) and its model stays inside
+0.84 × 0.84 of that, 1.68 units, so a one-tile corridor beside it stays visible; height
+2.2 to 3.6 units by level `[proposed]`. **A creep's footprint is 1 × 1**: it stays inside
+0.88 of a tile across its walking axis, with the margin that makes a one-wide gap read as
+passable, and may run to 1.2 tiles along it, because it walks a corridor lengthways. The
+runner's length is its silhouette and is not made to fit the tile. `[proposed]`
 
 ## 5. Tier language `[proposed]`
 
@@ -183,6 +192,17 @@ asset changes; the budget does not.
 Triangles are counted after export, before compression. A creep's clips are counted in
 its file size.
 
+**Scale**, enforced by the same gate on the exported bounds (ADR-0019):
+
+| Class | Height (tiles) | Footprint (tiles) | Width across the walk |
+|---|---|---|---|
+| Creep | 0.15 to 1.6 | ≤ 1.2 | ≤ 0.88 |
+| Tower | 1.4 to 4.0 | ≤ 1.68 | — |
+| Projectile | ≤ 0.8 | ≤ 0.8 | — |
+| Effect | ≤ 1.5 | ≤ 1.5 | — |
+| Tile | ≤ 0.25 | ≤ 2.0 | — |
+| Prop | ≤ 3.0 | ≤ 2.0 | — |
+
 **Global budget for a full match.** Two lanes, 60 towers, and creeps at the **measured**
 peak rather than the stated one: bot matches reach 880 to 1 099 creeps on the board
 (issue #14), not 300.
@@ -204,10 +224,10 @@ That path is an issue, not part of this factory.
 
 | | Convention |
 |---|---|
-| Scale | 1 unit = 1 tile. A tower's tile is 1 × 1. |
+| Scale | 1 unit = 1 tile, the creep tile. A tower's footprint is 2 × 2 tiles; a creep's is 1 × 1 (ADR-0019). |
 | Up | +Y |
 | Forward | **+Z**. Verified: three.js `Object3D.lookAt(target)` turns local +Z toward the target for a non-camera object, and glTF's own convention is +Z forward. A model that faces +Z needs no correction quaternion. |
-| Origin | base of the model, centre of the footprint, on y = 0 |
+| Origin | base of the model, centre of the footprint, on y = 0. For a tower that is the grid vertex at the middle of its 2 × 2, which the client places at anchor + 1 on each axis. |
 | Handedness | right-handed (glTF, three.js) |
 
 In Blender the authoring frame is Z up and **−Y forward**; the glTF exporter's `+Y up`
@@ -218,8 +238,11 @@ lands facing +Z in the game. The exporter applies transforms, so object transfor
 The existing procedural models in `models.ts` face **+X** and are rotated by heading in
 `scene.ts`. They are the exception, and they go away as the catalogue replaces them.
 
-The lane: the entrance is at z = 0 (top of the screen) and the exit at z = 23 (bottom).
-World x is the lane origin plus the sim's x; world z is the sim's y.
+The lane: a 10-row spawn zone from z = 0 (top of the screen), 200 buildable rows, and a
+3-row exit zone ending at z = 213 (bottom). World x is the lane origin plus the sim's x;
+world z is the sim's y. Tile assets: `tile_entrance` and `tile_exit` mark a zone's seam
+and are one tile; `tile_cursor`, `tile_blocked` and `tile_wait` are the three states of
+the 2 × 2 placement ghost (legal, refused, a creep on the footprint -- ADR-0023).
 
 ## 9. Animation contract
 

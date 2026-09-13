@@ -1,6 +1,6 @@
 # Generator reference
 
-*Generated from `art/generators/ltw_art` (version 0.1.12) by `python3 -m ltw_art.docs`. Do not edit.*
+*Generated from `art/generators/ltw_art` (version 0.2.0) by `python3 -m ltw_art.docs`. Do not edit.*
 
 Every name a spec may use: body plans and their parameters, parts and where they attach, rig templates and their bones, animation generators and the clips they produce. `spec-validate` checks specs against the same tables (`registry.json`).
 
@@ -209,8 +209,8 @@ shell -- a cannonball. An iron sphere, nothing else; it reads as a dot.
 
 ### `tile_flat` — tile
 
-tile_flat -- a 1 × 1 slab, 2 cm thick, for the entrance and exit tiles and
-the blocked-placement preview. Colour comes from the palette role.
+tile_flat -- a `size` × `size` slab, 2 cm thick: a lane tile at 1, a tower
+footprint at 2 (the placement cursor). Colour comes from the palette role.
 
 **Attachment points:** none  
 **Material slots:** `face`
@@ -218,12 +218,14 @@ the blocked-placement preview. Colour comes from the palette role.
 | Parameter | Default | Range | Meaning |
 |---|---|---|---|
 | `inset` | `0.02` | 0.0 .. 0.1 | Gap to the tile edge. |
+| `size` | `1` | 1 .. 2 | Tiles per side: 1 for a lane tile, 2 for a tower footprint. |
 
 ### `tile_marker` — tile
 
-tile_marker -- a slab with a raised glyph: an arrow for the entrance, a
-ring for the exit, a cross for a blocked tile, a chevron for the leak
-marker. The glyph is the glow material so it reads on any turf.
+tile_marker -- a slab with a raised glyph: an arrow for the spawn seam, a
+ring for the exit seam, a cross for a refused footprint, a chevron for the
+leak marker. The glyph is the glow material so it reads on any turf. At
+`size` 2 the slab and the glyph cover a tower's footprint.
 
 **Attachment points:** none  
 **Material slots:** `face`, `rune`
@@ -232,6 +234,7 @@ marker. The glyph is the glow material so it reads on any turf.
 |---|---|---|---|
 | `rune` | `arrow` | `arrow` / `cross` / `ring` / `chevron` | The glyph raised on the tile. |
 | `height` | `0.03` | 0.01 .. 0.2 | How far the glyph stands above the slab. |
+| `size` | `1` | 1 .. 2 | Tiles per side: 1 for a zone marker, 2 for a tower footprint. |
 
 ### `turret_on_base` — tower
 
@@ -244,7 +247,7 @@ rule asks: height is at least 2.5 × the keep's width.
 
 | Parameter | Default | Range | Meaning |
 |---|---|---|---|
-| `height` | `1.2` | 0.8 .. 2.0 | Plinth to parapet. |
+| `height` | `1.2` | 0.5 .. 2.0 | Plinth to parapet, in the unit frame; x2 at the footprint. A spire or cone adds its own height, so a roofed level keeps this lower than the level below. |
 | `base_size` | `0.84` | 0.5 .. 0.84 |  |
 | `keep_radius` | `0.27` | 0.15 .. 0.4 |  |
 | `merlons` | `6` | 0 .. 10 | Blocks around the parapet. |

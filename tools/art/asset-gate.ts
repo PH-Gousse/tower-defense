@@ -122,7 +122,11 @@ const CHECKS: ((c: Ctx) => Violation[])[] = [
     const footprint = Math.max(b.max[0]! - b.min[0]!, b.max[2]! - b.min[2]!)
     const out: Violation[] = []
     if (height < bud.height[0] - 0.001 || height > bud.height[1] + 0.001) out.push({ code: 'Scale', message: `height ${height.toFixed(3)} tiles; a ${c.cls} is ${bud.height[0]}–${bud.height[1]}`, fix: 'set params.height (or import.scale)' })
-    if (footprint > bud.footprint + 0.01) out.push({ code: 'Footprint', message: `footprint ${footprint.toFixed(3)} tiles, limit ${bud.footprint} for a ${c.cls}`, fix: c.cls === 'tower' ? 'a tower stays inside 0.84 of its tile so corridors stay visible' : 'shrink the body plan' })
+    if (footprint > bud.footprint + 0.01) out.push({ code: 'Footprint', message: `footprint ${footprint.toFixed(3)} tiles, limit ${bud.footprint} for a ${c.cls}`, fix: c.cls === 'tower' ? 'a tower stays inside 0.84 of its 2x2 footprint so a one-tile corridor beside it stays visible' : 'shrink the body plan' })
+    if (bud.width !== undefined) {
+      const width = b.max[0]! - b.min[0]!
+      if (width > bud.width + 0.01) out.push({ code: 'Width', message: `width ${width.toFixed(3)} tiles across the walking axis, limit ${bud.width} for a ${c.cls}`, fix: 'a creep must pass a one-tile corridor with a margin; narrow the body plan' })
+    }
     return out
   },
   function materials(c) {

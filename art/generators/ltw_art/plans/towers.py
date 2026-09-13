@@ -1,6 +1,14 @@
 """
-Tower body plans. Every tower stands on a 0.84 × 0.84 plinth inside its
-1 × 1 tile, has a `muzzle` (where the projectile leaves), and rigs to the
+Tower body plans. A tower's footprint is TOWER_TILES × TOWER_TILES tiles
+(ADR-0019: towers are 2 × 2, creeps 1 × 1). Every plan is laid out in a unit
+frame -- a 0.84 × 0.84 plinth inside a 1 × 1 square, the way the plans were
+first drawn -- and `_footprint` scales the finished layout up by TOWER_TILES
+at the end, joints, attachments and muzzle included. Uniform, on purpose:
+scaling x and z alone would shear the mortar's pitched barrel, and a tower
+twice as wide is also allowed to be taller than it was. The spec's `height`
+brings it back into the class's range.
+
+Every tower has a `muzzle` (where the projectile leaves) and rigs to the
 four-bone `turret` template: root, base, turret, muzzle. Levels are the
 tier language applied by the spec (size, parts, palette, trim), not new
 plans -- the same plan with `roof: cone` and a `spire` part IS level 3.
@@ -15,7 +23,22 @@ from ..params import P, SEED
 from ..registry import body_plan
 from .common import ground
 
+# The plinth inside the unit frame: 0.84 of a tile, so that at TOWER_TILES the
+# model stays inside 0.84 of its footprint and a one-tile corridor beside it
+# stays visible (style sheet §4).
 PLINTH = 0.84
+# Tiles per tower side. The sim's TOWER_SIZE; the gate's tower footprint budget
+# is PLINTH * TOWER_TILES.
+TOWER_TILES = 2.0
+
+
+def _footprint(lay: Layout) -> Layout:
+    """Scale a unit-frame tower layout to its footprint, then ground it."""
+    out = lay.placed((0.0, 0.0, 0.0), scale=TOWER_TILES)
+    if lay.muzzle is not None:
+        out.muzzle = tuple(v * TOWER_TILES for v in lay.muzzle)  # type: ignore[assignment]
+    ground(out)
+    return out
 
 
 def _plinth(lay: Layout, size: float) -> float:
@@ -34,7 +57,7 @@ def _turret_joints(lay: Layout, base_top: float, turret_y: float, muzzle) -> Non
 
 
 @body_plan("turret_on_base", "tower", {
-    "height": P(1.2, 0.8, 2.0, doc="Plinth to parapet."),
+    "height": P(1.2, 0.5, 2.0, doc="Plinth to parapet, in the unit frame; x2 at the footprint. A spire or cone adds its own height, so a roofed level keeps this lower than the level below."),
     "base_size": P(PLINTH, 0.5, PLINTH),
     "keep_radius": P(0.27, 0.15, 0.4),
     "merlons": P(6, 0, 10, doc="Blocks around the parapet."),
@@ -73,8 +96,7 @@ def turret_on_base(p: dict, rng) -> Layout:
     lay.attach(Attachment("muzzle", muzzle, size=r, bone="muzzle"))
     lay.attach(Attachment("base_ring", (0, top0 + 0.02, 0), size=r * 2.2, bone="base"))
     lay.attach(Attachment("banner", (0, top + 0.1, r * 1.1), size=0.5, bone="turret"))
-    ground(lay)
-    return lay
+    return _footprint(lay)
 
 
 @body_plan("cannon", "tower", {
@@ -122,8 +144,7 @@ def cannon(p: dict, rng) -> Layout:
     lay.attach(Attachment("muzzle", muzzle, rot=(pitch - math.pi / 2, 0, 0), size=br * 2, bone="muzzle"))
     lay.attach(Attachment("base_ring", (0, top0 + drum_h * 0.18, 0), size=r * 1.9, bone="base"))
     lay.attach(Attachment("banner", (0, top0 + drum_h * 0.6, -(r + 0.05)), size=0.4, bone="base"))
-    ground(lay)
-    return lay
+    return _footprint(lay)
 
 
 @body_plan("crystal_emitter", "tower", {
@@ -164,8 +185,7 @@ def crystal_emitter(p: dict, rng) -> Layout:
     lay.attach(Attachment("muzzle", muzzle, size=0.2, bone="muzzle"))
     lay.attach(Attachment("base_ring", (0, top0 + ped_h * 0.5, 0), size=0.7, bone="base"))
     lay.attach(Attachment("banner", (0, top0 + ped_h * 0.6, -0.34), size=0.4, bone="base"))
-    ground(lay)
-    return lay
+    return _footprint(lay)
 
 
 @body_plan("pillar", "tower", {
@@ -197,5 +217,4 @@ def pillar(p: dict, rng) -> Layout:
     lay.attach(Attachment("muzzle", muzzle, size=r, bone="muzzle"))
     lay.attach(Attachment("base_ring", (0, top0 + 0.05, 0), size=r * 2.2, bone="base"))
     lay.attach(Attachment("banner", (0, top0 + h * 0.5, -(r + 0.02)), size=0.4, bone="base"))
-    ground(lay)
-    return lay
+    return _footprint(lay)

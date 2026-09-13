@@ -1,8 +1,9 @@
-# The blocked marker: a slab with a raised cross in the glow material.
+# The refused ghost: a 2 x 2 slab with a raised cross in the glow material,
+# for a placement the rules refuse (ADR-0019's refusals).
 id: tile_blocked
 class: tile
 archetype: blocked
 body_plan: tile_marker
-params: { rune: cross, height: 0.03 }
+params: { rune: cross, height: 0.03, size: 2 }
 palette: { primary: stone_dark, secondary: stone_dark, accent: danger, glow: danger }
 source: { kind: generated, licence: own, author: asset-factory }

@@ -4,7 +4,7 @@ class: tower
 archetype: slow
 level: 2
 derived_from: tower_slow_l1
-params: { height: 1.21, crystal_height: 0.45, ring_crystals: 6, parts: [{ part: crystal_shards, at: turret_top }] }
+params: { height: 0.93, crystal_height: 0.55, ring_crystals: 6, parts: [{ part: crystal_shards, at: turret_top }] }
 palette: { tier_shift: 0.25 }
 game: { cost: 1200, damage: 6, range: 2.4, cooldownTicks: 10, slowPercent: 40 }
 source: { kind: generated, licence: own, author: asset-factory }

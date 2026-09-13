@@ -1,4 +1,5 @@
-# The exit marker: a slab with a raised ring in the glow material.
+# The exit seam marker: a one-tile slab with a raised ring in the glow
+# material, where the build area meets the exit zone.
 id: tile_exit
 class: tile
 archetype: exit

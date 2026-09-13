@@ -422,8 +422,8 @@ export function createScene(
    * footprint is 2 x 2 now (ADR-0019). They are scaled to it in the instance
    * matrix: TOWER_SIZE across, and a little less than that up, because a
    * tower twice as tall as it was would loom over a one-tile creep. The
-   * catalogue's towers get rebuilt at the new footprint in Phase 5 (#47);
-   * this is what the fallback draws until then.
+   * catalogue's towers are built at the footprint (style sheet §8) and need
+   * none of this; it is what the procedural fallback draws.
    */
   const TOWER_HEIGHT_SCALE = 1.5
   const TOWER_SCALE = new THREE.Vector3(TOWER_SIZE, TOWER_HEIGHT_SCALE, TOWER_SIZE)
@@ -1713,7 +1713,6 @@ const WAIT_COLOUR = 0xf3c650
         dev,
         creepNames: CREEP_FILE.archetypes.map((a) => a.key),
         towerNames: ARCHETYPES.map((a) => a.key),
-        towerSize: TOWER_SIZE,
       })
       const missing = layer.missingFor(CREEP_FILE.archetypes.length, 3, ARCHETYPES.length, 3)
       if (missing.length && dev) console.warn(`[assets] catalogue lacks ${missing.length} of the match's assets (${missing.join(', ')}); those draw procedurally`)

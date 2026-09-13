@@ -24,6 +24,23 @@ describe('the budgets the gate enforces are the ones the style sheet states', ()
     expect(row('Tile / prop')).toContain(`${BUDGETS.tile.bytes / 1024} KB`)
     void nums
   })
+  it('height, footprint and width per class match the scale table in §7', () => {
+    // ADR-0019 made a tower two tiles across and gave creeps a width rule; the
+    // table that states it and the gate that enforces it must not drift.
+    // Only the scale table: the budgets table above it and the naming table
+    // in §10 carry the same class labels.
+    const scale = sheet.slice(sheet.indexOf('**Scale**'), sheet.indexOf('## 8.'))
+    const row = (label: string) => scale.split('\n').find((l) => l.startsWith(`| ${label} |`)) ?? ''
+    const num = (v: number) => (Number.isInteger(v) ? `${v}` : `${v}`)
+    expect(row('Creep')).toContain(`${num(BUDGETS.creep.height[0])} to ${num(BUDGETS.creep.height[1])}`)
+    expect(row('Creep')).toContain(`≤ ${num(BUDGETS.creep.footprint)}`)
+    expect(row('Creep')).toContain(`≤ ${num(BUDGETS.creep.width!)}`)
+    expect(row('Tower')).toContain(`${num(BUDGETS.tower.height[0])} to ${num(BUDGETS.tower.height[1])}`)
+    expect(row('Tower')).toContain(`≤ ${num(BUDGETS.tower.footprint)}`)
+    expect(row('Tile')).toContain(`≤ ${num(BUDGETS.tile.footprint)}`)
+    expect(row('Prop')).toContain(`≤ ${num(BUDGETS.prop.footprint)}`)
+  })
+
   it('required clips per class match the contract', () => {
     expect(contract).toContain('### Creeps — ' + REQUIRED_CLIPS.creep.join(', '))
     expect(contract).toContain('### Towers — ' + REQUIRED_CLIPS.tower.join(', '))

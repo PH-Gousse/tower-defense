@@ -1,4 +1,5 @@
-# The entrance marker: a slab with a raised arrow in the glow material.
+# The spawn seam marker: a one-tile slab with a raised arrow in the glow
+# material, where the spawn zone meets the build area.
 id: tile_entrance
 class: tile
 archetype: entrance

@@ -110,8 +110,13 @@ def test_every_body_plan_grounds_at_the_origin_and_fits_its_class():
         for prim in lay.prims:
             assert prim.slot in plan.slots or prim.slot == "bone", f"{name}: prim uses undeclared slot {prim.slot}"
         if plan.cls == "tower":
-            assert lay.footprint <= 0.84 + 1e-6, f"{name}: footprint {lay.footprint} exceeds the 0.84 tile rule"
+            from ltw_art.plans.towers import PLINTH, TOWER_TILES
+
+            limit = PLINTH * TOWER_TILES
+            assert lay.footprint <= limit + 1e-6, f"{name}: footprint {lay.footprint} exceeds the {limit} rule (0.84 of a {TOWER_TILES:g}-tile footprint)"
+            assert lay.footprint > 1.0, f"{name}: a tower is wider than a tile now (ADR-0019); footprint {lay.footprint}"
             assert lay.muzzle is not None, f"{name}: a tower needs a muzzle"
+            assert lay.muzzle[1] > 1.0, f"{name}: the muzzle did not scale with the footprint"
 
 
 def test_every_body_plan_is_within_its_triangle_budget_at_defaults():

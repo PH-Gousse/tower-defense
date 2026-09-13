@@ -1,10 +1,10 @@
-# The placement cursor: a plain pale slab under the hovered tile (gold is
-# reserved for tier-3 trim, style sheet §3). No glyph,
-# so it never collides with the leak marker's chevron.
+# The placement cursor: a plain pale slab over the 2 x 2 footprint about to be
+# built on (gold is reserved for tier-3 trim, style sheet §3). No glyph, so it
+# never collides with the leak marker's chevron. The legal state of the ghost.
 id: tile_cursor
 class: tile
 archetype: cursor
 body_plan: tile_flat
-params: { inset: 0.04 }
+params: { inset: 0.04, size: 2 }
 palette: { primary: bone, secondary: bone, accent: bone, glow: null }
 source: { kind: generated, licence: own, author: asset-factory }

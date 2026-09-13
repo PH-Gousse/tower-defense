@@ -16,14 +16,26 @@ export interface Budget {
   height: [number, number]
   /** Widest extent in x or z, in tiles. */
   footprint: number
+  /**
+   * Widest extent ACROSS the walking axis (x; models face +z), in tiles.
+   * Only creeps have one: a creep walks a one-tile corridor along its own
+   * length, so its width is what must leave a margin, not its length.
+   */
+  width?: number
 }
 
+/**
+ * Scale, per ADR-0019: a tower's footprint is 2 x 2 tiles and its model
+ * stays inside 0.84 of that (1.68) so a one-tile corridor beside it stays
+ * visible; a creep stays inside 0.88 of a tile across its walking axis and
+ * may run to 1.2 along it. Tiles are one or two tiles square.
+ */
 export const BUDGETS: Record<AssetClass, Budget> = {
-  creep: { triangles: 1500, textureSize: 512, textures: 1, bones: 20, bytes: 400 * 1024, height: [0.15, 1.6], footprint: 1.6 },
-  tower: { triangles: 2500, textureSize: 512, textures: 1, bones: 6, bytes: 500 * 1024, height: [0.8, 2.4], footprint: 0.84 },
+  creep: { triangles: 1500, textureSize: 512, textures: 1, bones: 20, bytes: 400 * 1024, height: [0.15, 1.6], footprint: 1.2, width: 0.88 },
+  tower: { triangles: 2500, textureSize: 512, textures: 1, bones: 6, bytes: 500 * 1024, height: [1.4, 4.0], footprint: 1.68 },
   projectile: { triangles: 100, textureSize: 128, textures: 1, bones: 0, bytes: 30 * 1024, height: [0.0, 0.8], footprint: 0.8 },
   effect: { triangles: 100, textureSize: 128, textures: 1, bones: 0, bytes: 30 * 1024, height: [0.0, 1.5], footprint: 1.5 },
-  tile: { triangles: 200, textureSize: 256, textures: 1, bones: 0, bytes: 50 * 1024, height: [0.0, 0.25], footprint: 1.0 },
+  tile: { triangles: 200, textureSize: 256, textures: 1, bones: 0, bytes: 50 * 1024, height: [0.0, 0.25], footprint: 2.0 },
   prop: { triangles: 200, textureSize: 256, textures: 1, bones: 0, bytes: 50 * 1024, height: [0.0, 3.0], footprint: 2.0 },
 }
 

@@ -1,0 +1,10 @@
+# The waiting ghost: a 2 x 2 slab with a raised ring, for a footprint a creep
+# is standing on (ADR-0023). A wait, not a no: bronze rather than the refused
+# cross's danger red, so it never reads as the maze breaking.
+id: tile_wait
+class: tile
+archetype: wait
+body_plan: tile_marker
+params: { rune: ring, height: 0.03, size: 2 }
+palette: { primary: stone_dark, secondary: stone_dark, accent: bronze, glow: bronze }
+source: { kind: generated, licence: own, author: asset-factory }
