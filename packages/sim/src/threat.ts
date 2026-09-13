@@ -1,5 +1,7 @@
 import {
   MAX_TOWERS,
+  GRID_W,
+  GRID_H,
   SPAWN_INDICES,
   tileX,
   tileY,
@@ -88,12 +90,42 @@ const SPREAD = 0.2
 
 /** One extra slot for an override that adds a tower. */
 const SCRATCH_TOWERS = MAX_TOWERS + 1
+/** A route visits a tile at most once. */
+const MAX_ROUTE = GRID_W * GRID_H
 /** Route tiles within range of each tower, scratch. */
 const reach = new Int32Array(SCRATCH_TOWERS)
 const kindAt = new Int8Array(SCRATCH_TOWERS)
 const levelAt = new Int8Array(SCRATCH_TOWERS)
 const centreX = new Float64Array(SCRATCH_TOWERS)
 const centreY = new Float64Array(SCRATCH_TOWERS)
+
+/**
+ * The last route and tower list measured, and what was measured.
+ *
+ * Pass one below is `towers x route`, and the bot asks for it once per
+ * candidate: every upgrade it could buy, every decision. Those candidates
+ * share the route and all but one tower, so once the bot has built past its
+ * template -- income compounds late in a match, and it builds 140 towers on a
+ * 476-tile route -- the same 67,000 distance checks were repeated 140 times a
+ * decision and a tick cost 16 ms. Measured before this cache: 0.07 ms a tick
+ * at 8 towers, 4 ms at 78, 16 ms at 141, and a 40,000-tick match took over
+ * ten minutes. So the base measurement is kept, and an override recomputes
+ * one tower's reach instead of everyone's.
+ *
+ * Validity is checked by comparing contents, not identity: the bot reuses
+ * its route arrays between decisions, and the lane's tower list is mutated
+ * in place, so the same objects hold different boards a tick later. The
+ * comparison is `route + 4 x towers` integer reads against `towers x route`
+ * distance checks, and it can never be wrong the way a hash could.
+ */
+const cachedRoute = new Int32Array(MAX_ROUTE)
+let cachedRouteLen = -1
+const cachedAX = new Int32Array(SCRATCH_TOWERS)
+const cachedAY = new Int32Array(SCRATCH_TOWERS)
+const cachedKind = new Int8Array(SCRATCH_TOWERS)
+const cachedLevel = new Int8Array(SCRATCH_TOWERS)
+let cachedCount = -1
+const cachedReach = new Int32Array(SCRATCH_TOWERS)
 const MAX_ROSTER = 64
 const lanePop = new Int32Array(MAX_ROSTER)
 const wavePop = new Int32Array(MAX_ROSTER)
@@ -147,6 +179,43 @@ function loadTowers(towers: Towers, override: TowerOverride | null): number {
   return n
 }
 
+/** Route cells within `range` of a tower centred at (tx, ty). */
+function reachOf(route: readonly number[], routeLen: number, range: number, tx: number, ty: number): number {
+  const r2 = range * range
+  let hits = 0
+  for (let i = 0; i < routeLen; i++) {
+    const r = route[i] as number
+    const dx = tileX(r) + 0.5 - tx
+    const dy = tileY(r) + 0.5 - ty
+    if (dx * dx + dy * dy <= r2) hits += 1
+  }
+  return hits
+}
+
+function cacheHolds(route: readonly number[], routeLen: number, towers: Towers): boolean {
+  if (routeLen !== cachedRouteLen || towers.count !== cachedCount) return false
+  for (let i = 0; i < routeLen; i++) if (route[i] !== cachedRoute[i]) return false
+  for (let t = 0; t < towers.count; t++) {
+    if (towers.anchorX[t] !== cachedAX[t]) return false
+    if (towers.anchorY[t] !== cachedAY[t]) return false
+    if (towers.kind[t] !== cachedKind[t]) return false
+    if (towers.level[t] !== cachedLevel[t]) return false
+  }
+  return true
+}
+
+function remember(route: readonly number[], routeLen: number, towers: Towers): void {
+  cachedRouteLen = routeLen
+  for (let i = 0; i < routeLen; i++) cachedRoute[i] = route[i] as number
+  cachedCount = towers.count
+  for (let t = 0; t < towers.count; t++) {
+    cachedAX[t] = towers.anchorX[t] as number
+    cachedAY[t] = towers.anchorY[t] as number
+    cachedKind[t] = towers.kind[t] as number
+    cachedLevel[t] = towers.level[t] as number
+  }
+}
+
 /**
  * Creeps predicted to survive one lap of this maze, out of a population of
  * `counts[i]` creeps of roster entry `i`. Fractional: 2.4 means two leak and a
@@ -174,28 +243,39 @@ export function floodLeaks(
 
   // Pass one: how much of the route each tower reaches, and how much of it
   // the slows cover between them. Route cells are measured at their centres,
-  // towers at theirs, the same geometry `findTarget` uses.
+  // towers at theirs, the same geometry `findTarget` uses. The base board's
+  // reach is cached (see cachedRoute); only the override is measured fresh.
+  if (!cacheHolds(route, routeLen, towers)) {
+    for (let t = 0; t < towers.count; t++) {
+      cachedReach[t] = reachOf(
+        route,
+        routeLen,
+        levelOf(towers.kind[t] as TowerKind, towers.level[t] as number).range,
+        footprintCentreX(towers.anchorX[t] as number),
+        footprintCentreY(towers.anchorY[t] as number),
+      )
+    }
+    remember(route, routeLen, towers)
+  }
+  for (let t = 0; t < towers.count; t++) reach[t] = cachedReach[t] as number
+  if (override) {
+    const slot = towers.at[override.tile] as number
+    const t = slot !== -1 ? slot : n - 1
+    reach[t] = reachOf(
+      route,
+      routeLen,
+      levelOf(kindAt[t] as TowerKind, levelAt[t] as number).range,
+      centreX[t] as number,
+      centreY[t] as number,
+    )
+  }
   let slowTiles = 0
   let slowPct = 0
   for (let t = 0; t < n; t++) {
-    const kind = kindAt[t] as number
-    const lv = levelOf(kind as TowerKind, levelAt[t] as number)
-    const r2 = lv.range * lv.range
-    const tx = centreX[t] as number
-    const ty = centreY[t] as number
-    let hits = 0
-    for (let i = 0; i < routeLen; i++) {
-      const r = route[i] as number
-      const dx = tileX(r) + 0.5 - tx
-      const dy = tileY(r) + 0.5 - ty
-      if (dx * dx + dy * dy <= r2) hits += 1
-    }
-    reach[t] = hits
-    if (kind === TowerKind.Slow) {
-      slowTiles += hits
-      const pct = lv.slowPercent ?? 0
-      if (pct > slowPct) slowPct = pct
-    }
+    if (kindAt[t] !== TowerKind.Slow) continue
+    slowTiles += reach[t] as number
+    const pct = levelOf(TowerKind.Slow, levelAt[t] as number).slowPercent ?? 0
+    if (pct > slowPct) slowPct = pct
   }
   // Slowed for the share of the route the frost towers cover, at the best
   // slow among them. Overlaps are counted twice, which errs toward the maze.
