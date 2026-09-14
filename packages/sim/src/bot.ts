@@ -263,28 +263,32 @@ const DEFAULT_ADAPTIVE: AdaptiveMode = 'both'
 const DEFAULT_READER: Reader = 'estimate'
 
 /**
- * See CounterPick. `table`, and it was measured, 2026-09-14, on the 16-wide
- * lane at splash radius 1.8 with the 0.2 / 0.4 / 0.5 presets:
+ * See CounterPick. `model`, measured twice on the 16-wide lane.
  *
- *   model vs table, both seats, three templates, normal and hard:  6-6.
- *   Both spread their gold -- the model bot 14-41% Swarm III, 35-75%
- *   Runner III -- where before either sent 82-99% Swarm III.
+ * Before sudden death (splash 1.8, presets 0.2 / 0.4 / 0.5) the model pick
+ * was 6-6 against the table but could not be the default: it broke the
+ * ladder on the shipped template, ran every mirror to 31-35 minutes at
+ * 5,000-7,000 creeps, and moved the batch's degenerate flag to Runner
+ * rather than removing it. Mixed sends leak less on both sides, so both
+ * sides held until income went exponential.
  *
- *   But as the default the model pick breaks the harness's pins of a healthy
- *   match: easy beat normal on the shipped template, the easy mirror ran 35
- *   minutes against the 25 the harness allows and peaked at 4,992 creeps
- *   against 3,000, and the normal mirror no longer decided inside 40,000
- *   ticks. Mixed sends leak less on both sides, so both sides hold longer.
+ * Under sudden death (ADR-0026, presets 0.2 / 0.4 / 0.6), 2026-09-15:
  *
- * So the table stays: it is not a stronger opponent than the model, and it
- * keeps the ladder transitive and the mirrors short. What the table costs
- * is variety -- its bots send mostly Swarm III because the maze it reads is
- * its own 3:1:1 template, which is single-target-dominant by gold on every
- * board it builds -- and that is what the balance batch's degenerate flag
- * reports. Making the model the default is a fair change once the mirror
- * length has somewhere to go (issue #8).
+ *   harness 24/24 -- ladder transitive, mirrors 20-24 minutes, peak creeps
+ *   814-2,072 against the 3,000 pin, 64-107 sends a minute.
+ *   batch: normal beats easy 6-0, hard beats normal 6-0, hard beats easy
+ *   6-0; 18/18 decided, none past 24,561 ticks, peak 943.
+ *   mirror send mix by gold: easy 97% Swarm III; normal 81% Swarm III,
+ *   17% Tank II; hard 44% Tank II, 29% Runner III, 26% Swarm III.
+ *
+ * The batch's flag still reads Swarm in every decided match, and by gold.
+ * That is the fallback doing its job: when nothing affordable is predicted
+ * to leak -- most of every match -- the model sends the best earner, and
+ * both winner and loser do. A pattern both sides play is not a pattern
+ * that is winning; the flag cannot tell the two apart, and that is its
+ * limit rather than the roster's.
  */
-const DEFAULT_COUNTER_PICK: CounterPick = 'table'
+const DEFAULT_COUNTER_PICK: CounterPick = 'model'
 
 /**
  * Difficulty is how much of its economy the bot commits to attacking.
