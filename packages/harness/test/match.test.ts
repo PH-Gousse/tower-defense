@@ -204,7 +204,14 @@ describe('the match is a contest, not a wait', () => {
       expect(minutes, `${name} mirror length`).toBeLessThan(25)
       expect(minutes, `${name} mirror length`).toBeGreaterThan(2)
       for (let p = 0; p < 2; p++) {
-        expect(m.sends[p], `${name} mirror: player ${p} sends`).toBeGreaterThan(500)
+        // A rate, not a count. This was "more than 500 sends", which is a
+        // count that only a long match can reach: the hard mirror at 0.75 is
+        // a 2.4-minute double knockout in which both seats send 139 times a
+        // minute, and 332 sends in 2.4 minutes is the opposite of idling.
+        // One send a second is far below every measured mirror (139-185 a
+        // minute) and far above the twenty-minutes-of-nothing bot this
+        // exists to catch.
+        expect(m.sends[p] / minutes, `${name} mirror: player ${p} sends per minute`).toBeGreaterThan(60)
       }
     }
   })

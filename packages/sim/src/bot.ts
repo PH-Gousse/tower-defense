@@ -24,6 +24,7 @@ import {
   MAX_TIER,
   tierUnlockTick,
   SEND_UNLOCK_TICKS,
+  type CreepSpec,
 } from './data'
 import {
   opponentOf,
@@ -103,6 +104,26 @@ export type AdaptiveMode = 'off' | 'defence' | 'send' | 'both'
  */
 export type Reader = 'table' | 'estimate'
 
+/**
+ * How the counter-pick chooses WHICH archetype to send.
+ *
+ * `table` reads the opponent's maze as one word -- "mostly single-target" --
+ * and answers from EXPLOITS. `model` asks the flood model what a bank's worth
+ * of each archetype would leak against the maze that is actually standing
+ * there, and sends the archetype that leaks most per gold; when nothing
+ * affordable is predicted to leak, it sends the archetype that earns the
+ * most income per gold, because a send that cannot hurt is an investment.
+ *
+ * The table was measured wrong on the 16-wide lane. "Swarm beats a
+ * single-target maze" is true of a maze with NO mortar and false of one
+ * with a mortar in every five towers, and the bot's own template is 3:1:1,
+ * so both seats sent 82-99% of their gold as Swarm III whatever stood in
+ * the other lane, and the first balance batches flagged Swarm as the
+ * winner's main send in every match. Kept runnable so the two can be
+ * measured against each other; the figures are on DEFAULT_COUNTER_PICK.
+ */
+export type CounterPick = 'table' | 'model'
+
 export interface BotConfig {
   /**
    * Share of decisions spent attacking rather than defending, 0..1.
@@ -135,6 +156,8 @@ export interface BotConfig {
   readonly adaptive?: AdaptiveMode
   /** See Reader. */
   readonly reader?: Reader
+  /** See CounterPick. */
+  readonly counterPick?: CounterPick
   /** Index into MAZE_TEMPLATES. */
   readonly template: number
 }
@@ -238,6 +261,30 @@ const DEFAULT_ADAPTIVE: AdaptiveMode = 'both'
 const DEFAULT_READER: Reader = 'estimate'
 
 /**
+ * See CounterPick. `table`, and it was measured, 2026-09-14, on the 16-wide
+ * lane at splash radius 1.8 with the 0.2 / 0.4 / 0.5 presets:
+ *
+ *   model vs table, both seats, three templates, normal and hard:  6-6.
+ *   Both spread their gold -- the model bot 14-41% Swarm III, 35-75%
+ *   Runner III -- where before either sent 82-99% Swarm III.
+ *
+ *   But as the default the model pick breaks the harness's pins of a healthy
+ *   match: easy beat normal on the shipped template, the easy mirror ran 35
+ *   minutes against the 25 the harness allows and peaked at 4,992 creeps
+ *   against 3,000, and the normal mirror no longer decided inside 40,000
+ *   ticks. Mixed sends leak less on both sides, so both sides hold longer.
+ *
+ * So the table stays: it is not a stronger opponent than the model, and it
+ * keeps the ladder transitive and the mirrors short. What the table costs
+ * is variety -- its bots send mostly Swarm III because the maze it reads is
+ * its own 3:1:1 template, which is single-target-dominant by gold on every
+ * board it builds -- and that is what the balance batch's degenerate flag
+ * reports. Making the model the default is a fair change once the mirror
+ * length has somewhere to go (issue #8).
+ */
+const DEFAULT_COUNTER_PICK: CounterPick = 'table'
+
+/**
  * Difficulty is how much of its economy the bot commits to attacking.
  *
  * It was the reaction delay, and that was a symptom of a broken economy rather
@@ -247,30 +294,31 @@ const DEFAULT_READER: Reader = 'estimate'
  *
  * Attacking pays now, but not without limit, and the ratio is NOT monotone
  * on the 16-wide lane. On the 8-wide one a sweep came out perfectly ordered
- * (0.8 beat 0.65 beat 0.5 beat 0.4 beat 0.3 beat 0.2); with 2x2 towers and a
- * three-times-faster creep the same sweep, 2026-09-14, seven ratios pairwise
- * on every template with 9,000 starting gold, is a tangle:
+ * (0.8 beat 0.65 beat 0.5 beat 0.4 beat 0.3 beat 0.2); here the same sweep
+ * is a tangle, and it changed shape when the mortar's blast went from 3.6 to
+ * 1.8 tiles (towers.json v5) -- the first triple chosen on this board,
+ * 0.2 / 0.4 / 0.5, stopped being transitive that day. So the presets are
+ * chosen the way the harness test says to: by searching the sweep for an
+ * ordered triple that is transitive on EVERY template, never by assuming
+ * more aggressive is harder. Six ratios pairwise, 9,000 starting gold,
+ * splash radius 1.8, 2026-09-14 -- "beats" reads row over column:
  *
- *   template 1 (shipped)   beats                       loses to
- *     0.2                  0.9                         everything else
- *     0.3                  0.2 0.5 0.6 0.9             0.4 0.75
- *     0.4                  0.2 0.3 0.6 0.9             0.5 0.75
- *     0.5                  0.2 0.4 0.6 0.75 0.9        0.3
- *     0.6                  0.2 0.75 0.9                0.3 0.4 0.5
- *     0.75                 0.2 0.3 0.4 0.9             0.5 0.6
- *     0.9                  nothing: dead in 2-3 minutes with no maze
+ *   template 1 (shipped)   beats                  loses to
+ *     0.2                  0.3 0.6                0.4 0.5 0.75
+ *     0.3                  0.5                    0.2 0.4 0.6 0.75
+ *     0.4                  0.2 0.3 0.5            0.6 0.75
+ *     0.5                  0.2 0.75               0.3 0.4 0.6
+ *     0.6                  0.3 0.4 0.5 0.75       0.2
+ *     0.75                 0.2 0.3 0.4            0.5 0.6
  *
- * The old presets, 0.3 / 0.5 / 0.75, are a cycle in that table (0.5 loses
- * only to 0.3; 0.75 loses to 0.5), and the first balance batch on this lane
- * measured exactly that: easy beat normal, normal beat hard, hard beat easy,
- * each 2-1. The presets are therefore chosen the way the harness test says
- * to -- by searching the sweep for an ordered triple that is transitive on
- * EVERY template, not by assuming more aggressive is harder. 0.2 / 0.4 / 0.5
- * is the only such triple with 0.5 at the top; it is transitive on templates
- * 0, 1 and 2 and the winner keeps 9 to 20 lives in every pairing. Past 0.5
- * the maze is too thin for the flood the ratio buys, so "hard" splits its
- * gold evenly and the harder bots differ in how much maze they think is
- * enough, which is the knob's actual meaning (see `defensiveness`).
+ * 0.2 / 0.4 / 0.75 is transitive on templates 0, 1 and 2, and on the shipped
+ * template the winner keeps 18 to 20 lives in every pairing. 0.3 / 0.4 / 0.6
+ * and 0.3 / 0.4 / 0.75 also order on template 1 but fall over on template
+ * 0, where 0.3 beats 0.4. Note what 0.75 losing to 0.5 and 0.6 means: the
+ * hardest bot is not the most aggressive one that exists, it is the most
+ * aggressive one that still beats everything below it. Past it the maze is
+ * too thin for the flood the ratio buys, and 0.9 (not in this table) is dead
+ * in three minutes with no maze at all.
  */
 /**
  * Template 1, the tight serpentine: a wall every other row, one corridor
@@ -293,7 +341,7 @@ const DEFAULT_READER: Reader = 'estimate'
  */
 export const BOT_EASY: BotConfig = { sendRatio: 0.2, reactionTicks: 10, template: 1 }
 export const BOT_NORMAL: BotConfig = { sendRatio: 0.4, reactionTicks: 10, template: 1 }
-export const BOT_HARD: BotConfig = { sendRatio: 0.5, reactionTicks: 10, template: 1 }
+export const BOT_HARD: BotConfig = { sendRatio: 0.75, reactionTicks: 10, template: 1 }
 
 /**
  * One decision. Returns the commands it wants applied this tick, empty when it
@@ -384,8 +432,11 @@ function decideByTable(
   // the reason their board is drawn on your screen at all.
   const adaptive = config.adaptive ?? DEFAULT_ADAPTIVE
   const wantsCounter = adaptive === 'send' || adaptive === 'both'
-  const theirMaze = wantsCounter ? readMaze(state.lanes[opponentOf(player)]!) : null
-  const prefer = theirMaze === null ? null : (EXPLOITS[theirMaze] as CreepArchetypeKind)
+  const prefer = !wantsCounter
+    ? null
+    : (config.counterPick ?? DEFAULT_COUNTER_PICK) === 'model'
+      ? modelPick(state, player, me, config, unlocked)
+      : tablePick(state, player)
   // Nothing to save toward during the opening build phase. `checkSend` would
   // refuse the send anyway and `step` would drop it, so the bot would not cheat
   // -- but it would BANK for a purchase it cannot make, and banking is a branch
@@ -836,6 +887,78 @@ const ANSWERS: readonly TowerKind[] = [
  * opponent. A maze of anti-tank towers kills one target at a time and drowns in
  * swarm; a maze of splash does little to a single fat creep.
  */
+/** The table's answer: the archetype EXPLOITS names for the opponent's dominant tower. */
+function tablePick(state: GameState, player: 0 | 1): CreepArchetypeKind | null {
+  const theirMaze = readMaze(state.lanes[opponentOf(player)] as Lane)
+  return theirMaze === null ? null : (EXPLOITS[theirMaze] as CreepArchetypeKind)
+}
+
+/**
+ * The model's answer: of the archetypes a bank buys at the tier the bank
+ * reaches, the one predicted to leak most per gold against the opponent's
+ * actual maze; failing any predicted leak, the best earner. See CounterPick.
+ *
+ * Per gold rather than absolute, because the bank buys twenty-two swarm or
+ * one tank and the question is which spends the gold better. Ties go to the
+ * lower archetype index, which is the roster's order and never a clock.
+ */
+function modelPick(
+  state: GameState,
+  player: 0 | 1,
+  me: Player,
+  config: BotConfig,
+  unlocked: number,
+): CreepArchetypeKind | null {
+  if (!sendsOpen(state)) return null
+  const bank = me.income * (config.savingPeriods ?? MAX_SAVING_PERIODS)
+  const any = affordableSoon(state, bank, unlocked, null)
+  if (any === -1) return null
+  const tier = creepSpec(any).tier
+  const opp = state.lanes[opponentOf(player)] as Lane
+  const route = routeOf(opp, routeA)
+  let best: CreepArchetypeKind | null = null
+  let bestScore = 0
+  for (let k = 0; k < ARCHETYPE_KINDS.length; k++) {
+    const kind = ARCHETYPE_KINDS[k] as CreepArchetypeKind
+    const creep = affordableSoon(state, bank, unlocked, kind)
+    if (creep === -1) continue
+    const spec = creepSpec(creep)
+    if (spec.archetype !== kind || spec.tier !== tier) continue
+    let count = Math.floor(bank / spec.cost)
+    if (count > MAX_SEND_BURST) count = MAX_SEND_BURST
+    if (count < 1) continue
+    const leaks = waveLeaks(opp, route, creep, count)
+    const score = leaks / (count * spec.cost)
+    if (score > bestScore) {
+      bestScore = score
+      best = kind
+    }
+  }
+  return best !== null ? best : BEST_EARNER
+}
+
+const ARCHETYPE_KINDS: readonly CreepArchetypeKind[] = [
+  CreepArchetypeKind.Swarm,
+  CreepArchetypeKind.Runner,
+  CreepArchetypeKind.Tank,
+]
+
+/** The tier-0 archetype with the most income per gold; the send when nothing can hurt. */
+const BEST_EARNER: CreepArchetypeKind = (() => {
+  let best = CreepArchetypeKind.Swarm
+  let bestRate = -1
+  for (let i = 0; i < CREEPS.length; i++) {
+    const spec = CREEPS[i] as CreepSpec
+    if (spec.tier !== 0 || spec.cost <= 0) continue
+    const rate = spec.incomeBonus / spec.cost
+    if (rate > bestRate) {
+      bestRate = rate
+      best = spec.archetype
+    }
+  }
+  return best
+})()
+
 const EXPLOITS: readonly CreepArchetypeKind[] = [
   CreepArchetypeKind.Swarm, // vs single-target
   CreepArchetypeKind.Tank, // vs splash
