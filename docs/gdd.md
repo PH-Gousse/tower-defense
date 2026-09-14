@@ -296,7 +296,7 @@ Source of truth: `packages/sim/data/towers.json`, `packages/sim/data/creeps.json
 | Constant | Value | Where | Note |
 |---|---|---|---|
 | Tick rate | 20 Hz | `step.ts` `TICK_HZ` | `[confirmed]` — a determinism invariant, not balance |
-| Starting gold | 6 000 | `data.ts` `STARTING_GOLD` | not in a JSON file yet · `[retune]` |
+| Starting gold | 9 000 | `data.ts` `STARTING_GOLD` | not in a JSON file yet · `[retune]` — first retune 2026-09-14, was 6 000: a first half-slot wall is eight towers on 16 tiles (#48). A longer build phase was measured first and bought nothing, because income anchors to send-unlock |
 | Starting income | 250 | `data.ts` `STARTING_INCOME` | not in a JSON file yet · `[retune]` |
 | Starting lives | 20 | `state.ts` `STARTING_LIVES` | not in a JSON file yet; "one bad leak is a crisis with time to respond" is the intent |
 | Income interval | 300 ticks (15 s) | `state.ts` `INCOME_EVERY_TICKS` | interval `[confirmed]` on the old board, now `[retune]`: 3 to 5 payouts per bare lap instead of 1 or 2; anchor `[proposed]` |

@@ -299,8 +299,17 @@ export const MAX_TIER = creepFile.maxTier
  * arithmetic whatsoever -- which is exactly the false alarm that teaches people
  * to regenerate the hash without reading it. `state.ts` re-exports both, so
  * every existing import site is unchanged.
+ *
+ * 9,000 since 2026-09-14, was 6,000: the first retune on the 16-wide lane
+ * (issue #48). Ten towers is a wall and a bit on 16 tiles where it was two
+ * and a half walls on 8, and the first batch ended two of three templates in a
+ * three-minute double knockout with 12 towers standing. Lengthening the build
+ * phase was measured first and did nothing -- the income clock anchors to
+ * send-unlock (ADR-0009), so a longer opening buys no gold, and every number
+ * in the batch shifted by exactly the extra ticks. Fifteen towers is a wall
+ * and its plug with change for the second.
  */
-export let STARTING_GOLD = 6000
+export let STARTING_GOLD = 9000
 /** Paid into gold every INCOME_EVERY_TICKS. Sending is the only way it grows. */
 export let STARTING_INCOME = 250
 
