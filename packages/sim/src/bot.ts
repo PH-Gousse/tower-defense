@@ -245,15 +245,32 @@ const DEFAULT_READER: Reader = 'estimate'
  * shipping it as "hard" would have shipped a weaker opponent under a stronger
  * name, and the only axis left pointing the right way was latency.
  *
- * Attacking pays now, and a sweep of the ratio comes out perfectly monotone:
- * 0.8 beats 0.65 beats 0.5 beats 0.4 beats 0.3 beats 0.2, with no exceptions.
- * That is both a better ladder and a far better answer to "what makes this one
- * hard" than a number of milliseconds -- the hard bot sends more, which is what
- * a stronger opponent does in a game about sending.
+ * Attacking pays now, but not without limit, and the ratio is NOT monotone
+ * on the 16-wide lane. On the 8-wide one a sweep came out perfectly ordered
+ * (0.8 beat 0.65 beat 0.5 beat 0.4 beat 0.3 beat 0.2); with 2x2 towers and a
+ * three-times-faster creep the same sweep, 2026-09-14, seven ratios pairwise
+ * on every template with 9,000 starting gold, is a tangle:
  *
- * Verified transitive by a round robin in the harness: every off-diagonal goes
- * to the more aggressive bot and every mirror is a draw, which also proves the
- * sim gives neither seat an edge.
+ *   template 1 (shipped)   beats                       loses to
+ *     0.2                  0.9                         everything else
+ *     0.3                  0.2 0.5 0.6 0.9             0.4 0.75
+ *     0.4                  0.2 0.3 0.6 0.9             0.5 0.75
+ *     0.5                  0.2 0.4 0.6 0.75 0.9        0.3
+ *     0.6                  0.2 0.75 0.9                0.3 0.4 0.5
+ *     0.75                 0.2 0.3 0.4 0.9             0.5 0.6
+ *     0.9                  nothing: dead in 2-3 minutes with no maze
+ *
+ * The old presets, 0.3 / 0.5 / 0.75, are a cycle in that table (0.5 loses
+ * only to 0.3; 0.75 loses to 0.5), and the first balance batch on this lane
+ * measured exactly that: easy beat normal, normal beat hard, hard beat easy,
+ * each 2-1. The presets are therefore chosen the way the harness test says
+ * to -- by searching the sweep for an ordered triple that is transitive on
+ * EVERY template, not by assuming more aggressive is harder. 0.2 / 0.4 / 0.5
+ * is the only such triple with 0.5 at the top; it is transitive on templates
+ * 0, 1 and 2 and the winner keeps 9 to 20 lives in every pairing. Past 0.5
+ * the maze is too thin for the flood the ratio buys, so "hard" splits its
+ * gold evenly and the harder bots differ in how much maze they think is
+ * enough, which is the knob's actual meaning (see `defensiveness`).
  */
 /**
  * Template 1, the tight serpentine: a wall every other row, one corridor
@@ -274,9 +291,9 @@ const DEFAULT_READER: Reader = 'estimate'
  * Template 2 ("posts") loses 0-6 in under two minutes and stays in the list
  * only so the harness can keep saying so.
  */
-export const BOT_EASY: BotConfig = { sendRatio: 0.3, reactionTicks: 10, template: 1 }
-export const BOT_NORMAL: BotConfig = { sendRatio: 0.5, reactionTicks: 10, template: 1 }
-export const BOT_HARD: BotConfig = { sendRatio: 0.75, reactionTicks: 10, template: 1 }
+export const BOT_EASY: BotConfig = { sendRatio: 0.2, reactionTicks: 10, template: 1 }
+export const BOT_NORMAL: BotConfig = { sendRatio: 0.4, reactionTicks: 10, template: 1 }
+export const BOT_HARD: BotConfig = { sendRatio: 0.5, reactionTicks: 10, template: 1 }
 
 /**
  * One decision. Returns the commands it wants applied this tick, empty when it
