@@ -301,53 +301,56 @@ const DEFAULT_COUNTER_PICK: CounterPick = 'model'
  * Attacking pays now, but not without limit, and the ratio is NOT monotone
  * on the 16-wide lane. On the 8-wide one a sweep came out perfectly ordered
  * (0.8 beat 0.65 beat 0.5 beat 0.4 beat 0.3 beat 0.2); here the same sweep
- * is a tangle, and it changes shape with every balance rule: 0.2 / 0.4 / 0.5
- * ordered at splash radius 3.6, 0.2 / 0.4 / 0.75 at 1.8, and sudden death
- * (ADR-0026) reshuffled it again. So the presets are chosen the way the
- * harness test says to: by searching the sweep for an ordered triple that is
- * transitive on the shipped template, never by assuming more aggressive is
- * harder. Six ratios pairwise, 9,000 starting gold, splash 1.8, sudden death
- * at 15:00, 2026-09-14 -- "beats" reads row over column:
+ * is a tangle, and it changes shape with every balance rule, so the presets
+ * are chosen the way the harness test says to: by searching the sweep for an
+ * ordered triple that is transitive on the shipped template, never by
+ * assuming more aggressive is harder. Six ratios pairwise, 9,000 starting
+ * gold, splash 1.8, sudden death at 15:00, the model counter-pick,
+ * 2026-09-15 -- "beats" reads row over column:
  *
- *   template 1 (shipped)   beats                  loses to
- *     0.2                  0.75                   0.3 0.4 0.5 0.6
- *     0.3                  0.2 0.4 0.5 0.75       0.6
- *     0.4                  0.2                    0.3 0.5 0.6 0.75
- *     0.5                  0.2 0.4 0.6 0.75       0.3
- *     0.6                  0.2 0.3 0.4 0.75       0.5
- *     0.75                 0.4                    0.2 0.3 0.5 0.6
+ *   template 0 (shipped)   beats                  loses to
+ *     0.2                  0.3                    0.4 0.5 0.6 0.75
+ *     0.3                  nothing                everything
+ *     0.4                  0.2 0.3 0.5            0.6 0.75
+ *     0.5                  0.2 0.3 0.6 0.75       0.4
+ *     0.6                  0.2 0.3 0.4            0.5 0.75
+ *     0.75                 0.2 0.3 0.4 0.6        0.5
  *
- * 0.2 / 0.4 / 0.6 is transitive on template 1 with the winner on 20 lives in
- * every pairing, and on template 2. It is NOT ordered on template 0, where
- * 0.75 beats everything and 0.6 loses to 0.2 and 0.4; under sudden death no
- * triple in this sweep orders on all three templates, and the bot ships
- * template 1. Note what 0.75 losing to nearly everything here means: the
+ * 0.2 / 0.4 / 0.6 is transitive on all three templates in that sweep -- the
+ * first triple to be since the lane grew -- with the winner keeping 15 to
+ * 20 lives on the shipped one. Note what 0.75 losing to 0.5 means: the
  * hardest bot is not the most aggressive one that exists, it is the most
  * aggressive one that still beats everything below it, and a thin maze dies
  * in three minutes to a flood the ratio cannot cover.
  */
 /**
- * Template 1, the tight serpentine: a wall every other row, one corridor
- * between, which is the maze a player actually builds. Template 0 walled
- * every third row and wasted a row per wall; the full tight serpentine walks
- * 100 tiles for 77 towers where template 0 walks 72 for 49, and at 45 towers
- * it deals 13,290 damage a lap to a tank against 11,400 -- 17% more per tower
- * for the same gold. Head to head the same bot on template 1 beats itself on
- * template 0 six matches out of six, 20 lives to 0.
+ * Template 0, the half-slot serpentine with a two-row corridor (maze.ts).
  *
- * The cost is in the mirror: two equal defenders on a proper maze leak
- * nothing until the economy outgrows it, so the easy mirror runs 22.7
- * minutes with the first leak at minute 18 and peaks at 2,620 creeps. That
- * is issue #8 -- the bounded ladder has no valve -- showing through a better
- * defence, and the harness pins it as such rather than pinning the bot to a
- * worse maze.
+ * Template 1, the tight one with a one-row corridor, shipped from the 8-wide
+ * lane on measurements that are history now: there it walked 100 tiles for
+ * 77 towers where template 0 walked 72 for 49, and beat it six out of six.
+ * On the 16-wide lane under sudden death, with the model counter-pick, the
+ * same head-to-head goes the other way and it is not close (2026-09-15,
+ * both seats, every preset, 40,000-tick ceiling):
  *
- * Template 2 ("posts") loses 0-6 in under two minutes and stays in the list
- * only so the harness can keep saying so.
+ *   template 0 vs template 1:  0 wins 6-0, 20 lives to 0 every time
+ *   template 0 vs template 2:  0 wins 6-0, 20 lives to 0 every time
+ *   template 1 vs template 2:  1 wins at easy and normal, 2 wins at hard
+ *
+ * A longer route per tower is not worth a corridor a creep crosses in a
+ * fifth of a second: with ranges of nine tiles every tower already fires
+ * for the whole lap, and what the tight maze buys is fewer towers in reach
+ * of any one point of it. The bot builds template 0.
+ *
+ * Choosing the template by reading the opponent (issue #27) was measured
+ * before it was built, and there is nothing to choose: one template wins
+ * whatever the other seat sends or builds. The templates stay in the list
+ * so the harness can keep saying so, and so a template can be re-measured
+ * after the next balance rule without re-writing it.
  */
-export const BOT_EASY: BotConfig = { sendRatio: 0.2, reactionTicks: 10, template: 1 }
-export const BOT_NORMAL: BotConfig = { sendRatio: 0.4, reactionTicks: 10, template: 1 }
-export const BOT_HARD: BotConfig = { sendRatio: 0.6, reactionTicks: 10, template: 1 }
+export const BOT_EASY: BotConfig = { sendRatio: 0.2, reactionTicks: 10, template: 0 }
+export const BOT_NORMAL: BotConfig = { sendRatio: 0.4, reactionTicks: 10, template: 0 }
+export const BOT_HARD: BotConfig = { sendRatio: 0.6, reactionTicks: 10, template: 0 }
 
 /**
  * One decision. Returns the commands it wants applied this tick, empty when it
