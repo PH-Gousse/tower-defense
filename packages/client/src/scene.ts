@@ -51,6 +51,7 @@ import { CameraRig, DEFAULT_ROWS_IN_VIEW, type GroundBounds } from './render/Cam
 import { minimapLayout, minimapToWorld, paintMinimap, type MinimapLayout, type MinimapView } from './minimap'
 import { EdgeAlerts } from './alerts'
 import { rowBand, towerSlotRange, inBand, type RowBand } from './render/band'
+import { creepOffset, type Offset } from './render/creepOffset'
 import {
   spawnZoneCentre, exitZoneCentre, mirrorAcross, deepestCreep, highestLappers, nextLapper, clampToLane,
   type Point,
@@ -711,7 +712,8 @@ const WAIT_COLOUR = 0xf3c650
   const scratch = new THREE.Matrix4()
   const scratchQ = new THREE.Quaternion()
   const scratchQ2 = new THREE.Quaternion()
-  const scratchV = new THREE.Vector3()
+  const offset: Offset = { x: 0, z: 0 }
+const scratchV = new THREE.Vector3()
   const scratchS = new THREE.Vector3()
   const UP = new THREE.Vector3(0, 1, 0)
   const X_AXIS = new THREE.Vector3(1, 0, 0)
@@ -1422,8 +1424,13 @@ const WAIT_COLOUR = 0xf3c650
         const cadence = slowed ? gait.hz * 0.5 : gait.hz
         const stride = moving ? Math.sin(tSec * cadence * Math.PI * 2 + phase) : 0
         const bob = moving ? Math.abs(stride) * gait.bob * scale : 0
-        const wx = ox + x
-        const wz = y
+        // Drawn a little off its true point, by its id alone (ADR-0021): the
+        // sim stacks creeps that share a cell, and this is the whole of the
+        // separation. Everything visual -- model, bar, pips, where a shot is
+        // aimed -- uses the drawn point; the band test uses the true one.
+        creepOffset(id, offset)
+        const wx = ox + x + offset.x
+        const wz = y + offset.z
         if (assets && assets.placeCreep(lane, id, kind, tier, wx, wz, heading, moving, (Math.abs(mdx) + Math.abs(mdy)) * 20, slowed)) {
           dxs[i] = wx
           dys[i] = 0.35 * scale

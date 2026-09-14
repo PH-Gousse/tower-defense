@@ -32,7 +32,7 @@ Write one through `/decide`. A decision that changes a **game rule** also needs
 | [0018](0018-assets-are-generated-from-specs.md) | Assets are generated from specs, and the built files are committed | Accepted |
 | [0019](0019-lane-is-16-wide-with-2x2-towers-and-1-tile-creeps.md) | The lane is 16 wide and Warcraft 3-length, towers are 2×2, creeps are 1×1 | Accepted — implemented 2026-09-13; `LANE_LENGTH` and `LANE_GAP` still `[proposed]` |
 | [0020](0020-towers-anchor-on-the-creep-tile-grid.md) | Towers anchor on the 1-tile creep grid | Accepted |
-| [0021](0021-creeps-do-not-collide.md) | Creeps do not collide with each other | Accepted — client visual offset not implemented (#49) |
+| [0021](0021-creeps-do-not-collide.md) | Creeps do not collide with each other | Accepted — implemented 2026-09-15; the client offsets creeps by id (#49) |
 | [0022](0022-spawns-spread-across-the-zone-with-a-fractional-setback.md) | Spawns spread across the zone and keep the fractional setback | Accepted |
 | [0023](0023-placement-on-a-creep-is-refused.md) | A placement whose footprint holds a creep is refused | Accepted — implemented 2026-09-13; supersedes half of ADR-0012 |
 | [0024](0024-camera-scrolls-and-zoom-caps-at-40-rows.md) | The camera scrolls, zoom caps at 40 rows, a minimap shows the rest | Accepted — implemented 2026-09-13; 20-row default and bindings `[proposed]` |

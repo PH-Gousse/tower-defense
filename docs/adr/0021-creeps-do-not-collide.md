@@ -1,7 +1,7 @@
 # ADR-0021 — Creeps do not collide with each other
 
 - **Date:** 2026-09-13
-- **Status:** Accepted — the sim side holds (it never had collision); the client's per-id visual offset is **not implemented** (issue #49)
+- **Status:** Accepted — implemented 2026-09-15: the client draws each creep offset inside its tile by a pure function of its id (`packages/client/src/render/creepOffset.ts`, issue #49)
 
 ## Context
 
