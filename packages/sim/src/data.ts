@@ -179,6 +179,9 @@ export interface CreepsFile {
   readonly unlockEveryTicks: number
   /** Opening build phase, in ticks. Absent means none. See SEND_UNLOCK_TICKS. */
   readonly sendUnlockTicks?: number
+  /** Sudden death, ADR-0026. Absent means never. See SUDDEN_DEATH_TICK. */
+  readonly suddenDeathTick?: number
+  readonly suddenDeathGrowth?: number
   readonly maxTier: number
   readonly growth: CreepGrowth
   readonly archetypes: readonly CreepArchetype[]
@@ -284,6 +287,67 @@ function assertSendUnlock(v: number): number {
   return v
 }
 export const CREEP_DATA_VERSION = creepFile.version
+
+/**
+ * Sudden death: the match-ender (ADR-0026, issue #8).
+ *
+ * From SUDDEN_DEATH_TICK the HP of every creep spawned is multiplied by
+ * SUDDEN_DEATH_GROWTH once per income period, compounding, so any maze is
+ * eventually walked through -- the guarantee the twenty-tier ladder gave and
+ * the three-tier one lost. `suddenDeathScale` is what `step` applies at
+ * spawn and what the bot's flood model reads.
+ *
+ * The factors are a table built by repeated multiplication rather than a
+ * `pow`, which is banned in this package (docs/invariants.md), and the table
+ * is capped: creep HP is an Int32, and 6,250 x 1.15^100 would overflow it.
+ * At the cap a creep already has a hundred thousand times its HP, which no
+ * maze this lane can hold survives, so the cap is never the thing that ends
+ * a match. NEVER (-1) means the rule is off, which is what a fixture recorded
+ * before the rule existed carries.
+ */
+export const SUDDEN_DEATH_NEVER = -1
+export let SUDDEN_DEATH_TICK = assertSuddenDeathTick(creepFile.suddenDeathTick)
+export let SUDDEN_DEATH_GROWTH = assertSuddenDeathGrowth(creepFile.suddenDeathGrowth)
+const SUDDEN_DEATH_MAX_FACTOR = 100_000
+const SUDDEN_DEATH_PERIODS = 512
+const suddenDeathTable = new Float64Array(SUDDEN_DEATH_PERIODS)
+function rebuildSuddenDeath(): void {
+  let f = 1
+  for (let i = 0; i < SUDDEN_DEATH_PERIODS; i++) {
+    f = f * SUDDEN_DEATH_GROWTH
+    if (f > SUDDEN_DEATH_MAX_FACTOR) f = SUDDEN_DEATH_MAX_FACTOR
+    suddenDeathTable[i] = f
+  }
+}
+rebuildSuddenDeath()
+
+/**
+ * The HP multiplier for a creep spawned at `tick`, with income paid every
+ * `periodTicks`. 1 before sudden death and whenever the rule is off; the
+ * first factor lands on the start tick itself.
+ */
+export function suddenDeathScale(tick: number, periodTicks: number): number {
+  if (SUDDEN_DEATH_TICK === SUDDEN_DEATH_NEVER || tick < SUDDEN_DEATH_TICK) return 1
+  let periods = Math.floor((tick - SUDDEN_DEATH_TICK) / periodTicks)
+  if (periods >= SUDDEN_DEATH_PERIODS) periods = SUDDEN_DEATH_PERIODS - 1
+  return suddenDeathTable[periods] as number
+}
+
+function assertSuddenDeathTick(v: number | undefined): number {
+  if (v === undefined) return SUDDEN_DEATH_NEVER
+  if (!Number.isInteger(v) || v < 0) {
+    throw new Error(`creeps.json: suddenDeathTick must be a non-negative integer or absent, got ${v}`)
+  }
+  return v
+}
+
+function assertSuddenDeathGrowth(v: number | undefined): number {
+  if (v === undefined) return 1
+  if (!Number.isFinite(v) || v < 1) {
+    throw new Error(`creeps.json: suddenDeathGrowth must be a finite number of at least 1, got ${v}`)
+  }
+  return v
+}
 /** Highest tier the roster reaches. Tier N unlocks N minutes in. */
 export const MAX_TIER = creepFile.maxTier
 
@@ -323,6 +387,9 @@ export interface BalanceData {
   readonly unlockEveryTicks: number
   /** Optional: a fixture recorded before the build phase existed has none. */
   readonly sendUnlockTicks?: number
+  /** Optional: a fixture recorded before sudden death existed (ADR-0026) has none, meaning never. */
+  readonly suddenDeathTick?: number
+  readonly suddenDeathGrowth?: number
   /** Optional: a fixture recorded before the opening purse was freezable has none. */
   readonly startingGold?: number
   /** Optional, for the same reason as `startingGold`. */
@@ -337,6 +404,8 @@ export function liveBalanceData(): BalanceData {
     archetypes: ARCHETYPES,
     unlockEveryTicks: UNLOCK_EVERY_TICKS,
     sendUnlockTicks: SEND_UNLOCK_TICKS,
+    suddenDeathTick: SUDDEN_DEATH_TICK === SUDDEN_DEATH_NEVER ? undefined : SUDDEN_DEATH_TICK,
+    suddenDeathGrowth: SUDDEN_DEATH_TICK === SUDDEN_DEATH_NEVER ? undefined : SUDDEN_DEATH_GROWTH,
     startingGold: STARTING_GOLD,
     startingIncome: STARTING_INCOME,
     creeps: CREEPS,
@@ -358,6 +427,11 @@ export function installBalanceData(next: BalanceData): BalanceData {
   // Missing means none: a fixture frozen before the build phase existed replays
   // the match it recorded, rather than one where half its sends are refused.
   SEND_UNLOCK_TICKS = assertSendUnlock(next.sendUnlockTicks ?? 0)
+  // Missing means never: a fixture frozen before sudden death existed
+  // recorded a match that had no horizon, and replays the one it recorded.
+  SUDDEN_DEATH_TICK = assertSuddenDeathTick(next.suddenDeathTick)
+  SUDDEN_DEATH_GROWTH = assertSuddenDeathGrowth(next.suddenDeathGrowth)
+  rebuildSuddenDeath()
   // Missing means today's value, NOT zero: a fixture frozen before these were
   // freezable recorded a match played on the purse of its day, and the numbers
   // it was recorded under are the ones written into its "data" block by hand.

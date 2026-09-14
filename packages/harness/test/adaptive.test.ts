@@ -42,6 +42,15 @@ interface Record {
  */
 const cache = new Map<string, Promise<Record>>()
 
+/**
+ * Wall-clock budget per test, not a game pin. Each mode is twelve full
+ * matches, and under sudden death (ADR-0026) the table-reader draws run to
+ * about 31,000 ticks at 8-9 s each: 100-130 s for the first test to await a
+ * mode, against vitest's 120 s default. The number of matches is the
+ * measurement and stays; the budget is what moves.
+ */
+const ADAPTIVE_TEST_BUDGET_MS = 600_000
+
 function versusTemplate(mode: AdaptiveMode, reader: Reader): Promise<Record> {
   const key = `${reader}:${mode}`
   const existing = cache.get(key)
@@ -73,7 +82,7 @@ describe('adaptive play under the table reader', () => {
     // The whole reason the opponent's board is drawn on your screen.
     const r = await versusTemplate('send', 'table')
     expect(r.wins).toBeGreaterThan(r.losses * 2)
-  })
+  }, ADAPTIVE_TEST_BUDGET_MS)
 
   it('reacting to the wave in your own lane never wins', async () => {
     // Not a neutral change: the fixed 3:1:1 mix answers all three creep shapes
@@ -91,13 +100,13 @@ describe('adaptive play under the table reader', () => {
     // reading your own lane THIS WAY is not an improvement.
     const r = await versusTemplate('defence', 'table')
     expect(r.wins).toBe(0)
-  })
+  }, ADAPTIVE_TEST_BUDGET_MS)
 
   it('so send-only beats doing both', async () => {
     const send = await versusTemplate('send', 'table')
     const both = await versusTemplate('both', 'table')
     expect(send.wins).toBeGreaterThanOrEqual(both.wins)
-  })
+  }, ADAPTIVE_TEST_BUDGET_MS)
 })
 
 describe('adaptive play under the estimate reader', () => {
@@ -109,5 +118,5 @@ describe('adaptive play under the estimate reader', () => {
     // which before touching the default.
     const r = await versusTemplate('both', 'estimate')
     expect(r.wins).toBeGreaterThan(r.losses * 2)
-  })
+  }, ADAPTIVE_TEST_BUDGET_MS)
 })

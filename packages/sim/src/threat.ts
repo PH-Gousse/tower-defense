@@ -229,6 +229,7 @@ export function floodLeaks(
   towers: Towers,
   counts: ArrayLike<number>,
   override: TowerOverride | null = null,
+  hpScale = 1,
 ): number {
   const routeLen = route.length
   // A sealed lane has no route and nothing leaks from it; the sim sends the
@@ -300,6 +301,10 @@ export function floodLeaks(
     const count = counts[i] as number
     if (count <= 0) continue
     const spec = CREEPS[i] as CreepSpec
+    // Sudden death (ADR-0026) scales HP at spawn; the model reads the same
+    // factor for the whole population, which errs toward the attacker for a
+    // crowd that spawned across several periods.
+    const hp = spec.hp * hpScale
     let speed = spec.speed * slowFactor
     if (speed < 0.001) speed = 0.001
     const lap = routeLen / speed
@@ -320,13 +325,13 @@ export function floodLeaks(
       const shots = ((r * hitZone) / speed) / (lv.cooldownTicks + 1)
       splash += shots * lv.damage
     }
-    if (splash >= spec.hp) continue
+    if (splash >= hp) continue
 
     // Everything else kills one creep at a time, and this entry gets its
     // share of the shots by headcount. Splash accrues along the route rather
     // than up front, so a single-target shot lands on a creep carrying about
     // half of it on average.
-    const hpLeft = spec.hp - splash * 0.5
+    const hpLeft = hp - splash * 0.5
     let kills = 0
     for (let t = 0; t < n; t++) {
       const kind = kindAt[t] as number
@@ -353,19 +358,30 @@ export function floodLeaks(
  * whether to reinforce, and the cost of a false alarm is a tower it would
  * have built anyway.
  */
-export function laneThreat(lane: Lane, route: readonly number[], override: TowerOverride | null = null): number {
+export function laneThreat(
+  lane: Lane,
+  route: readonly number[],
+  override: TowerOverride | null = null,
+  hpScale = 1,
+): number {
   population(lane, lanePop)
-  return floodLeaks(route, lane.towers, lanePop, override)
+  return floodLeaks(route, lane.towers, lanePop, override, hpScale)
 }
 
 /**
  * Leaks a wave of `count` creeps of roster entry `creep` would add to a lane,
  * on top of what the lane is predicted to leak already.
  */
-export function waveLeaks(lane: Lane, route: readonly number[], creep: number, count: number): number {
-  const before = laneThreat(lane, route)
+export function waveLeaks(
+  lane: Lane,
+  route: readonly number[],
+  creep: number,
+  count: number,
+  hpScale = 1,
+): number {
+  const before = laneThreat(lane, route, null, hpScale)
   population(lane, wavePop)
   wavePop[creep] = (wavePop[creep] as number) + count
-  const after = floodLeaks(route, lane.towers, wavePop)
+  const after = floodLeaks(route, lane.towers, wavePop, null, hpScale)
   return after > before ? after - before : 0
 }

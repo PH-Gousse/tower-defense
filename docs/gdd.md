@@ -141,12 +141,14 @@ for both players.** `[confirmed]`
   one creep".**
 - Tier N's stats are **`base × growth^N`, generated at load** — the roster is a rule, not a
   list. `[proposed]` (`expandCreeps`, `packages/sim/src/data.ts`)
-- **Known gap, deliberate:** bounding the ladder at three tiers removed the property that
-  used to guarantee every match ends (geometric HP growth eventually beating any maze).
-  Nothing replaces it. Measured: a saturated maze needs 40 572 HP to survive one lap; the
-  heaviest creep this ladder can produce is Tank III at 6 250 — short by 6.5×, permanently.
-  Two players who both build past ~50 towers can sit in a match that cannot end. Bots do
-  not reach it (`MAX_TOWER_TARGET = 45`). `[proposed]` — needs a match-ender decision, [issue #8](https://github.com/PH-Gousse/tower-defense/issues/8).
+- **Sudden death guarantees the match ends.** From `suddenDeathTick` the HP of every creep
+  *spawned* is multiplied by `suddenDeathGrowth` once per income period, compounding — the
+  guarantee the twenty-tier ladder gave and the three-tier one lost. Sized `[proposed]`
+  `[retune]` at 15:00 and ×1.15 per 15 s: Tank III (6 250 HP) passes the 81 000 a
+  30-tower level-3 maze needs 4.6 minutes in and the 415 000 a 120-tower one needs 7.5
+  minutes in, so no maze on this lane survives past about 23 minutes. Creeps already on
+  the board keep the HP they spawned with. [ADR-0026](adr/0026-sudden-death-on-the-clock-ends-every-match.md),
+  closes [issue #8](https://github.com/PH-Gousse/tower-defense/issues/8).
 
 ## 6. Sending
 
@@ -186,6 +188,10 @@ for both players.** `[confirmed]`
 - **Every income tick the income figure is paid into the player's gold.** `[confirmed]`
   Interval is a constant, default **15 s = 300 ticks at 20 Hz** (`INCOME_EVERY_TICKS`).
   `[confirmed]` at 15 s.
+- **Sudden death runs on the income clock.** From `suddenDeathTick` every creep spawned
+  carries `suddenDeathGrowth` more HP per income period elapsed, compounding (§5,
+  ADR-0026). The HUD counts down to it beside the tier clock and then shows the factor a
+  send would carry. `[proposed]` sizing, `[retune]`.
 - ⚠️ **The income clock starts when sending opens, not at tick 0.** `[proposed]` — not in
   the confirmed rules. The code anchors the schedule to `SEND_UNLOCK_TICKS` because a
   payout landing before anyone may send is a period the attacker can never have
@@ -302,6 +308,8 @@ Source of truth: `packages/sim/data/towers.json`, `packages/sim/data/creeps.json
 | Income interval | 300 ticks (15 s) | `state.ts` `INCOME_EVERY_TICKS` | interval `[confirmed]` on the old board, now `[retune]`: 3 to 5 payouts per bare lap instead of 1 or 2; anchor `[proposed]` |
 | Build phase | 400 ticks (20 s) | `creeps.json` `sendUnlockTicks` | `[retune]` — a 16-wide opening maze costs more than an 8-wide one |
 | Tier unlock spacing | 6 000 ticks (5 min) | `creeps.json` `unlockEveryTicks` | tiers at 0:00 / 5:00 / 10:00 · `[retune]` — the expected first `/balance` mover |
+| Sudden death start | 18 000 ticks (15:00) | `creeps.json` `suddenDeathTick` | ADR-0026; one unlock interval after the last tier · `[retune]` |
+| Sudden death growth | ×1.15 per income period | `creeps.json` `suddenDeathGrowth` | compounding, applied to HP at spawn · `[retune]` |
 | Max tier | 2 (→ three tiers, 0–2) | `creeps.json` `maxTier` | |
 | Sell refund | 0.60 | `towers.json` `sellRefund` | ⚠️ stated default is 0.75 |
 | Max tower level | 3 | `data.ts` `MAX_LEVEL` | `[confirmed]` |
@@ -377,5 +385,5 @@ Nine things need your word before they harden. Listed again in the Phase 8 repor
 5. **Income clock anchor** — tied to send-unlock (code) or to tick 0?
 6. ~~Blocking refusal~~ — resolved by ADR-0023: refuse on a creep-occupied footprint.
 7. **Draws** — is a same-tick double-zero a draw, or does someone win?
-8. **Match-ender** — the bounded ladder has no guarantee a match ends. What replaces it?
+8. ~~Match-ender~~ — resolved by ADR-0026: sudden death on the clock. Its sizing (15:00, ×1.15 per period) is `[proposed]`.
 9. **Every number in §11.**

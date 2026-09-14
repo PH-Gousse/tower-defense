@@ -8,7 +8,7 @@ import {
   CREEPS, tierUnlockTick, SEND_UNLOCK_TICKS, INCOME_EVERY_TICKS,
   BOT_EASY, BOT_NORMAL, BOT_HARD, type BotConfig,
 } from '@ltw/sim'
-import { mmss, secondsUntil, ticksUntilIncome, ticksUntilNextTier, unlockedTier } from './clocks'
+import { mmss, secondsUntil, ticksUntilIncome, ticksUntilNextTier, unlockedTier, ticksUntilSuddenDeath, suddenDeathLabel } from './clocks'
 import { railWidth, safeEdges } from './chrome'
 import { bootAssets } from './assets/boot'
 
@@ -36,6 +36,7 @@ const el = (id: string) => document.getElementById(id)
 const clock = el('clock')
 const incomeLeft = el('incomeLeft')
 const tierLeft = el('tierLeft')
+const suddenDeath = el('suddenDeath')
 const lives = el('lives')
 const oppLives = el('oppLives')
 const income = el('income')
@@ -298,6 +299,8 @@ scene.onStats((s) => {
   setText(incomeLeft, mmss(ticksUntilIncome(s.tick)))
   const nextTier = ticksUntilNextTier(s.tick)
   setText(tierLeft, nextTier === null ? '--:--' : mmss(nextTier))
+  const sd = ticksUntilSuddenDeath(s.tick)
+  setText(suddenDeath, sd === null ? '--:--' : sd > 0 ? mmss(sd) : suddenDeathLabel(s.tick))
   if (tierLeft) {
     if (nextTier === null) tierLeft.setAttribute('data-none', 'true')
     else tierLeft.removeAttribute('data-none')

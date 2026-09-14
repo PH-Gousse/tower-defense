@@ -1,4 +1,4 @@
-import { TICK_HZ, INCOME_EVERY_TICKS, SEND_UNLOCK_TICKS, tierUnlockTick, MAX_TIER } from '@ltw/sim'
+import { TICK_HZ, INCOME_EVERY_TICKS, SEND_UNLOCK_TICKS, tierUnlockTick, MAX_TIER, SUDDEN_DEATH_TICK, SUDDEN_DEATH_NEVER, suddenDeathScale } from '@ltw/sim'
 
 /**
  * Every clock the HUD shows, as pure functions of the tick.
@@ -92,4 +92,19 @@ export function ticksUntilNextTier(tick: number): number | null {
   const tier = unlockedTier(tick)
   if (tier >= MAX_TIER) return null
   return tierUnlockTick(tier + 1) - tick
+}
+
+/**
+ * Ticks until sudden death starts (ADR-0026), or null when the rule is off.
+ * Zero or negative once it has started; the HUD then shows the factor.
+ */
+export function ticksUntilSuddenDeath(tick: number): number | null {
+  if (SUDDEN_DEATH_TICK === SUDDEN_DEATH_NEVER) return null
+  return SUDDEN_DEATH_TICK - tick
+}
+
+/** The HP multiplier a creep sent now would carry, as the HUD prints it. */
+export function suddenDeathLabel(tick: number): string {
+  const f = suddenDeathScale(tick, INCOME_EVERY_TICKS)
+  return `\u00d7${f < 10 ? f.toFixed(2) : f < 1000 ? f.toFixed(0) : Math.round(f / 1000) + 'k'}`
 }

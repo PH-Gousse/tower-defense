@@ -45,6 +45,7 @@ import {
   creepSpec,
   tierUnlockTick,
   SEND_UNLOCK_TICKS,
+  suddenDeathScale,
 } from './data'
 import { createSpatialHash, rebuildHash, fireTowers, type SpatialHash } from './towers'
 
@@ -437,7 +438,9 @@ function spawnSend(
     c.spec[i] = creep
     c.x[i] = p.x
     c.y[i] = p.y
-    c.hp[i] = spec.hp
+    // Sudden death (ADR-0026): the roster's HP times the clock's factor,
+    // rounded because HP is an Int32. 1 until the start tick.
+    c.hp[i] = Math.round(spec.hp * suddenDeathScale(s.tick, INCOME_EVERY_TICKS))
     c.laps[i] = 0
     c.speed[i] = spec.speed
     c.slowPercent[i] = 0

@@ -154,3 +154,15 @@ describe('ticksUntilNextTier', () => {
     expect(ticksUntilNextTier(tierUnlockTick(MAX_TIER) + 99_999)).toBeNull()
   })
 })
+
+describe('sudden death clock', () => {
+  it('counts down to the start tick, then shows the factor a send would carry', async () => {
+    const { ticksUntilSuddenDeath, suddenDeathLabel } = await import('../src/clocks')
+    const { SUDDEN_DEATH_TICK, INCOME_EVERY_TICKS } = await import('@ltw/sim')
+    expect(ticksUntilSuddenDeath(0)).toBe(SUDDEN_DEATH_TICK)
+    expect(ticksUntilSuddenDeath(SUDDEN_DEATH_TICK)).toBe(0)
+    expect(suddenDeathLabel(0)).toBe('×1.00')
+    expect(suddenDeathLabel(SUDDEN_DEATH_TICK)).toBe('×1.15')
+    expect(suddenDeathLabel(SUDDEN_DEATH_TICK + INCOME_EVERY_TICKS)).toBe('×1.32')
+  })
+})

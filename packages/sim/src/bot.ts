@@ -24,9 +24,11 @@ import {
   MAX_TIER,
   tierUnlockTick,
   SEND_UNLOCK_TICKS,
+  suddenDeathScale,
   type CreepSpec,
 } from './data'
 import {
+  INCOME_EVERY_TICKS,
   opponentOf,
   footprintOverlapsTower,
   type GameState,
@@ -295,30 +297,30 @@ const DEFAULT_COUNTER_PICK: CounterPick = 'table'
  * Attacking pays now, but not without limit, and the ratio is NOT monotone
  * on the 16-wide lane. On the 8-wide one a sweep came out perfectly ordered
  * (0.8 beat 0.65 beat 0.5 beat 0.4 beat 0.3 beat 0.2); here the same sweep
- * is a tangle, and it changed shape when the mortar's blast went from 3.6 to
- * 1.8 tiles (towers.json v5) -- the first triple chosen on this board,
- * 0.2 / 0.4 / 0.5, stopped being transitive that day. So the presets are
- * chosen the way the harness test says to: by searching the sweep for an
- * ordered triple that is transitive on EVERY template, never by assuming
- * more aggressive is harder. Six ratios pairwise, 9,000 starting gold,
- * splash radius 1.8, 2026-09-14 -- "beats" reads row over column:
+ * is a tangle, and it changes shape with every balance rule: 0.2 / 0.4 / 0.5
+ * ordered at splash radius 3.6, 0.2 / 0.4 / 0.75 at 1.8, and sudden death
+ * (ADR-0026) reshuffled it again. So the presets are chosen the way the
+ * harness test says to: by searching the sweep for an ordered triple that is
+ * transitive on the shipped template, never by assuming more aggressive is
+ * harder. Six ratios pairwise, 9,000 starting gold, splash 1.8, sudden death
+ * at 15:00, 2026-09-14 -- "beats" reads row over column:
  *
  *   template 1 (shipped)   beats                  loses to
- *     0.2                  0.3 0.6                0.4 0.5 0.75
- *     0.3                  0.5                    0.2 0.4 0.6 0.75
- *     0.4                  0.2 0.3 0.5            0.6 0.75
- *     0.5                  0.2 0.75               0.3 0.4 0.6
- *     0.6                  0.3 0.4 0.5 0.75       0.2
- *     0.75                 0.2 0.3 0.4            0.5 0.6
+ *     0.2                  0.75                   0.3 0.4 0.5 0.6
+ *     0.3                  0.2 0.4 0.5 0.75       0.6
+ *     0.4                  0.2                    0.3 0.5 0.6 0.75
+ *     0.5                  0.2 0.4 0.6 0.75       0.3
+ *     0.6                  0.2 0.3 0.4 0.75       0.5
+ *     0.75                 0.4                    0.2 0.3 0.5 0.6
  *
- * 0.2 / 0.4 / 0.75 is transitive on templates 0, 1 and 2, and on the shipped
- * template the winner keeps 18 to 20 lives in every pairing. 0.3 / 0.4 / 0.6
- * and 0.3 / 0.4 / 0.75 also order on template 1 but fall over on template
- * 0, where 0.3 beats 0.4. Note what 0.75 losing to 0.5 and 0.6 means: the
+ * 0.2 / 0.4 / 0.6 is transitive on template 1 with the winner on 20 lives in
+ * every pairing, and on template 2. It is NOT ordered on template 0, where
+ * 0.75 beats everything and 0.6 loses to 0.2 and 0.4; under sudden death no
+ * triple in this sweep orders on all three templates, and the bot ships
+ * template 1. Note what 0.75 losing to nearly everything here means: the
  * hardest bot is not the most aggressive one that exists, it is the most
- * aggressive one that still beats everything below it. Past it the maze is
- * too thin for the flood the ratio buys, and 0.9 (not in this table) is dead
- * in three minutes with no maze at all.
+ * aggressive one that still beats everything below it, and a thin maze dies
+ * in three minutes to a flood the ratio cannot cover.
  */
 /**
  * Template 1, the tight serpentine: a wall every other row, one corridor
@@ -341,7 +343,7 @@ const DEFAULT_COUNTER_PICK: CounterPick = 'table'
  */
 export const BOT_EASY: BotConfig = { sendRatio: 0.2, reactionTicks: 10, template: 1 }
 export const BOT_NORMAL: BotConfig = { sendRatio: 0.4, reactionTicks: 10, template: 1 }
-export const BOT_HARD: BotConfig = { sendRatio: 0.75, reactionTicks: 10, template: 1 }
+export const BOT_HARD: BotConfig = { sendRatio: 0.6, reactionTicks: 10, template: 1 }
 
 /**
  * One decision. Returns the commands it wants applied this tick, empty when it
@@ -927,7 +929,7 @@ function modelPick(
     let count = Math.floor(bank / spec.cost)
     if (count > MAX_SEND_BURST) count = MAX_SEND_BURST
     if (count < 1) continue
-    const leaks = waveLeaks(opp, route, creep, count)
+    const leaks = waveLeaks(opp, route, creep, count, suddenDeathScale(state.tick, INCOME_EVERY_TICKS))
     const score = leaks / (count * spec.cost)
     if (score > bestScore) {
       bestScore = score
@@ -1134,7 +1136,7 @@ function bestWave(
     let count = Math.floor(budget / spec.cost)
     if (count > MAX_SEND_BURST) count = MAX_SEND_BURST
     if (count < 1) continue
-    const leaks = waveLeaks(opp, oppRoute, i, count)
+    const leaks = waveLeaks(opp, oppRoute, i, count, suddenDeathScale(state.tick, INCOME_EVERY_TICKS))
     if (leaks >= 1 && (best === null || leaks > best.leaks)) best = { creep: i, count, leaks }
   }
   return best
@@ -1162,7 +1164,9 @@ function shoreUp(
   gold: number,
   config: BotConfig,
 ): Command | null {
-  const threat = laneThreat(lane, route)
+  // The flood is read at the HP sudden death gives it now (ADR-0026).
+  const hpScale = suddenDeathScale(state.tick, INCOME_EVERY_TICKS)
+  const threat = laneThreat(lane, route, null, hpScale)
   if (threat < 1) return null
 
   let best: Command | null = null
@@ -1192,7 +1196,7 @@ function shoreUp(
       const a = anchorOf(lane, slot)
       if (checkUpgrade(state, player, tileX(a), tileY(a)) !== Refusal.None) continue
       const override: TowerOverride = { tile: a, kind: kind as TowerKind, level: level + 1 }
-      const after = laneThreat(lane, route, override)
+      const after = laneThreat(lane, route, override, hpScale)
       consider({ tick: state.tick, player, kind: Kind.Upgrade, x: tileX(a), y: tileY(a) }, cost, after)
     }
   }
@@ -1214,7 +1218,7 @@ function shoreUp(
         // the sim would refuse is not a fix, and emitting it would be the bot
         // sending a command a player could not.
         if (checkBuild(state, player, tileX(tile), tileY(tile), kind).refusal !== Refusal.None) continue
-        const after = laneThreat(lane, newRoute, { tile, kind, level: 1 })
+        const after = laneThreat(lane, newRoute, { tile, kind, level: 1 }, hpScale)
         consider(
           { tick: state.tick, player, kind: Kind.Build, tower: kind, x: tileX(tile), y: tileY(tile) },
           levelOf(kind, 1).cost,

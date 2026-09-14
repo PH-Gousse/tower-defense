@@ -211,7 +211,7 @@ describe('the match is a contest, not a wait', () => {
         // One send a second is far below every measured mirror (139-185 a
         // minute) and far above the twenty-minutes-of-nothing bot this
         // exists to catch.
-        expect(m.sends[p] / minutes, `${name} mirror: player ${p} sends per minute`).toBeGreaterThan(60)
+        expect((m.sends[p] as number) / minutes, `${name} mirror: player ${p} sends per minute`).toBeGreaterThan(60)
       }
     }
   })
