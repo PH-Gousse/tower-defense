@@ -146,7 +146,7 @@ lapGaps.sort((x, y) => x - y)
 
 /**
  * The check: among matches that were decided, what share did the WINNER spend
- * most of its send gold on? If one archetype takes more than the threshold, one
+ * most of its send gold on (by gold, across tiers)? If one archetype takes more than the threshold, one
  * send pattern is winning the game and the counter structure is not working.
  */
 const winnerFavourite = new Map<string, number>()
@@ -154,18 +154,27 @@ for (const r of rows) {
   if (r.summary.result !== MatchResult.Decided) continue
   const w = r.summary.winner
   const by = r.summary.sendsByCreep[w] ?? []
-  let bestIdx = -1
-  let bestCount = 0
+  // By GOLD, not by count, and grouped by archetype across tiers: "Swarm II
+  // winning" and "Swarm winning" are the same finding about the same card.
+  // Counting sends flagged Swarm in every decided match on the 16-wide lane,
+  // where a 20-gold creep is sent thirty times for every 600-gold tank; by
+  // gold the same matches told a different story (issue #12).
+  const goldBy = new Map<string, number>()
   for (let i = 0; i < by.length; i++) {
-    const c = by[i] ?? 0
-    if (c > bestCount) { bestCount = c; bestIdx = i }
+    const n = by[i] ?? 0
+    if (n === 0) continue
+    const spec = CREEPS[i]
+    const name = spec?.name ?? `creep ${i}`
+    const archetype = name.replace(/ (II|III|IV|V|VI|VII|VIII|IX|X)$/, '')
+    goldBy.set(archetype, (goldBy.get(archetype) ?? 0) + n * (spec?.cost ?? 0))
   }
-  if (bestIdx === -1) continue
-  const name = CREEPS[bestIdx]?.name ?? `creep ${bestIdx}`
-  // Group by archetype, not tier: "Swarm II winning" and "Swarm winning" are
-  // the same finding about the same card.
-  const archetype = name.replace(/ (II|III|IV|V|VI|VII|VIII|IX|X)$/, '')
-  winnerFavourite.set(archetype, (winnerFavourite.get(archetype) ?? 0) + 1)
+  let best: string | null = null
+  let bestGold = 0
+  for (const [archetype, gold] of goldBy) {
+    if (gold > bestGold) { bestGold = gold; best = archetype }
+  }
+  if (best === null) continue
+  winnerFavourite.set(best, (winnerFavourite.get(best) ?? 0) + 1)
 }
 
 const favouriteTotal = [...winnerFavourite.values()].reduce((a, b) => a + b, 0)

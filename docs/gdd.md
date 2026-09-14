@@ -317,7 +317,7 @@ hashed as a 32-bit integer, so sub-unit prices are unavailable at any scale.
 | Single-target | 1 | 600 | 30 | 9.00 | 25 t | |
 | | 2 | 900 | 55 | 9.75 | 24 t | |
 | | 3 | 1 400 | 84 | 10.50 | 22 t | |
-| Splash | 1 | 1 100 | 12 | 4.50 | 12 t | splash radius 3.6 |
+| Splash | 1 | 1 100 | 12 | 4.50 | 12 t | splash radius 1.8 (was 3.6; second retune 2026-09-14, #12) |
 | | 2 | 1 600 | 20 | 5.10 | 12 t | |
 | | 3 | 2 400 | 32 | 5.70 | 11 t | |
 | Slow | 1 | 800 | 4 | 6.75 | 10 t | slow 30%, 20 t |
@@ -331,6 +331,13 @@ towers (ADR-0025): at 1.5–3.5 tiles a tower's range was shorter than the tower
 original's 600–900 units are 9–14 creep tiles. A level-1 single-target now covers a little
 over half the lane's width from a wall; a level-1 splash reaches the corridor on either
 side of its own wall and no further.
+
+The splash radius did **not** keep the ×3. A blast is an area over a crowd, and creeps do
+not collide (ADR-0021), so they pack far denser than the original's: at 3.6 tiles a
+mortar in every five towers held 60 000 gold of swarm to zero leaks, and sending swarm was
+never pressure. At 1.8 a swarm flood beats a single-target maze, a mortar-heavy maze still
+holds it, and tanks and runners get through the mortar-heavy maze that swarm cannot — the
+3×3 the design rests on, measured 2026-09-14 (issue #12).
 
 ### Creeps — tier 0 base (all `[proposed]` `[retune]`)
 
