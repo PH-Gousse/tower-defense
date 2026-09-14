@@ -1,7 +1,7 @@
 # ADR-0019 — The lane is 16 tiles wide and Warcraft 3-length, towers are 2×2, creeps are 1×1
 
 - **Date:** 2026-09-13
-- **Status:** Accepted — sim implemented 2026-09-13 (issue #38); client, art and balance follow in issues #44–#47, #42
+- **Status:** Accepted — implemented 2026-09-13: sim (#38), camera and rendering (#44–#46), catalogue (#47), constants conversion (#42). `LANE_LENGTH` 200 and `LANE_GAP` 4 remain `[proposed]`
 
 ## Context
 

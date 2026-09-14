@@ -1,7 +1,7 @@
 # ADR-0021 — Creeps do not collide with each other
 
 - **Date:** 2026-09-13
-- **Status:** Accepted
+- **Status:** Accepted — the sim side holds (it never had collision); the client's per-id visual offset is **not implemented** (issue #49)
 
 ## Context
 
