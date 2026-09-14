@@ -21,9 +21,15 @@ nothing.
 
 ## The degenerate flag
 
-Fires when one creep archetype is the winner's main send in more than 70% of decided
-matches. It groups by archetype, not tier — "Swarm II winning" and "Swarm winning" are the
-same finding about the same card.
+Fires when the **winner leaned on one archetype more than the loser did** — by more than 10
+points of send gold in more than 70% of decided matches. It groups by archetype, not tier —
+"Swarm II winning" and "Swarm winning" are the same finding about the same card.
+
+It is a comparison, not a count, on purpose. Two earlier versions read "the winner's main
+send": by count that named the cheapest creep whatever won, and by gold it named the economy
+card, which both seats send whenever nothing is predicted to leak. A mix both sides play is
+not a winning pattern. The report still tabulates the winner's main send for reference;
+read the lean table for the flag.
 
 The 3×3 counter structure (`docs/gdd.md` §4-5) says each creep has one tower answer. If one
 card wins regardless, either that structure is not working or the card is mispriced.

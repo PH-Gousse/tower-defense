@@ -42,8 +42,9 @@ Full guidance in [`reading-the-report.md`](reading-the-report.md).
 
 - **Head to head**, not aggregate win rate. Aggregate depends on who a preset was drawn
   against. The ladder should be monotone with mirrors drawn.
-- **Degenerate flag.** One archetype being the winner's main send breaks the 3×3 counter
-  structure the whole design rests on.
+- **Degenerate flag.** An archetype winners lean on and losers do not breaks the 3×3
+  counter structure the whole design rests on. A mix both seats send is the economy card,
+  not a pattern that wins; the flag compares, it does not count.
 - **Match length.** A rising "hit the ceiling" count is issue #8 — the bounded ladder has no
   guarantee a match ends — showing up as data.
 - **Income curve.** Flat means nobody is attacking, and income only grows by sending.

@@ -1,10 +1,11 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { join, relative } from 'node:path'
-import { MatchResult, CREEPS } from '@ltw/sim'
+import { MatchResult } from '@ltw/sim'
 import { parseArgs, num, say, emit, pct, gameSeconds } from './lib/cli'
 import { REPO_ROOT } from './lib/scan'
 import { configFor, SEED_CAVEAT, DISTINCT_CONFIGS } from './lib/config'
 import { runRecorded, type RunSummary } from './lib/replay'
+import { goldShares, leanAcross, type DecidedMix } from './lib/lean'
 
 /**
  * `balance-batch` — run M matches and report what the economy actually does.
@@ -32,8 +33,10 @@ import { runRecorded, type RunSummary } from './lib/replay'
 const args = parseArgs(process.argv.slice(2))
 const matches = num(args, 'matches', 18)
 const maxTicks = num(args, 'max-ticks', 40_000)
-/** Share of wins by one creep archetype above which we call it degenerate. */
+/** Share of decided matches in which the winner must lean on an archetype for it to be degenerate. */
 const degenerateThreshold = num(args, 'threshold', 0.7)
+/** How much more of its send gold the winner must put on it than the loser, as a share of 1. */
+const degenerateMargin = num(args, 'margin', 0.1)
 
 say(`balance-batch — ${matches} matches x up to ${maxTicks} ticks`)
 say(`  ${SEED_CAVEAT}`)
@@ -145,44 +148,31 @@ lapGaps.sort((x, y) => x - y)
 // --- degenerate strategy -----------------------------------------------------
 
 /**
- * The check: among matches that were decided, what share did the WINNER spend
- * most of its send gold on (by gold, across tiers)? If one archetype takes more than the threshold, one
- * send pattern is winning the game and the counter structure is not working.
+ * The check: in decided matches, did the winner lean on one archetype more
+ * than the loser did? See lib/lean.ts for why it is a comparison and not a
+ * count -- two earlier versions named the cheapest creep and then the
+ * economy card, which both seats send, and could not tell "both sides play
+ * it" from "it wins". The winner's main send is still tabulated as
+ * information, but the flag reads the lean.
  */
+const decidedMixes: DecidedMix[] = []
 const winnerFavourite = new Map<string, number>()
 for (const r of rows) {
   if (r.summary.result !== MatchResult.Decided) continue
   const w = r.summary.winner
-  const by = r.summary.sendsByCreep[w] ?? []
-  // By GOLD, not by count, and grouped by archetype across tiers: "Swarm II
-  // winning" and "Swarm winning" are the same finding about the same card.
-  // Counting sends flagged Swarm in every decided match on the 16-wide lane,
-  // where a 20-gold creep is sent thirty times for every 600-gold tank; by
-  // gold the same matches told a different story (issue #12).
-  const goldBy = new Map<string, number>()
-  for (let i = 0; i < by.length; i++) {
-    const n = by[i] ?? 0
-    if (n === 0) continue
-    const spec = CREEPS[i]
-    const name = spec?.name ?? `creep ${i}`
-    const archetype = name.replace(/ (II|III|IV|V|VI|VII|VIII|IX|X)$/, '')
-    goldBy.set(archetype, (goldBy.get(archetype) ?? 0) + n * (spec?.cost ?? 0))
-  }
+  const l = 1 - w
+  decidedMixes.push({ winner: r.summary.sendsByCreep[w], loser: r.summary.sendsByCreep[l] })
   let best: string | null = null
-  let bestGold = 0
-  for (const [archetype, gold] of goldBy) {
-    if (gold > bestGold) { bestGold = gold; best = archetype }
+  let bestShare = 0
+  for (const [archetype, share] of goldShares(r.summary.sendsByCreep[w])) {
+    if (share > bestShare) { bestShare = share; best = archetype }
   }
-  if (best === null) continue
-  winnerFavourite.set(best, (winnerFavourite.get(best) ?? 0) + 1)
+  if (best !== null) winnerFavourite.set(best, (winnerFavourite.get(best) ?? 0) + 1)
 }
 
 const favouriteTotal = [...winnerFavourite.values()].reduce((a, b) => a + b, 0)
-const degenerate: { archetype: string; share: number; wins: number }[] = []
-for (const [archetype, wins] of winnerFavourite) {
-  const share = favouriteTotal > 0 ? wins / favouriteTotal : 0
-  if (share > degenerateThreshold) degenerate.push({ archetype, share, wins })
-}
+const leans = leanAcross(decidedMixes, degenerateThreshold, degenerateMargin)
+const degenerate = leans.filter((l) => l.flagged)
 
 // --- income curves -----------------------------------------------------------
 
@@ -228,12 +218,12 @@ if (lapGaps.length > 0) {
 say(`  peak creeps across all matches: ${Math.max(...rows.map((r) => r.summary.peakCreeps))}`)
 say()
 if (degenerate.length > 0) {
-  say(`  DEGENERATE STRATEGY FLAG (threshold ${pct(degenerateThreshold)})`)
+  say(`  DEGENERATE STRATEGY FLAG (winner leaned by more than ${pct(degenerateMargin)} in more than ${pct(degenerateThreshold)} of decided matches)`)
   for (const d of degenerate) {
-    say(`    ${d.archetype} was the winner's main send in ${d.wins}/${favouriteTotal} decided matches (${pct(d.share)})`)
+    say(`    ${d.archetype}: winners ${pct(d.winnerShare)} of send gold, losers ${pct(d.loserShare)}, leaned on in ${d.leanedIn}/${d.decided}`)
   }
 } else {
-  say(`  no degenerate strategy: no archetype above ${pct(degenerateThreshold)} of winners' main sends`)
+  say(`  no degenerate strategy: no archetype the winner leaned on by more than ${pct(degenerateMargin)} in more than ${pct(degenerateThreshold)} of decided matches`)
 }
 say()
 
@@ -328,22 +318,32 @@ if (lapGaps.length > 0) {
 md.push('')
 md.push('## Degenerate strategy check')
 md.push('')
-md.push(`Threshold: one creep archetype being the winner's main send in more than **${pct(degenerateThreshold)}**`)
-md.push('of decided matches.')
+md.push(`The winner's send gold by archetype against the loser's, per decided match. An archetype is`)
+md.push(`degenerate when the winner leaned on it by more than **${pct(degenerateMargin)}** of send gold in more than`)
+md.push(`**${pct(degenerateThreshold)}** of decided matches. A mix both seats play leans on nothing, however`)
+md.push('lopsided it is — that is the economy card, not a winning pattern.')
 md.push('')
-if (favouriteTotal === 0) {
+if (leans.length === 0) {
   md.push('No decided matches with sends — nothing to check.')
 } else {
-  md.push("| Archetype | Matches it was the winner's main send | Share |")
-  md.push('|---|---|---|')
-  for (const [archetype, wins] of [...winnerFavourite].sort((a, b) => b[1] - a[1])) {
-    md.push(`| ${archetype} | ${wins} | ${pct(wins / favouriteTotal)} |`)
+  md.push("| Archetype | Winner's share | Loser's share | Lean | Leaned on in |")
+  md.push('|---|---|---|---|---|')
+  for (const l of leans) {
+    md.push(`| ${l.archetype} | ${pct(l.winnerShare)} | ${pct(l.loserShare)} | ${l.lean >= 0 ? '+' : ''}${pct(l.lean)} | ${l.leanedIn}/${l.decided} |`)
   }
   md.push('')
   md.push(degenerate.length > 0
-    ? `**FLAGGED:** ${degenerate.map((d) => `${d.archetype} at ${pct(d.share)}`).join(', ')}. ` +
-      'One send pattern is winning the game, which means the 3x3 counter structure is not working.'
-    : '**Clear.** No archetype above the threshold.')
+    ? `**FLAGGED:** ${degenerate.map((d) => `${d.archetype} (winners ${pct(d.winnerShare)}, losers ${pct(d.loserShare)})`).join(', ')}. ` +
+      'Winners lean on one send pattern that losers do not, which means the 3x3 counter structure is not working.'
+    : '**Clear.** Winners lean on nothing losers do not.')
+  md.push('')
+  md.push("For reference, the winner's main send by gold:")
+  md.push('')
+  md.push("| Archetype | Matches it was the winner's main send |")
+  md.push('|---|---|')
+  for (const [archetype, wins] of [...winnerFavourite].sort((a, b) => b[1] - a[1])) {
+    md.push(`| ${archetype} | ${wins}/${favouriteTotal} |`)
+  }
 }
 md.push('')
 md.push('## Per-match detail')
@@ -387,5 +387,6 @@ emit('balance-batch', true, `${matches} matches, ${degenerate.length} degenerate
   peakCreeps: Math.max(...rows.map((r) => r.summary.peakCreeps)),
   incomeCurve,
   degenerate,
+  leans,
   winnerFavourite: Object.fromEntries(winnerFavourite),
 })
