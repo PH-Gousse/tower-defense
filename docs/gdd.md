@@ -38,7 +38,11 @@ The **tile** is the creep tile and the only unit the sim speaks. See
 
 - **A creep occupies 1 × 1 tile. A tower occupies 2 × 2 tiles.** No code path may assume the
   two are the same size. `[confirmed]` (`TOWER_SIZE`, `CREEP_SIZE`, `packages/sim/src/grid.ts`)
-- **The lane is 16 tiles wide** — a full row is 8 towers. `[confirmed]` (`LANE_WIDTH`)
+- **The lane is 17 tiles wide** — a full row is 8 towers and leaves **one spare column**,
+  one creep wide, so a straight wall is a half-slot by itself and its gap is on whichever
+  side the wall does not touch. **`[proposed]`** 2026-09-15, one more than ADR-0019's
+  confirmed 16 ([ADR-0027](adr/0027-lane-is-17-wide-and-100-rows.md)). (`LANE_WIDTH`,
+  `TOWERS_ACROSS`, `SPARE_TILES`)
 - The lane runs **vertically**: creeps enter at the top, leave at the bottom. `[confirmed]`
 - Along its length the lane has three zones, in the order creeps meet them:
   - a **spawn zone** of `SPAWN_ROWS = 10` rows, where creeps appear. Not buildable. `[confirmed]`
@@ -54,6 +58,10 @@ The **tile** is the creep tile and the only unit the sim speaks. See
   per-cell occupancy grid is a cache of it, never the source of truth. Two towers offset by
   one tile leave a corridor one creep wide — the **half-slot** — and that is the mazing
   skill of the game. `[confirmed]` ([ADR-0020](adr/0020-towers-anchor-on-the-creep-tile-grid.md))
+  On the 17-wide lane a full row gets the same corridor for free from the spare column;
+  the offset still matters anywhere a wall does not reach an edge, and it is what seals:
+  a tower directly under a full row's open column, sharing an edge with the row's last
+  tower, is `WouldSealLane`; one row further down it is a corridor.
 - **The camera cannot show the whole lane.** The player scrolls. `[confirmed]` — see §9.
 - Width is the maze-richness knob; length is the pace knob. Change one at a time.
   `[proposed]`

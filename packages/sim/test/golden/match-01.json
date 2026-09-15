@@ -1,5 +1,5 @@
 {
-  "_comment": "FROZEN. Do not edit to make a red test green \u2014 find out what diverged. Recorded on the 16-wide, 213-row lane with 2x2 towers (ADR-0019): build coordinates are ANCHORS, upgrade and sell may name any footprint cell. Pins its own balance data in \"data\", so a red hash means the arithmetic diverged and never that somebody retuned a number. Plays a rounded match: building, upgrading, selling, sends from both sides, kills, a leak.",
+  "_comment": "FROZEN. Do not edit to make a red test green \u2014 find out what diverged. Recorded on the 16-wide, 213-row lane with 2x2 towers (ADR-0019), re-hashed on the 17-wide, 113-row lane (ADR-0027) since the fixture pins balance data, not geometry: build coordinates are ANCHORS, upgrade and sell may name any footprint cell. Pins its own balance data in \"data\", so a red hash means the arithmetic diverged and never that somebody retuned a number. Plays a rounded match: building, upgrading, selling, sends from both sides, kills, a leak.",
   "_hashHistory": [
     "ad3da200 - step 2/3, movement only",
     "ded775ca - step 4, towers began shooting (real behaviour change)",
@@ -130,7 +130,7 @@
       "y": 17
     }
   ],
-  "expectedHash": "f014e790",
+  "expectedHash": "140a06ab",
   "data": {
     "sellRefund": 0.6,
     "archetypes": [

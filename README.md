@@ -31,7 +31,7 @@ keeping its damage and its lap count. Nothing but tower damage removes it. Lap c
 pips on the creep, the route that produced a leak flashes red, and at zero lives the match
 ends. One creep your maze cannot kill is enough to lose.
 
-**Two lanes**, vertical, **16 tiles wide and 100 rows long** — a 10-row spawn zone,
+**Two lanes**, vertical, **17 tiles wide and 100 rows long** — a 10-row spawn zone,
 100 buildable rows, a 3-row exit zone — the opponent's exactly as large as yours, and both
 drawn side by side, because you cannot counter-pick a maze you cannot read. **A tower is
 2 × 2 tiles and a creep is one**, so two towers offset by a single tile leave a corridor one

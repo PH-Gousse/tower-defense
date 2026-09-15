@@ -8,7 +8,7 @@ import {
   liveBalanceData,
   type BalanceData,
 } from '../src/data'
-import { BUILD_ROW_MIN, GRID_W, TOWER_SIZE } from '../src/grid'
+import { BUILD_ROW_MIN, GRID_W, TOWER_SIZE, SPARE_TILES } from '../src/grid'
 
 /**
  * Shared test rig.
@@ -205,6 +205,19 @@ export function wall(s: GameState, lane: number, y: number, open: readonly numbe
     for (let dx = 0; dx < TOWER_SIZE; dx++) if (open.includes(ax + dx)) skip = true
     if (!skip) place(s, lane, ax, y)
   }
+}
+
+/**
+ * Seal the lane at rows y..y+1, by hand, past the WouldSealLane rule.
+ *
+ * A full row of towers leaves the spare column open (ADR-0027), so on this
+ * lane a seal is the row plus a plug directly below it at the spare column,
+ * sharing an edge with the row's last tower. On a lane with no spare column
+ * the row alone seals and the plug is skipped.
+ */
+export function seal(s: GameState, lane: number, y: number): void {
+  wall(s, lane, y, [])
+  if (SPARE_TILES > 0) place(s, lane, GRID_W - TOWER_SIZE, y + TOWER_SIZE)
 }
 
 /** Number of ticks a creep of `speed` tiles/tick needs for one bare lap. */

@@ -121,40 +121,40 @@
       "player": 0,
       "kind": "build",
       "tower": 0,
-      "x": 13,
-      "y": 13
+      "x": 14,
+      "y": 11
     },
     {
       "at": 70,
       "player": 1,
       "kind": "build",
       "tower": 0,
-      "x": 13,
-      "y": 13
+      "x": 14,
+      "y": 11
     },
     {
       "at": 80,
       "player": 0,
       "kind": "build",
       "tower": 1,
-      "x": 14,
-      "y": 17
+      "x": 15,
+      "y": 15
     },
     {
       "at": 80,
       "player": 1,
       "kind": "build",
       "tower": 1,
-      "x": 14,
-      "y": 17
+      "x": 15,
+      "y": 15
     },
     {
       "at": 90,
       "player": 0,
       "kind": "build",
       "tower": 2,
-      "x": 12,
-      "y": 17
+      "x": 13,
+      "y": 15
     },
     {
       "at": 90,
@@ -168,8 +168,8 @@
       "player": 0,
       "kind": "build",
       "tower": 0,
-      "x": 10,
-      "y": 17
+      "x": 11,
+      "y": 15
     },
     {
       "at": 100,
@@ -408,13 +408,13 @@
       "creep": 0
     },
     {
-      "at": 490,
+      "at": 500,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 490,
+      "at": 500,
       "player": 1,
       "kind": "send",
       "creep": 0
@@ -426,7 +426,7 @@
       "creep": 0
     },
     {
-      "at": 520,
+      "at": 530,
       "player": 0,
       "kind": "send",
       "creep": 0
@@ -444,13 +444,13 @@
       "creep": 0
     },
     {
-      "at": 550,
+      "at": 560,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 570,
+      "at": 580,
       "player": 0,
       "kind": "send",
       "creep": 0
@@ -642,25 +642,19 @@
       "creep": 0
     },
     {
-      "at": 720,
+      "at": 730,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 750,
+      "at": 760,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 780,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 800,
+      "at": 790,
       "player": 0,
       "kind": "send",
       "creep": 0
@@ -678,19 +672,25 @@
       "creep": 0
     },
     {
-      "at": 810,
-      "player": 1,
+      "at": 820,
+      "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 830,
+      "at": 820,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
       "at": 840,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 850,
       "player": 0,
       "kind": "send",
       "creep": 0
@@ -918,7 +918,7 @@
       "creep": 0
     },
     {
-      "at": 1060,
+      "at": 1030,
       "player": 0,
       "kind": "send",
       "creep": 0
@@ -942,14 +942,14 @@
       "creep": 0
     },
     {
-      "at": 1080,
-      "player": 1,
+      "at": 1090,
+      "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1110,
-      "player": 0,
+      "at": 1090,
+      "player": 1,
       "kind": "send",
       "creep": 0
     },
@@ -1224,7 +1224,7 @@
       "creep": 0
     },
     {
-      "at": 1370,
+      "at": 1380,
       "player": 0,
       "kind": "send",
       "creep": 0
@@ -1248,13 +1248,13 @@
       "creep": 0
     },
     {
-      "at": 1390,
+      "at": 1410,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1420,
+      "at": 1410,
       "player": 1,
       "kind": "send",
       "creep": 0
@@ -1572,31 +1572,31 @@
       "creep": 0
     },
     {
-      "at": 1680,
+      "at": 1700,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1680,
+      "at": 1700,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1680,
+      "at": 1700,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1680,
+      "at": 1700,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1690,
+      "at": 1710,
       "player": 0,
       "kind": "send",
       "creep": 0
@@ -1944,7 +1944,7 @@
       "creep": 0
     },
     {
-      "at": 1950,
+      "at": 1940,
       "player": 0,
       "kind": "send",
       "creep": 0
@@ -1956,6 +1956,18 @@
       "creep": 0
     },
     {
+      "at": 1960,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 1960,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
       "at": 1980,
       "player": 0,
       "kind": "send",
@@ -1968,37 +1980,25 @@
       "creep": 0
     },
     {
-      "at": 1980,
+      "at": 1990,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1980,
+      "at": 2010,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 1980,
+      "at": 2030,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 2050,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2060,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2120,
+      "at": 2040,
       "player": 0,
       "kind": "send",
       "creep": 0
@@ -2293,7 +2293,7 @@
     },
     {
       "at": 2210,
-      "player": 1,
+      "player": 0,
       "kind": "send",
       "creep": 0
     },
@@ -2335,30 +2335,30 @@
     },
     {
       "at": 2210,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2210,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2220,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
       "at": 2230,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2230,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
       "at": 2230,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2250,
       "player": 1,
       "kind": "send",
       "creep": 0
@@ -2382,26 +2382,32 @@
       "creep": 0
     },
     {
-      "at": 2290,
+      "at": 2280,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 2300,
+      "at": 2280,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2310,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
       "at": 2310,
-      "player": 1,
+      "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
       "at": 2320,
-      "player": 0,
+      "player": 1,
       "kind": "send",
       "creep": 0
     },
@@ -2424,19 +2430,13 @@
       "creep": 0
     },
     {
-      "at": 2370,
+      "at": 2360,
       "player": 0,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 2380,
-      "player": 1,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2420,
+      "at": 2450,
       "player": 1,
       "kind": "send",
       "creep": 0
@@ -2446,16 +2446,16 @@
       "player": 0,
       "kind": "build",
       "tower": 0,
-      "x": 8,
-      "y": 17
+      "x": 9,
+      "y": 15
     },
     {
       "at": 2500,
       "player": 1,
       "kind": "build",
       "tower": 0,
-      "x": 10,
-      "y": 17
+      "x": 11,
+      "y": 15
     },
     {
       "at": 2510,
@@ -2476,7 +2476,7 @@
       "creep": 0
     },
     {
-      "at": 2540,
+      "at": 2590,
       "player": 0,
       "kind": "send",
       "creep": 0
@@ -2618,8 +2618,8 @@
       "player": 1,
       "kind": "build",
       "tower": 0,
-      "x": 8,
-      "y": 17
+      "x": 9,
+      "y": 15
     },
     {
       "at": 2810,
@@ -2660,12 +2660,6 @@
     {
       "at": 2810,
       "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2810,
-      "player": 1,
       "kind": "send",
       "creep": 0
     },
@@ -2694,32 +2688,32 @@
       "creep": 0
     },
     {
-      "at": 2840,
+      "at": 2820,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 2850,
-      "player": 0,
-      "kind": "send",
-      "creep": 0
-    },
-    {
-      "at": 2870,
+      "at": 2860,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 2890,
+      "at": 2880,
+      "player": 1,
+      "kind": "send",
+      "creep": 0
+    },
+    {
+      "at": 2900,
       "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
       "at": 2910,
-      "player": 1,
+      "player": 0,
       "kind": "send",
       "creep": 0
     },
@@ -2731,12 +2725,12 @@
     },
     {
       "at": 2920,
-      "player": 0,
+      "player": 1,
       "kind": "send",
       "creep": 0
     },
     {
-      "at": 2930,
+      "at": 2920,
       "player": 1,
       "kind": "send",
       "creep": 0
@@ -2748,20 +2742,26 @@
       "creep": 0
     },
     {
+      "at": 2950,
+      "player": 0,
+      "kind": "send",
+      "creep": 0
+    },
+    {
       "at": 3100,
       "player": 0,
       "kind": "build",
       "tower": 0,
-      "x": 6,
-      "y": 17
+      "x": 7,
+      "y": 15
     },
     {
       "at": 3100,
       "player": 1,
       "kind": "build",
       "tower": 0,
-      "x": 6,
-      "y": 17
+      "x": 7,
+      "y": 15
     },
     {
       "at": 3110,
@@ -2793,7 +2793,7 @@
       "kind": "build",
       "tower": 0,
       "x": 1,
-      "y": 19
+      "y": 15
     },
     {
       "at": 3400,
@@ -2801,7 +2801,7 @@
       "kind": "build",
       "tower": 0,
       "x": 1,
-      "y": 19
+      "y": 15
     },
     {
       "at": 3410,
@@ -2838,8 +2838,8 @@
       "player": 0,
       "kind": "build",
       "tower": 2,
-      "x": 2,
-      "y": 17
+      "x": 3,
+      "y": 15
     },
     {
       "at": 3700,
@@ -2847,7 +2847,7 @@
       "kind": "build",
       "tower": 0,
       "x": 0,
-      "y": 23
+      "y": 19
     },
     {
       "at": 3710,
@@ -2880,7 +2880,7 @@
       "creep": 0
     }
   ],
-  "expectedHash": "5153f6b7",
+  "expectedHash": "58e2f06b",
   "data": {
     "sellRefund": 0.6,
     "archetypes": [

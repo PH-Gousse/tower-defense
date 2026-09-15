@@ -12,7 +12,7 @@ describe('rowBand', () => {
     const b = rowBand(30.2, 49.7, 3, GRID_H, { first: 0, last: 0 })
     expect(b).toEqual({ first: 27, last: 53 })
     expect(rowBand(-5, 12, 3, GRID_H, { first: 0, last: 0 })).toEqual({ first: 0, last: 15 })
-    expect(rowBand(200, 400, 3, GRID_H, { first: 0, last: 0 })).toEqual({ first: 197, last: GRID_H - 1 })
+    expect(rowBand(GRID_H - 13, GRID_H + 187, 3, GRID_H, { first: 0, last: 0 })).toEqual({ first: GRID_H - 16, last: GRID_H - 1 })
   })
 
   it('never inverts', () => {

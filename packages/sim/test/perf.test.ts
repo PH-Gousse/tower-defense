@@ -28,7 +28,7 @@ withoutBuildPhase()
  * anchor is taken. Pinned rather than computed so that a geometry or rule
  * change that moves it is noticed here, not hidden by the fill.
  */
-const FULL_LANE = 280
+const FULL_LANE = 272
 
 describe('tick budget', () => {
   function fullMaze(): GameState {

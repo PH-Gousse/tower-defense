@@ -1,5 +1,5 @@
 {
-  "_comment": "FROZEN. Do not edit to make a red test green \u2014 find out what diverged. Companion to match-01: where that one plays a rounded match, this one exists for MASS SENDING. Twenty creeps bought on a single tick spawn in one call, spread across the spawn zone by spawnPointFor (ADR-0022), and must stay twenty distinct points through a row of towers. Recorded on the 16x213 lane (ADR-0019).",
+  "_comment": "FROZEN. Do not edit to make a red test green \u2014 find out what diverged. Companion to match-01: where that one plays a rounded match, this one exists for MASS SENDING. Twenty creeps bought on a single tick spawn in one call, spread across the spawn zone by spawnPointFor (ADR-0022), and must stay twenty distinct points through a row of towers. Recorded on the 16x213 lane (ADR-0019), re-hashed on the 17x113 lane (ADR-0027) since the fixture pins balance data, not geometry.",
   "_hashHistory": [
     "0e2fe8d7 - first recording, added with the spawn queue removal",
     "e0355b68 - re-recorded for the 16x213 lane and 2x2 towers (ADR-0019), with the derived flow field dropped from hashState; every earlier hash was the 8x24 board"
@@ -152,7 +152,7 @@
       "creep": 0
     }
   ],
-  "expectedHash": "38709b68",
+  "expectedHash": "6cb512ae",
   "data": {
     "sellRefund": 0.6,
     "archetypes": [

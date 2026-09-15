@@ -11,7 +11,7 @@
  *
  * The lane runs **vertically**: creeps enter at the top and walk down.
  *
- *        x=0                          x=15
+ *        x=0                          x=16
  *   y=0  +------------------------------+
  *        |          SPAWN ZONE          |   SPAWN_ROWS rows. Creeps appear
  *        |     (10 rows, not buildable) |   anywhere in here. Never built on.
@@ -44,8 +44,14 @@
  * determinism, not just convenience.
  */
 
-/** Tiles across. A full row is LANE_WIDTH / TOWER_SIZE towers. */
-export const LANE_WIDTH = 16
+/**
+ * Tiles across. `[proposed]` 17 -- one more than ADR-0019's 16, see ADR-0027.
+ *
+ * Odd on purpose: a full row of TOWERS_ACROSS towers covers 16 tiles and
+ * leaves SPARE_TILES = 1 open, so a straight wall is a half-slot by itself
+ * and the row's only gap is exactly one creep wide.
+ */
+export const LANE_WIDTH = 17
 /** A tower's footprint is TOWER_SIZE x TOWER_SIZE tiles. */
 export const TOWER_SIZE = 2
 /** A creep's footprint is CREEP_SIZE x CREEP_SIZE tiles. The unit itself. */
@@ -79,6 +85,11 @@ export const GRID_W = LANE_WIDTH
 export const GRID_H = SPAWN_ROWS + LANE_LENGTH + EXIT_ROWS
 export const TILE_COUNT = GRID_W * GRID_H
 
+/** Towers that fit side by side in one row. */
+export const TOWERS_ACROSS = Math.floor(LANE_WIDTH / TOWER_SIZE)
+/** Tiles left over beside a full row of towers: the width a straight wall's gap has. */
+export const SPARE_TILES = LANE_WIDTH - TOWERS_ACROSS * TOWER_SIZE
+
 /** First and last row (inclusive) a footprint may occupy. */
 export const BUILD_ROW_MIN = SPAWN_ROWS
 export const BUILD_ROW_MAX = SPAWN_ROWS + LANE_LENGTH - 1
@@ -86,11 +97,12 @@ export const BUILD_ROW_MAX = SPAWN_ROWS + LANE_LENGTH - 1
 export const EXIT_ROW_MIN = SPAWN_ROWS + LANE_LENGTH
 
 /**
- * Most towers a lane can hold: the buildable area divided by a footprint.
- * Footprints never overlap, so this bounds the dense tower list whatever the
- * anchors are.
+ * Most towers a lane can hold: whole footprints across times whole footprints
+ * down. Footprints never overlap, so this bounds the dense tower list whatever
+ * the anchors are. Per axis rather than area over area, because a spare
+ * column holds no tower at all.
  */
-export const MAX_TOWERS = (LANE_WIDTH * LANE_LENGTH) / (TOWER_SIZE * TOWER_SIZE)
+export const MAX_TOWERS = TOWERS_ACROSS * Math.floor(LANE_LENGTH / TOWER_SIZE)
 
 export interface Tile {
   readonly x: number

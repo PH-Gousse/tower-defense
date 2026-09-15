@@ -1,6 +1,9 @@
 import {
   GRID_W,
   TOWER_SIZE,
+  CREEP_SIZE,
+  TOWERS_ACROSS,
+  SPARE_TILES,
   BUILD_ROW_MIN,
   BUILD_ROW_MAX,
   type Tile,
@@ -14,12 +17,27 @@ import {
  * usable maze on their own, because the bot will often only afford the first
  * handful.
  *
- * Towers are 2x2 (ADR-0019) on a 1-tile grid (ADR-0020), and that is what
- * makes the half-slot possible: a wall of seven towers covers 14 of the 16
- * tiles and leaves a 2-wide gap, and a 2-wide gap cannot be narrowed by
- * another tower in the same rows -- 15 is odd. So the eighth tower sits in
- * the rows BELOW the wall, offset by one tile from the wall's grid, and it is
- * that offset that turns the 2-wide gap into a 1-wide slot:
+ * Towers are 2x2 (ADR-0019) on a 1-tile grid (ADR-0020). How a wall gets
+ * its one-creep slot depends on whether the width divides by the footprint:
+ *
+ * **A spare column (the 17-wide lane, ADR-0027).** Eight towers cover 16 of
+ * the 17 tiles and the column left over IS the slot. Which side it lands on
+ * is which side the wall starts from:
+ *
+ *        x=0                            x=16
+ *   y    ████████████████████████████████ .     8 towers from x=0: slot at 16
+ *   y+1  ████████████████████████████████ .
+ *   y+2   . . . . . . . . . . . . . . . . .     one open row: the corridor
+ *   y+3   . ████████████████████████████████    8 towers from x=1: slot at 0
+ *   y+4   . ████████████████████████████████
+ *
+ * Eight towers per crossing, three rows per crossing with a one-row corridor.
+ *
+ * **No spare column (the 16-wide lane it replaced).** A wall of seven towers
+ * covers 14 of the 16 tiles and leaves a 2-wide gap, and a 2-wide gap cannot
+ * be narrowed by another tower in the same rows -- 15 is odd. So the eighth
+ * tower sits in the rows BELOW the wall, offset by one tile from the wall's
+ * grid, and it is that offset that turns the 2-wide gap into a 1-wide slot:
  *
  *        x=0                          x=15
  *   y    ██████████████████████████████  ..    7 towers at even x: gap at 14-15
@@ -30,17 +48,15 @@ import {
  *   y+5   ..  ██████████████████████████████  gap at 0-1, plug at x=1, slot at 0
  *   y+6   ..  ██████████████████████████████
  *
- * The plug's other side leaves a 13-tile pocket (rows y+2..y+3, x 0..12) that
- * is reachable only from the corridor and leads nowhere; the flow field walks
- * around it and it is free real estate for towers that shoot but do not maze.
+ * The plug's other side leaves a 13-tile pocket that is reachable only from
+ * the corridor and leads nowhere; it is free real estate for towers that
+ * shoot but do not maze. Eight towers per crossing, five rows per crossing.
  *
- * Eight towers per crossing, five rows per crossing. A plain 7-tower wall with
- * a 2-wide gap is cheaper (7 per crossing, 3 rows), and there is no collision
- * in the sim (ADR-0021) so a 1-wide slot does not queue creeps -- the
- * half-slot buys the game its shape, not the bot a stronger maze. It is here
- * because the bot has to build the maze the rules are for (issue #41), and
- * because a full lane of it is 40 walls and 320 towers, which is the board
- * `/balance` is measured on.
+ * Both shapes are kept because the parity is one constant away, and the
+ * generator has to build the maze the rules are for (issue #41) on either.
+ * There is no collision in the sim (ADR-0021), so a 1-wide slot does not
+ * queue creeps: the half-slot buys the game its shape, not the bot a stronger
+ * maze.
  *
  * Templates are generated rather than stored as data because the shape is a
  * rule, not a set of numbers, and a rule stays correct if the grid is resized.
@@ -50,11 +66,11 @@ import {
  * than "skip".
  */
 
-/** Anchors across a full row of towers. */
-const TOWERS_ACROSS = GRID_W / TOWER_SIZE
+/** A spare column at least a creep wide is a slot on its own; no plug needed. */
+const SPARE_IS_SLOT = SPARE_TILES >= CREEP_SIZE
 
-/** Rows one half-slot wall occupies: the wall and its plug. */
-export const HALF_SLOT_ROWS = 2 * TOWER_SIZE
+/** Rows one half-slot wall occupies: the wall alone, or the wall and its plug. */
+export const HALF_SLOT_ROWS = SPARE_IS_SLOT ? TOWER_SIZE : 2 * TOWER_SIZE
 
 /**
  * Build a half-slot serpentine.
@@ -77,7 +93,14 @@ function halfSlotSerpentine(startY: number, spacing: number, walls: number): Til
     const y = startY + w * spacing
     if (y + HALF_SLOT_ROWS - 1 > BUILD_ROW_MAX) break
     const gapAtRight = w % 2 === 0
-    if (gapAtRight) {
+    if (SPARE_IS_SLOT) {
+      // A full row from one edge leaves the spare column at the other edge.
+      if (gapAtRight) {
+        for (let a = 0; a < TOWERS_ACROSS; a++) out.push({ x: a * TOWER_SIZE, y })
+      } else {
+        for (let a = TOWERS_ACROSS - 1; a >= 0; a--) out.push({ x: SPARE_TILES + a * TOWER_SIZE, y })
+      }
+    } else if (gapAtRight) {
       // Wall covers x 0..13; the plug covers 13..14 two rows down, leaving 15.
       for (let a = 0; a < TOWERS_ACROSS - 1; a++) out.push({ x: a * TOWER_SIZE, y })
       out.push({ x: GRID_W - TOWER_SIZE - 1, y: y + TOWER_SIZE })
@@ -107,14 +130,18 @@ function halfSlotSerpentine(startY: number, spacing: number, walls: number): Til
  */
 function posts(startY: number, spacing: number, count: number, reach: number): Tile[] {
   const out: Tile[] = []
-  const mid = TOWERS_ACROSS / 2
+  const mid = Math.floor(TOWERS_ACROSS / 2)
   for (let p = 0; p < count; p++) {
     const y = startY + p * spacing
     if (y + TOWER_SIZE - 1 > BUILD_ROW_MAX) break
     const fromLeft = p % 2 === 0
     const from = fromLeft ? Math.max(0, mid - reach) : mid - 1
     const to = fromLeft ? mid : Math.min(TOWERS_ACROSS - 1, mid - 1 + reach)
-    for (let a = from; a <= to; a++) out.push({ x: a * TOWER_SIZE, y })
+    // A tooth from the right sits on the right edge's grid, so the spare
+    // column (if any) is on its open side, not left as a free channel down
+    // the edge it is meant to close.
+    const shift = fromLeft ? 0 : SPARE_TILES
+    for (let a = from; a <= to; a++) out.push({ x: shift + a * TOWER_SIZE, y })
   }
   return out
 }
@@ -128,8 +155,8 @@ export interface MazeTemplate {
  * Spacings are in rows. A half-slot wall is HALF_SLOT_ROWS tall, so
  * HALF_SLOT_ROWS + 1 is a wall every fifth row with a one-row corridor, and
  * HALF_SLOT_ROWS + 2 leaves a two-row corridor. Wall counts are ceilings; the
- * generators stop at the exit zone. The tight serpentine fills the lane: 40
- * walls, 320 towers, 200 rows.
+ * generators stop at the exit zone. The tight serpentine fills the lane: on
+ * 17 x 100 that is 33 walls and 264 towers.
  *
  * Index 1 is what the presets build (bot.ts). Nothing here has been measured
  * against the pre-ADR-0019 templates' figures; the numbers in bot.ts that
@@ -139,7 +166,7 @@ export interface MazeTemplate {
 export const MAZE_TEMPLATES: readonly MazeTemplate[] = [
   { name: 'half-slot serpentine', tiles: halfSlotSerpentine(BUILD_ROW_MIN + 1, HALF_SLOT_ROWS + 2, 64) },
   { name: 'tight half-slot serpentine', tiles: halfSlotSerpentine(BUILD_ROW_MIN, HALF_SLOT_ROWS + 1, 80) },
-  { name: 'posts', tiles: posts(BUILD_ROW_MIN + 1, TOWER_SIZE + 1, 80, TOWERS_ACROSS / 2) },
+  { name: 'posts', tiles: posts(BUILD_ROW_MIN + 1, TOWER_SIZE + 1, 80, Math.floor(TOWERS_ACROSS / 2)) },
 ]
 
 export function templateAt(index: number): MazeTemplate {

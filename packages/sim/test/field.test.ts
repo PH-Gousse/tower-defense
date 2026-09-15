@@ -10,6 +10,8 @@ import {
   GRID_W,
   GRID_H,
   TOWER_SIZE,
+  TOWERS_ACROSS,
+  SPARE_TILES,
   BUILD_ROW_MIN,
   EXIT_ROW_MIN,
   Dir,
@@ -39,6 +41,16 @@ function wall(b: Uint8Array, y: number, open: readonly number[]): void {
     if (open.includes(ax) || open.includes(ax + 1)) continue
     tower(b, ax, y)
   }
+}
+
+/**
+ * Seal the lane at rows y..y+1. A full row leaves the spare column open
+ * (ADR-0027), so the seal is the row plus a plug directly below it at that
+ * column; on a lane with no spare column the row alone seals.
+ */
+function seal(b: Uint8Array, y: number): void {
+  wall(b, y, [])
+  if (SPARE_TILES > 0) tower(b, GRID_W - TOWER_SIZE, y + TOWER_SIZE)
 }
 
 /** Steps from a spawn cell straight down to the exit zone on a bare lane. */
@@ -95,43 +107,52 @@ describe('flow field', () => {
     expect(spawnsReachable(f)).toBe(true)
     expect(mazeLength(f)).toBeGreaterThan(bareDist(0))
     // The wall moved every spawn cell by the same detour, so the far-left
-    // corner is still the worst case and it walks the width to the gap.
-    expect(mazeLength(f)).toBe(bareDist(0) + (GRID_W - 2))
+    // corner is still the worst case and it walks the width to the gap,
+    // which opens where the skipped last tower would have started.
+    expect(mazeLength(f)).toBe(bareDist(0) + (TOWERS_ACROSS - 1) * TOWER_SIZE)
   })
 
   it('passes a 1-wide gap: creeps are one tile, so one tile is a corridor', () => {
     // Towers at anchors 0 and 3 leave column 2 open between them -- the
-    // half-slot. The rest of the row is closed by the ordinary stride, and
-    // the odd column at the far right is closed by a tower one row down.
+    // half-slot. The rest of the row is closed by the ordinary stride up to
+    // the far edge.
     const b = empty()
     const y = BUILD_ROW_MIN + 4
     tower(b, 0, y)
     for (let ax = 3; ax + TOWER_SIZE <= GRID_W; ax += TOWER_SIZE) tower(b, ax, y)
-    tower(b, GRID_W - TOWER_SIZE, y + TOWER_SIZE)
     const f = buildField(b)
     expect(spawnsReachable(f)).toBe(true)
     // The route runs through the slot and nowhere else on that row.
     expect(f.dist[tileIndex({ x: 2, y })]).not.toBe(UNREACHABLE)
     expect(f.dist[tileIndex({ x: 1, y })]).toBe(UNREACHABLE)
     expect(f.dist[tileIndex({ x: 3, y })]).toBe(UNREACHABLE)
-    // Column 15 is open at the wall row but dead-ends under it.
-    expect(f.dist[tileIndex({ x: GRID_W - 1, y })]).toBeGreaterThan(f.dist[tileIndex({ x: 2, y })] as number)
+    expect(f.dist[tileIndex({ x: GRID_W - 1, y })]).toBe(UNREACHABLE)
   })
 
   it('does not pass a diagonal: towers touching at a corner seal the gap', () => {
-    // A staircase of towers from the left edge to the right, each touching the
-    // next only at a corner. Under 4-neighbour connectivity that is a wall.
+    // A pocket under the right end of a wall whose only way out is between
+    // two towers meeting at a corner: the wall stops three tiles short of the
+    // edge, a tower two rows down covers the two tiles next to the wall's
+    // end, and a tower two rows below that covers the edge tiles. Under
+    // 4-neighbour connectivity the corner is a wall. Written this way rather
+    // than as a staircase across the lane so it holds whatever the width.
     const b = empty()
-    for (let k = 0; k < GRID_W / TOWER_SIZE; k++) {
-      tower(b, k * TOWER_SIZE, BUILD_ROW_MIN + 2 + k * TOWER_SIZE)
-    }
-    const f = buildField(b)
-    expect(spawnsReachable(f)).toBe(false)
+    const y = BUILD_ROW_MIN + 2
+    wall(b, y, [GRID_W - 3, GRID_W - 2, GRID_W - 1])
+    tower(b, GRID_W - 4, y + TOWER_SIZE)
+    tower(b, GRID_W - 2, y + 2 * TOWER_SIZE)
+    expect(spawnsReachable(buildField(b))).toBe(false)
+    // The same last tower one row lower leaves a cell between the corners.
+    const c = empty()
+    wall(c, y, [GRID_W - 3, GRID_W - 2, GRID_W - 1])
+    tower(c, GRID_W - 4, y + TOWER_SIZE)
+    tower(c, GRID_W - 2, y + 2 * TOWER_SIZE + 1)
+    expect(spawnsReachable(buildField(c))).toBe(true)
   })
 
   it('reports the spawn zone unreachable when the lane is sealed', () => {
     const b = empty()
-    wall(b, BUILD_ROW_MIN + 4, [])
+    seal(b, BUILD_ROW_MIN + 4)
     const f = buildField(b)
     expect(spawnsReachable(f)).toBe(false)
     for (const s of SPAWN_INDICES) expect(f.dist[s]).toBe(UNREACHABLE)

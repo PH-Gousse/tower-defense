@@ -10,6 +10,8 @@ import {
   GRID_H,
   TILE_COUNT,
   MAX_TOWERS,
+  TOWERS_ACROSS,
+  SPARE_TILES,
   BUILD_ROW_MIN,
   BUILD_ROW_MAX,
   EXIT_ROW_MIN,
@@ -36,13 +38,15 @@ import {
  * read as one.
  */
 describe('the lane', () => {
-  it('is 16 tiles wide, with 2x2 towers and 1x1 creeps', () => {
-    expect(LANE_WIDTH).toBe(16)
+  it('is 17 tiles wide, with 2x2 towers and 1x1 creeps', () => {
+    expect(LANE_WIDTH).toBe(17)
     expect(TOWER_SIZE).toBe(2)
     expect(CREEP_SIZE).toBe(1)
     expect(GRID_W).toBe(LANE_WIDTH)
-    // A full row is eight towers.
-    expect(LANE_WIDTH / TOWER_SIZE).toBe(8)
+    // A full row is eight towers, and the column left over is one creep wide
+    // (ADR-0027): a straight wall has a slot of its own.
+    expect(TOWERS_ACROSS).toBe(8)
+    expect(SPARE_TILES).toBe(CREEP_SIZE)
   })
 
   it('is spawn zone, then buildable rows, then exit zone', () => {
@@ -80,8 +84,10 @@ describe('the lane', () => {
     }
   })
 
-  it('bounds the tower list by the area a footprint takes', () => {
-    expect(MAX_TOWERS).toBe((LANE_WIDTH * LANE_LENGTH) / (TOWER_SIZE * TOWER_SIZE))
+  it('bounds the tower list by whole footprints across and down', () => {
+    // Per axis, not area over area: the spare column holds no tower.
+    expect(MAX_TOWERS).toBe(TOWERS_ACROSS * Math.floor(LANE_LENGTH / TOWER_SIZE))
+    expect(MAX_TOWERS).toBe(400)
   })
 })
 

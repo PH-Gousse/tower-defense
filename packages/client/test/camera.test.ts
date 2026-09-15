@@ -527,22 +527,28 @@ describe('rows in frame', () => {
 
   it('shows your whole lane across, with margin, wherever it opens', () => {
     // The chrome rule (`MIN_VIEW_TILES`) exists to make this true in rails.
+    // The one exception is a phone at the zoom cap: 40 rows on 390x844 is
+    // about 18 tiles across, which holds the 17-wide lane (ADR-0027) but not
+    // its margin. There the lane itself must still fit.
     for (const [name, w, h] of VIEWPORTS) {
       const f = frameAs(w, h, DEFAULT_ROWS_IN_VIEW, GRID_W / 2)
-      expect(f.tilesAcross, name).toBeGreaterThanOrEqual(GRID_W + 2)
+      const atCap = f.distance >= DEFAULT_MAX_DISTANCE - 1e-9
+      expect(f.tilesAcross, name).toBeGreaterThanOrEqual((atCap ? GRID_W : GRID_W + 2) - 0.01)
       if (h <= w && railWidth(w, h) > 0) expect(f.tilesAcross, name).toBeGreaterThanOrEqual(MIN_VIEW_TILES - 0.01)
     }
   })
 
   it('is width-bound in portrait, and still inside the zoom cap', () => {
-    // 20 rows on a phone shows nine tiles of a sixteen-wide lane, so the
-    // framing backs off until the lane fits; ADR-0024 says that lands near
-    // 35 rows, under the 40-row cap.
+    // 20 rows on a phone shows nine tiles of a seventeen-wide lane, so the
+    // framing backs off until the lane fits; ADR-0024 said that lands near
+    // 35 rows for 16 wide, and at 17 wide (ADR-0027) a 390-wide phone runs
+    // into the 40-row cap with the lane in frame and its margin not.
     for (const [name, w, h] of VIEWPORTS) {
       if (h <= w) continue
       const f = frameAs(w, h, DEFAULT_ROWS_IN_VIEW, GRID_W / 2)
       expect(f.bound, name).toBe('width')
-      expect(f.tilesAcross, name).toBeGreaterThanOrEqual(GRID_W + 2 - 0.01)
+      const atCap = f.distance >= DEFAULT_MAX_DISTANCE - 1e-9
+      expect(f.tilesAcross, name).toBeGreaterThanOrEqual((atCap ? GRID_W : GRID_W + 2) - 0.01)
       expect(f.rows, name).toBeLessThanOrEqual(MAX_ROWS_IN_VIEW)
       expect(f.rows, name).toBeGreaterThan(DEFAULT_ROWS_IN_VIEW)
     }

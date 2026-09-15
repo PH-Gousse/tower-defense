@@ -16,6 +16,7 @@ import {
   EXIT_ROW_MIN,
   BUILD_ROW_MAX,
   LANE_WIDTH,
+  TOWERS_ACROSS,
   tileIndex,
   tileY,
   footprintContains,
@@ -24,7 +25,7 @@ import { UNREACHABLE, buildField, mazeLength } from '../src/field'
 import { hashState } from '../src/hash'
 import { TowerKind, levelOf, creepSpec } from '../src/data'
 import {
-  build, upgrade, sell, send, run, runUntil, tick, advance, stepper, place, wall, withGold,
+  build, upgrade, sell, send, run, runUntil, tick, advance, stepper, place, wall, seal, withGold,
   R, SWARM, RUNNER, TANK, withoutBuildPhase,
 } from './helpers'
 
@@ -102,7 +103,8 @@ describe('sends and where creeps enter', () => {
     }
     expect(setbacks.size).toBe(SPAWN_PERIOD)
     expect(spawnPointFor(SPAWN_PERIOD, field)).toEqual(spawnPointFor(0, field))
-    expect(SPAWN_PERIOD).toBe(1760)
+    // 17 columns x 10 rows x 11 setback slots.
+    expect(SPAWN_PERIOD).toBe(1870)
   })
 
   it('is deterministic across states: the same release gets the same point', () => {
@@ -218,10 +220,12 @@ describe('placement refusals, each in isolation, before any gold moves', () => {
 
   it('WouldSealLane when no route of empty tiles would remain', () => {
     const s = createState()
-    // Seven towers across; the eighth closes the row.
-    wall(s, 0, R + 4, [GRID_W - 2, GRID_W - 1])
-    refusedCleanly(s, build(GRID_W - 2, R + 4), Refusal.WouldSealLane)
-    expect(canBuild(s, 0, GRID_W - 2, R + 4)).toBe(false)
+    // A full row of towers leaves the spare column open (ADR-0027); the tower
+    // that covers it in the rows below is the one that seals.
+    wall(s, 0, R + 4, [])
+    expect(s.lanes[0]!.towers.count).toBe(TOWERS_ACROSS)
+    refusedCleanly(s, build(GRID_W - TOWER_SIZE, R + 4 + TOWER_SIZE), Refusal.WouldSealLane)
+    expect(canBuild(s, 0, GRID_W - TOWER_SIZE, R + 4 + TOWER_SIZE)).toBe(false)
   })
 
   it('names the reason from the player side, and every reason has one', () => {
@@ -239,7 +243,8 @@ describe('placement refusals, each in isolation, before any gold moves', () => {
 describe('the half-slot rule', () => {
   it('lets two towers offset by one tile leave a 1-wide corridor, and creeps use it', () => {
     // Towers at anchors 0 and 3 leave column 2 between them. The rest of the
-    // row closes by the ordinary stride; column 15 is closed one row down.
+    // row closes by the ordinary stride, up to the far edge; a tower one row
+    // down at the far edge is there to show the offset row is legal too.
     // Every placement is legal, so this is a maze a player can build.
     const cmds: Command[] = [build(0, R + 4), build(GRID_W - 2, R + 6)]
     for (let ax = 3; ax + TOWER_SIZE <= GRID_W; ax += TOWER_SIZE) cmds.push(build(ax, R + 4))
@@ -274,27 +279,38 @@ describe('the half-slot rule', () => {
     expect(s.players[0]!.leaks).toBe(0)
   })
 
-  it('refuses a full 16-wide wall', () => {
+  it('lets a full row of towers stand, because the spare column is the slot', () => {
+    // Eight towers from the left edge cover sixteen of the seventeen tiles
+    // (ADR-0027). The row is legal as it stands: column 16 is one creep wide
+    // and open. What seals is covering that column in the rows below.
     let s = createState()
-    for (let ax = 0; ax + TOWER_SIZE < GRID_W; ax += TOWER_SIZE) s = tick(s, [build(ax, R + 4)])
-    expect(s.lanes[0]!.towers.count).toBe(GRID_W / TOWER_SIZE - 1)
-    expect(checkBuild(s, 0, GRID_W - TOWER_SIZE, R + 4).refusal).toBe(Refusal.WouldSealLane)
+    for (let a = 0; a < TOWERS_ACROSS; a++) {
+      expect(checkBuild(s, 0, a * TOWER_SIZE, R + 4).refusal, `tower ${a}`).toBe(Refusal.None)
+      s = tick(s, [build(a * TOWER_SIZE, R + 4)])
+    }
+    expect(s.lanes[0]!.towers.count).toBe(TOWERS_ACROSS)
+    expect(s.lanes[0]!.field.dist[tileIndex({ x: GRID_W - 1, y: R + 4 })]).not.toBe(UNREACHABLE)
+    // Directly below the wall the plug shares an edge with it: sealed.
+    expect(checkBuild(s, 0, GRID_W - TOWER_SIZE, R + 4 + TOWER_SIZE).refusal).toBe(Refusal.WouldSealLane)
+    // One row further down there is a corridor between wall and plug: legal.
+    expect(checkBuild(s, 0, GRID_W - TOWER_SIZE, R + 5 + TOWER_SIZE).refusal).toBe(Refusal.None)
   })
 
   it('treats a corner touch as sealed: no diagonal squeezing', () => {
-    // A staircase from the left edge to the right, each tower touching the
-    // next only at a corner. The last step is the one that seals.
+    // A pocket under the right end of a wall whose only way out is between
+    // two towers that touch at a corner. Built so it does not depend on the
+    // lane's width being even: the wall stops three tiles short of the edge,
+    // a tower two rows down covers the two tiles next to the wall's end, and
+    // the tower two rows below THAT covers the edge tiles. Its top-left cell
+    // and the previous tower's bottom-right cell meet at a corner, and that
+    // corner is the pocket's last exit.
     let s = createState()
-    const steps = GRID_W / TOWER_SIZE
-    for (let k = 0; k < steps - 1; k++) {
-      const ax = k * TOWER_SIZE
-      const ay = R + 2 + k * TOWER_SIZE
-      expect(checkBuild(s, 0, ax, ay).refusal, `step ${k}`).toBe(Refusal.None)
-      s = tick(s, [build(ax, ay)])
-    }
-    expect(checkBuild(s, 0, (steps - 1) * TOWER_SIZE, R + 2 + (steps - 1) * TOWER_SIZE).refusal).toBe(
-      Refusal.WouldSealLane,
-    )
+    wall(s, 0, R + 2, [GRID_W - 3, GRID_W - 2, GRID_W - 1])
+    expect(checkBuild(s, 0, GRID_W - 4, R + 2 + TOWER_SIZE).refusal).toBe(Refusal.None)
+    s = tick(s, [build(GRID_W - 4, R + 2 + TOWER_SIZE)])
+    expect(checkBuild(s, 0, GRID_W - 2, R + 2 + 2 * TOWER_SIZE).refusal).toBe(Refusal.WouldSealLane)
+    // The same tower one row lower leaves an open cell between the corners.
+    expect(checkBuild(s, 0, GRID_W - 2, R + 3 + 2 * TOWER_SIZE).refusal).toBe(Refusal.None)
   })
 })
 
@@ -365,11 +381,13 @@ describe('placement bookkeeping', () => {
 
   it('reopens the path when a tower is sold', () => {
     const s = createState()
-    wall(s, 0, R + 4, [GRID_W - 2, GRID_W - 1])
-    // By hand, past the rule: seal the row, then sell the seal.
-    const sealSlot = place(s, 0, GRID_W - 2, R + 4)
+    wall(s, 0, R + 4, [])
+    // By hand, past the rule: plug the spare column below the row, which
+    // seals the lane (ADR-0027), then sell the plug.
+    const plugY = R + 4 + TOWER_SIZE
+    const sealSlot = place(s, 0, GRID_W - TOWER_SIZE, plugY)
     expect(s.lanes[0]!.field.dist[0]).toBe(UNREACHABLE)
-    const out = tick(s, [sell(s.lanes[0]!.towers.anchorX[sealSlot] as number, R + 4)])
+    const out = tick(s, [sell(s.lanes[0]!.towers.anchorX[sealSlot] as number, plugY)])
     expect(out.lanes[0]!.field.dist[0]).not.toBe(UNREACHABLE)
   })
 
@@ -447,10 +465,12 @@ describe('stranded creeps', () => {
     expect(walked).toBeGreaterThan(R + 6)
 
     // Seal the lane by hand above and below the creep, bypassing the rules.
-    // This is the state the respawn exists to recover from.
+    // This is the state the respawn exists to recover from. Each seal is a
+    // row plus its plug two rows further down, so the upper one starts five
+    // rows up to keep its plug off the creep's row.
     const row = Math.floor(walked)
-    wall(s, 0, row + 2, [])
-    wall(s, 0, row - 3, [])
+    seal(s, 0, row + 2)
+    seal(s, 0, row - 5)
     expect(s.lanes[0]!.field.dist[tileIndex({ x: Math.floor(s.lanes[0]!.creeps.x[0] as number), y: row })]).toBe(UNREACHABLE)
 
     s = tick(s)

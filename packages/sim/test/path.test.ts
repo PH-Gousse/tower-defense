@@ -5,6 +5,7 @@ import {
   TILE_COUNT,
   GRID_W,
   TOWER_SIZE,
+  SPARE_TILES,
   BUILD_ROW_MIN,
   EXIT_ROW_MIN,
   SPAWN_INDICES,
@@ -30,6 +31,12 @@ function wall(b: Uint8Array, y: number, open: readonly number[]): void {
   }
 }
 
+/** A full row plus, on a lane with a spare column (ADR-0027), the plug below it. */
+function seal(b: Uint8Array, y: number): void {
+  wall(b, y, [])
+  if (SPARE_TILES > 0) tower(b, GRID_W - TOWER_SIZE, y + TOWER_SIZE)
+}
+
 describe('pathFrom', () => {
   it('walks an empty lane straight down to the exit zone', () => {
     const p = pathFrom(buildField(empty()), spawn)
@@ -42,7 +49,7 @@ describe('pathFrom', () => {
 
   it('returns an empty route when the lane is sealed', () => {
     const b = empty()
-    wall(b, BUILD_ROW_MIN + 4, [])
+    seal(b, BUILD_ROW_MIN + 4)
     const f = buildField(b)
     expect(f.dist[spawn]).toBe(UNREACHABLE)
     expect(pathFrom(f, spawn)).toEqual([])
@@ -74,7 +81,7 @@ describe('pathFrom', () => {
     const long = pathFrom(buildField(empty()), spawn, out)
     const lenLong = long.length
     const b = empty()
-    wall(b, BUILD_ROW_MIN + 4, [])
+    seal(b, BUILD_ROW_MIN + 4)
     const sealed = pathFrom(buildField(b), spawn, out)
     expect(lenLong).toBeGreaterThan(0)
     expect(sealed.length).toBe(0)
