@@ -48,8 +48,7 @@ import { createRenderer } from './render/renderer'
 import { buildBoard, BOARD, BOARD_THEIRS } from './render/board'
 import { buildTerrain } from './render/terrain'
 import { CameraRig, DEFAULT_ROWS_IN_VIEW, type GroundBounds } from './render/CameraRig'
-import { minimapLayout, minimapToWorld, paintMinimap, type MinimapLayout, type MinimapView } from './minimap'
-import { EdgeAlerts } from './alerts'
+import { EdgeAlerts, type ViewBox } from './alerts'
 import { rowBand, towerSlotRange, inBand, type RowBand } from './render/band'
 import { creepOffset, type Offset } from './render/creepOffset'
 import {
@@ -197,8 +196,6 @@ export interface Scene {
   readonly onTileHover: (cb: (h: HoverInfo) => void) => void
   /** Centre the camera on a landmark or the deepest creep (ADR-0024). */
   readonly jump: (where: Jump) => void
-  /** Give the minimap its canvas. The scene sizes and repaints it. */
-  readonly attachMinimap: (canvas: HTMLCanvasElement) => void
   /** Give the off-screen alerts their layer. */
   readonly attachAlerts: (host: HTMLElement) => void
   readonly onStats: (cb: (s: Stats) => void) => void
@@ -1534,55 +1531,19 @@ const scratchV = new THREE.Vector3()
     if (cameraMoved) return
     const mine = laneX(me())
     rig.frameRows(DEFAULT_ROWS_IN_VIEW, mine, mine + GRID_W, 0, 0, CONTENT_W)
-    layoutMinimap()
     alerts?.relayout()
   }
 
-  // ---- navigation: minimap, jumps, alerts ------------------------------------
+  // ---- navigation: jumps, alerts ---------------------------------------------
+  //
+  // There is no minimap (ADR-0029): the lane is read by panning and by the
+  // jump keys, and `viewBox` exists for the off-screen alerts alone.
 
-  const viewBox: MinimapView = { minX: 0, minZ: 0, maxX: 0, maxZ: 0 }
-  let minimap: HTMLCanvasElement | null = null
-  let minimapCtx: CanvasRenderingContext2D | null = null
-  let minimapAt: MinimapLayout = minimapLayout(CONTENT_W, 1, 1)
-  let minimapPaintedAt = -1e9
-  /** Repaint cadence. Four times a second, never per frame. */
-  const MINIMAP_EVERY_MS = 250
+  const viewBox: ViewBox = { minX: 0, minZ: 0, maxX: 0, maxZ: 0 }
   let alerts: EdgeAlerts | null = null
   let safe = { top: 0, right: 0, bottom: 0, left: 0 }
 
-  function layoutMinimap(): void {
-    if (!minimap) return
-    // The room between the chrome, less a margin, and a fixed width budget.
-    const availH = Math.max(120, window.innerHeight - safe.top - safe.bottom - 48)
-    minimapAt = minimapLayout(CONTENT_W, 120, availH)
-    const dpr = Math.min(window.devicePixelRatio || 1, 2)
-    minimap.width = Math.round(minimapAt.width * dpr)
-    minimap.height = Math.round(minimapAt.height * dpr)
-    minimap.style.width = `${minimapAt.width}px`
-    minimap.style.height = `${minimapAt.height}px`
-    minimapCtx?.setTransform(dpr, 0, 0, dpr, 0, 0)
-    minimapPaintedAt = -1e9
-  }
-
-  function paintMinimapNow(now: number): void {
-    if (!minimap || !minimapCtx) return
-    if (now - minimapPaintedAt < MINIMAP_EVERY_MS) return
-    minimapPaintedAt = now
-    rig.visibleBounds(viewBox)
-    paintMinimap(minimapCtx, minimapAt, driver.current, laneX, viewBox)
-  }
-
-  /** A press or drag on the minimap puts that point under the camera. */
-  function minimapJump(ev: PointerEvent): void {
-    if (!minimap) return
-    const r = minimap.getBoundingClientRect()
-    const p = minimapToWorld(minimapAt, ev.clientX - r.left, ev.clientY - r.top, jumpPoint)
-    jumpTo(p.x, p.z)
-    minimapPaintedAt = -1e9
-  }
-
   const jumpPoint: Point = { x: 0, z: 0 }
-  let minimapDragging = false
 
   function jumpTo(x: number, z: number): void {
     rig.setTarget(x, z)
@@ -1657,25 +1618,6 @@ const scratchV = new THREE.Vector3()
   return {
     onTileHover: (cb) => { hoverCb = cb },
     jump,
-    attachMinimap: (canvas) => {
-      minimap = canvas
-      minimapCtx = canvas.getContext('2d')
-      canvas.addEventListener('pointerdown', (ev) => {
-        if (ev.button !== 0) return
-        minimapDragging = true
-        try { canvas.setPointerCapture(ev.pointerId) } catch { /* synthetic */ }
-        minimapJump(ev)
-        ev.preventDefault()
-      })
-      canvas.addEventListener('pointermove', (ev) => { if (minimapDragging) minimapJump(ev) })
-      const end = (ev: PointerEvent): void => {
-        minimapDragging = false
-        try { canvas.releasePointerCapture(ev.pointerId) } catch { /* never captured */ }
-      }
-      canvas.addEventListener('pointerup', end)
-      canvas.addEventListener('pointercancel', end)
-      layoutMinimap()
-    },
     attachAlerts: (hostEl) => {
       alerts = new EdgeAlerts(hostEl)
       alerts.setSafeArea(safe.top, safe.right, safe.bottom, safe.left)
@@ -1692,7 +1634,6 @@ const scratchV = new THREE.Vector3()
       safe = { top, right, bottom, left }
       alerts?.setSafeArea(top, right, bottom, left)
       alerts?.relayout()
-      layoutMinimap()
       frame()
       // Before the match starts nothing drives the loop, so the start screen
       // would sit over a black canvas. One still frame puts the field behind
@@ -1814,7 +1755,6 @@ const scratchV = new THREE.Vector3()
       candidatePath.update(nowMs)
       leakTrail.update(nowMs)
       alerts?.update(nowMs)
-      paintMinimapNow(nowMs)
       // Keyboard panning is integrated here, then the hover is re-resolved:
       // the tile under a stationary cursor changes when the camera moves.
       rig.update()

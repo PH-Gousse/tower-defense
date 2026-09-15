@@ -22,8 +22,8 @@ Related: engineering rules in [`invariants.md`](invariants.md) · decisions in
 - **Two lanes, one per player, side by side.** Player `i` defends lane `i`. `[confirmed]`
   (`GameState.lanes`, `packages/sim/src/state.ts`)
 - Both lanes are drawn side by side at the same scale and the camera can pan to either —
-  you cannot counter-pick a maze you cannot read. The frame holds 20 rows of them; the
-  minimap shows the rest (§9). `[proposed]`
+  you cannot counter-pick a maze you cannot read. The frame holds 20 rows of them; you
+  pan or jump to the rest (§9). `[proposed]`
 - **First player to zero lives loses.** `[confirmed]`
 - If both players hit zero on the same tick the match is a **draw**. `[proposed]` — the
   confirmed win condition does not mention draws; the code implements `MatchResult.Draw`
@@ -235,9 +235,9 @@ for both players.** `[confirmed]`
   wheel pans across. Plain wheel zooms. WASD stays with sending (`q w e r t y`, `d`), which
   is why the camera does not take it. `[proposed]`
 - The view is clamped so it never leaves the two lanes plus a tile of margin. `[confirmed]`
-- **A minimap** shows both lanes full-length: zones, tower footprints, creep dots in the
-  sender's colour, and the viewport rectangle. Click or drag on it to jump. It repaints from
-  the snapshot four times a second, never per frame. `[confirmed]`
+- **There is no minimap.** `[confirmed]` 2026-09-15 — the lane is read by panning, the jump
+  keys and the off-screen alerts. ([ADR-0029](adr/0029-no-minimap.md), superseding that
+  part of ADR-0024.)
 - **Jump keys `[proposed]`:** `Home` my spawn zone, `End` my exit zone, `Tab` the other lane
   at the same row, `Space` the deepest creep in my lane, then the next creep on the same lap.
 - **Off-screen alerts:** an arrow at the edge of the view when a creep leaks or a tower fires
@@ -258,7 +258,8 @@ for both players.** `[confirmed]`
   limit at this pose, about 118 units, and moves with it. `[proposed]`
 
 Superseded: "both lanes are drawn at full size simultaneously" as a framing rule (§1) — they
-are both drawn, but the frame holds 20 rows of them. Recorded in ADR-0024.
+are both drawn, but the frame holds 20 rows of them. Recorded in ADR-0024. The minimap that
+ADR-0024 added was removed two days later (ADR-0029).
 
 ## 10. Refusals
 

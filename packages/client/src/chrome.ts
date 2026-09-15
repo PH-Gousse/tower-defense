@@ -33,8 +33,8 @@ import { DEFAULT_ROWS_IN_VIEW } from './render/CameraRig'
  * Why a strip of the other lane rather than all of it: both lanes with margin
  * are 38 tiles across against 20 rows, an aspect of 1.9, which no common
  * screen reaches once any chrome is subtracted. Insisting on it would send
- * every laptop to bars for a view they cannot have anyway. The minimap and the
- * lane-swap hotkey are how the opponent's maze is read (ADR-0024).
+ * every laptop to bars for a view they cannot have anyway. Panning and the
+ * lane-swap hotkey are how the opponent's maze is read (ADR-0024, ADR-0029).
  */
 
 /** Gap between the two lanes, in tiles. The camera and the layout must agree. */

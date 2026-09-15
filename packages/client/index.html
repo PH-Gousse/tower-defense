@@ -300,17 +300,10 @@
 
     /* ---- navigation ----------------------------------------------------------
 
-       The lane is ten screens tall (ADR-0024), so three things live over the
-       canvas that did not before: the minimap, the off-screen alert arrows,
-       and a note that follows the cursor with the placement verdict. The
-       minimap is pixel art of the whole match and must never be smoothed. */
-    #minimap {
-      position: fixed; left: 12px; top: 50%; transform: translateY(-50%); z-index: 8;
-      image-rendering: pixelated; image-rendering: crisp-edges;
-      border: 2px solid var(--brass-dark); border-radius: 2px; box-shadow: var(--frame);
-      cursor: crosshair; touch-action: none; background: #0a0704;
-    }
-    body[data-layout="bars"] #minimap { top: calc(50% + 0px); }
+       The lane is several screens tall (ADR-0024), so two things live over
+       the canvas that did not before: the off-screen alert arrows, and a note
+       that follows the cursor with the placement verdict. There is no minimap
+       (ADR-0029). */
     #alerts { position: fixed; inset: 0; pointer-events: none; z-index: 9; }
     .alert {
       position: absolute; font: 700 24px/1 var(--sans); text-shadow: 0 0 8px #000, 0 1px 0 #000;
@@ -371,7 +364,6 @@
 
     /* Floating elements clear whichever chrome is present. */
     body[data-layout="rails"] #panel { right: calc(var(--rail) + 14px); top: 14px; }
-    body[data-layout="rails"] #minimap { left: calc(var(--rail) + 12px); }
     body[data-layout="rails"] #concede { right: calc(var(--rail) + 14px); bottom: 14px; }
     body[data-layout="rails"] #toast { bottom: 20px; }
     body[data-layout="rails"] #stalled { top: 14px; }
@@ -423,9 +415,8 @@
     <span class="hint"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> towers &middot; <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd> send &middot; <kbd>R</kbd><kbd>T</kbd><kbd>Y</kbd> next tier &middot; hold to send more &middot; drag, arrows, edge or <kbd>Shift</kbd>+wheel to scroll &middot; <kbd>Home</kbd> spawn <kbd>End</kbd> exit <kbd>Tab</kbd> other lane <kbd>Space</kbd> deepest creep &middot; click a tower to upgrade or sell &middot; <kbd>M</kbd> mute &middot; <kbd>D</kbd> dump</span>
   </div>
 
-  <!-- Navigation over the canvas: the whole match as a thumbnail, arrows for
-       what happened off-screen, and the placement verdict at the cursor. -->
-  <canvas id="minimap" width="76" height="430" aria-label="Minimap of both lanes"></canvas>
+  <!-- Navigation over the canvas: arrows for what happened off-screen, and
+       the placement verdict at the cursor. -->
   <div id="alerts"></div>
   <div id="cursorNote" hidden></div>
 

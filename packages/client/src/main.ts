@@ -511,13 +511,13 @@ scene.onTileHover((h) => {
   }
 })
 
-// --- navigation: minimap, jump keys ------------------------------------------
+// --- navigation: jump keys ---------------------------------------------------
 //
-// The lane is ten screens tall, so getting around it is its own set of
+// The lane is several screens tall, so getting around it is its own set of
 // controls (ADR-0024). Bindings are `[proposed]`: the letters are all taken by
 // sending and the palette, which is also why the camera pans on arrows only.
-const minimapEl = el('minimap') as HTMLCanvasElement | null
-if (minimapEl) scene.attachMinimap(minimapEl)
+// There is no minimap (ADR-0029); the jump keys and the off-screen alerts are
+// the whole of it.
 const alertsEl = el('alerts')
 if (alertsEl) scene.attachAlerts(alertsEl)
 

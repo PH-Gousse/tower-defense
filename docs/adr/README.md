@@ -35,9 +35,10 @@ Write one through `/decide`. A decision that changes a **game rule** also needs
 | [0021](0021-creeps-do-not-collide.md) | Creeps do not collide with each other | Accepted — implemented 2026-09-15; the client offsets creeps by id (#49) |
 | [0022](0022-spawns-spread-across-the-zone-with-a-fractional-setback.md) | Spawns spread across the zone and keep the fractional setback | Accepted |
 | [0023](0023-placement-on-a-creep-is-refused.md) | A placement whose footprint holds a creep is refused | Accepted — implemented 2026-09-13; supersedes half of ADR-0012 |
-| [0024](0024-camera-scrolls-and-zoom-caps-at-40-rows.md) | The camera scrolls, zoom caps at 40 rows, a minimap shows the rest | Accepted — implemented 2026-09-13; 20-row default and bindings `[proposed]` |
+| [0024](0024-camera-scrolls-and-zoom-caps-at-40-rows.md) | The camera scrolls, zoom caps at 40 rows, a minimap shows the rest | Accepted — implemented 2026-09-13; 20-row default and bindings `[proposed]`; the minimap part superseded by ADR-0029 |
 | [0025](0025-balance-constants-are-void-until-retuned-on-the-new-lane.md) | Geometric conversion of the constants, then void until `/balance` | Accepted — conversion applied 2026-09-13; every §11 constant `[retune]` until `/balance` |
 | [0026](0026-sudden-death-on-the-clock-ends-every-match.md) | Sudden death on the clock guarantees every match ends | Accepted — implemented 2026-09-14; sizing `[proposed]` `[retune]` |
+| [0029](0029-no-minimap.md) | There is no minimap | Accepted — implemented 2026-09-15; supersedes the minimap half of ADR-0024 |
 
 ## Status vocabulary
 

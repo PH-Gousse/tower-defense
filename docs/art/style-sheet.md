@@ -58,7 +58,7 @@ height about 58 px; at the 40-row cap, 27 px and 29 px. So:
 
 A tower is two tiles across (§8), so its footprint is 108 px wide at the default
 framing and 54 px at the cap: the maze reads as shapes at every zoom, and a creep at the
-cap is a dot with a colour, which is what the minimap is for.
+cap is a dot with a colour, and the off-screen alerts carry what a dot cannot.
 
 This is why the silhouette test in §4 runs at a **normalised** 32 px and separately at true
 game scale: a swarm creep can never be 32 px tall at the default zoom, and the test must

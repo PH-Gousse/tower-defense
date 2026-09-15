@@ -560,7 +560,7 @@ export class CameraRig {
 
   /**
    * World-axis bounding box of the ground the usable view shows, for the
-   * minimap's viewport rectangle and the off-screen alerts. Yaw 0 only in the
+   * off-screen alerts. Yaw 0 only in the
    * game, but written through the basis so a yawed demo gets a sane box.
    */
   visibleBounds(out: { minX: number; minZ: number; maxX: number; maxZ: number }): void {
