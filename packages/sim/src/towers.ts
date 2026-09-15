@@ -6,7 +6,7 @@ import {
   footprintCentreY,
 } from './grid'
 import { UNREACHABLE } from './field'
-import { TowerKind, levelOf, ARCHETYPES, type TowerArchetype } from './data'
+import { TowerKind, levelOf, ARCHETYPES, ACQUIRE_TICKS, type TowerArchetype } from './data'
 import type { GameState, Lane } from './state'
 
 /**
@@ -121,11 +121,19 @@ export function tileOf(x: number, y: number): number {
 }
 
 /**
- * Fire every tower that is off cooldown.
+ * Fire every tower that is off cooldown and locked on.
  *
  * Towers are walked in slot order, which is anchor tile-index order. Damage is
  * instant with no projectile travel, so a shot resolves in the tick it is
  * fired.
+ *
+ * Acquisition (ADR-0028): a tower with nothing in range resets its `acquire`
+ * counter to ACQUIRE_TICKS; while it has a target it counts down, and it fires
+ * only at zero. So the first shot lands ACQUIRE_TICKS ticks after a creep
+ * first appears, and a tower that keeps finding targets fires on every
+ * cooldown with no second wait. The counter is not touched during cooldown:
+ * a tower is either winding up or cooling down, never both, which keeps the
+ * two states one integer each and the hash honest.
  */
 export function fireTowers(state: GameState, lane: Lane, hash: SpatialHash): void {
   const t = lane.towers
@@ -142,7 +150,15 @@ export function fireTowers(state: GameState, lane: Lane, hash: SpatialHash): voi
     const level = t.level[i] as number
     const spec = levelOf(kind, level)
     const target = findTarget(lane, hash, i, spec.range)
-    if (target === -1) continue
+    if (target === -1) {
+      t.acquire[i] = ACQUIRE_TICKS
+      continue
+    }
+    const aim = t.acquire[i] as number
+    if (aim > 0) {
+      t.acquire[i] = aim - 1
+      continue
+    }
 
     t.cooldown[i] = spec.cooldownTicks
 

@@ -121,6 +121,11 @@ research, no damage types. Do not copy Warcraft 3's tower or tech system.** `[co
   ⚠️ Default stated as **75%**; `towers.json` ships **60%** (`sellRefund: 0.6`).
 - Damage is **instant, no projectile travel** — a shot resolves in the tick it is fired.
   `[proposed]` (`fireTowers`)
+- **A tower takes `acquireTicks` to acquire.** Its first shot lands that many ticks after a
+  creep first comes into range; while it keeps finding targets it stays locked on and fires
+  on every cooldown, and it only waits again after a tick with nothing in range. A newly
+  built tower starts unacquired. **10 ticks (0.5 s) `[proposed]` `[retune]`**
+  ([ADR-0028](adr/0028-towers-take-time-to-acquire.md), `towers.json`)
 - A tower targets **the in-range creep nearest the exit**, tiebroken by ascending creep id.
   `[proposed]`. Known consequence, unresolved: towers permanently focus whatever is
   furthest along, so a long-lived tank soaks every shot while fresh creeps walk behind it.
@@ -323,6 +328,7 @@ Source of truth: `packages/sim/data/towers.json`, `packages/sim/data/creeps.json
 | Sudden death growth | ×1.15 per income period | `creeps.json` `suddenDeathGrowth` | compounding, applied to HP at spawn · `[retune]` |
 | Max tier | 2 (→ three tiers, 0–2) | `creeps.json` `maxTier` | |
 | Sell refund | 0.60 | `towers.json` `sellRefund` | ⚠️ stated default is 0.75 |
+| Tower acquisition | 10 ticks (0.5 s) | `towers.json` `acquireTicks` | ADR-0028, 2026-09-15; the wait before a tower's first shot at a newly seen creep · `[retune]` |
 | Max tower level | 3 | `data.ts` `MAX_LEVEL` | `[confirmed]` |
 
 **Gold is scaled ×10 from the source table**, so a pack price can divide by its pack size

@@ -39,6 +39,7 @@ Write one through `/decide`. A decision that changes a **game rule** also needs
 | [0025](0025-balance-constants-are-void-until-retuned-on-the-new-lane.md) | Geometric conversion of the constants, then void until `/balance` | Accepted — conversion applied 2026-09-13; every §11 constant `[retune]` until `/balance` |
 | [0026](0026-sudden-death-on-the-clock-ends-every-match.md) | Sudden death on the clock guarantees every match ends | Accepted — implemented 2026-09-14; sizing `[proposed]` `[retune]` |
 | [0027](0027-lane-is-17-wide-and-100-rows.md) | The lane is 17 tiles wide and 100 buildable rows long | Accepted — implemented 2026-09-15; both `[proposed]`; supersedes the 16 and the 200 of ADR-0019 |
+| [0028](0028-towers-take-time-to-acquire.md) | A tower takes time to acquire before its first shot | Accepted — implemented 2026-09-15; 10 ticks `[proposed]` `[retune]` |
 | [0029](0029-no-minimap.md) | There is no minimap | Accepted — implemented 2026-09-15; supersedes the minimap half of ADR-0024 |
 
 ## Status vocabulary

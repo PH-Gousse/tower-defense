@@ -40,6 +40,7 @@ export interface TowerArchetype {
 interface TowersFile {
   readonly version: number
   readonly sellRefund: number
+  readonly acquireTicks: number
   readonly archetypes: readonly TowerArchetype[]
 }
 
@@ -64,6 +65,12 @@ export const MAX_LEVEL = 3
  * Nothing else may write these. See `installBalanceData`.
  */
 export let SELL_REFUND = file.sellRefund
+/**
+ * Ticks between a tower first seeing a creep and its first shot (ADR-0028).
+ * A tower that keeps finding targets stays locked on; it waits again only
+ * after a tick with nothing in range. Zero is the old rule: fire on sight.
+ */
+export let ACQUIRE_TICKS = file.acquireTicks
 export let ARCHETYPES: readonly TowerArchetype[] = file.archetypes
 
 /** Ordered by TowerKind so `ARCHETYPES[kind]` is always the right one. */
@@ -103,6 +110,15 @@ function assertData(): void {
     // can rebuild for nothing every wave is not a maze.
     throw new Error('towers.json: sellRefund must be between 0 and 1 exclusive')
   }
+  assertAcquireTicks(ACQUIRE_TICKS)
+}
+
+/** Whole ticks, never negative: it is counted down in an Int32Array. */
+function assertAcquireTicks(v: number): number {
+  if (!Number.isInteger(v) || v < 0) {
+    throw new Error('towers.json: acquireTicks must be a whole number of ticks, zero or more')
+  }
+  return v
 }
 
 assertData()
@@ -383,6 +399,8 @@ const DEFAULT_STARTING_INCOME = STARTING_INCOME
 /** The balance numbers a replay needs pinned to reproduce a hash. */
 export interface BalanceData {
   readonly sellRefund: number
+  /** Optional: a fixture recorded before the acquisition delay existed (ADR-0028) has none, meaning fire on sight. */
+  readonly acquireTicks?: number
   readonly archetypes: readonly TowerArchetype[]
   readonly unlockEveryTicks: number
   /** Optional: a fixture recorded before the build phase existed has none. */
@@ -401,6 +419,7 @@ export interface BalanceData {
 export function liveBalanceData(): BalanceData {
   return {
     sellRefund: SELL_REFUND,
+    acquireTicks: ACQUIRE_TICKS,
     archetypes: ARCHETYPES,
     unlockEveryTicks: UNLOCK_EVERY_TICKS,
     sendUnlockTicks: SEND_UNLOCK_TICKS,
@@ -422,6 +441,9 @@ export function liveBalanceData(): BalanceData {
 export function installBalanceData(next: BalanceData): BalanceData {
   const previous = liveBalanceData()
   SELL_REFUND = next.sellRefund
+  // Missing means zero: a fixture frozen before the delay existed recorded
+  // towers that fired on sight, and replays the match it recorded.
+  ACQUIRE_TICKS = assertAcquireTicks(next.acquireTicks ?? 0)
   ARCHETYPES = next.archetypes
   UNLOCK_EVERY_TICKS = next.unlockEveryTicks
   // Missing means none: a fixture frozen before the build phase existed replays

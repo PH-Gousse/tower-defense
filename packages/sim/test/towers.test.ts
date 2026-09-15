@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { createSpatialHash, rebuildHash, findTarget, tileOf, HASH_COUNT } from '../src/towers'
 import { createState } from '../src/state'
 import { buildField, UNREACHABLE } from '../src/field'
-import { TowerKind, levelOf, ARCHETYPES, creepSpec } from '../src/data'
+import { TowerKind, levelOf, ARCHETYPES, ACQUIRE_TICKS, creepSpec } from '../src/data'
 import { hashState } from '../src/hash'
 import {
   GRID_W,
@@ -16,7 +16,7 @@ import {
 } from '../src/grid'
 import { insertTower, footprintOverlapsTower } from '../src/state'
 import { step } from '../src/step'
-import { build, send, run, runUntil, R, SWARM, RUNNER, TANK, withoutBuildPhase } from './helpers'
+import { build, send, run, runUntil, stepper, R, SWARM, RUNNER, TANK, withoutBuildPhase } from './helpers'
 
 // Not a test of the opening: see withoutBuildPhase.
 withoutBuildPhase()
@@ -227,8 +227,8 @@ describe('towers', () => {
       c.speed[i] = 0
       c.spec[i] = SWARM
     }
-    const out = run(0)
-    void out
+    // Already locked on: the acquisition delay is its own test below.
+    lane.towers.acquire[0] = 0
     const after = step(s, [], createState())
     const full = creepSpec(SWARM).hp * 10
     const dmg = levelOf(TowerKind.Splash, 1).damage
@@ -269,10 +269,92 @@ describe('towers', () => {
     rebuildHash(lane, hash)
     expect(findTarget(lane, hash, 0, 3)).toBe(0)
     expect(findTarget(lane, hash, 1, 3)).toBe(0)
+    // Both locked on, so the order alone decides who shoots.
+    lane.towers.acquire[0] = 0
+    lane.towers.acquire[1] = 0
     const after = step(s, [], createState())
     expect(after.players[0]!.kills).toBe(1)
     expect(after.lanes[0]!.towers.cooldown[0]).toBe(levelOf(TowerKind.Single, 1).cooldownTicks)
     expect(after.lanes[0]!.towers.cooldown[1]).toBe(0)
+  })
+})
+
+describe('acquisition delay (ADR-0028)', () => {
+  /** One tower, one creep standing still inside its range, nothing else. */
+  function standoff(): { s: ReturnType<typeof createState>; hp: number } {
+    const s = createState()
+    const lane = s.lanes[0]!
+    insertTower(lane, 1, 4, R + 4, TowerKind.Single)
+    buildField(lane.blocked, lane.field)
+    const c = lane.creeps
+    c.count = 1
+    c.id[0] = 1
+    c.x[0] = footprintCentreX(4) + 2
+    c.y[0] = footprintCentreY(R + 4)
+    c.hp[0] = 1e6
+    c.speed[0] = 0
+    c.spec[0] = TANK
+    return { s, hp: 1e6 }
+  }
+
+  function damageAfter(ticks: number): number {
+    let { s } = standoff()
+    const { hp } = standoff()
+    const next = stepper(s)
+    for (let t = 0; t < ticks; t++) s = next()
+    return hp - (s.lanes[0]!.creeps.hp[0] as number)
+  }
+
+  it('is a whole number of ticks in the data', () => {
+    expect(Number.isInteger(ACQUIRE_TICKS)).toBe(true)
+    expect(ACQUIRE_TICKS).toBeGreaterThan(0)
+  })
+
+  it('holds fire for acquireTicks after a creep first comes into range', () => {
+    // A new tower with a creep already in range: nothing for ACQUIRE_TICKS
+    // ticks, then the first shot on the tick after.
+    const dmg = levelOf(TowerKind.Single, 1).damage
+    expect(damageAfter(ACQUIRE_TICKS)).toBe(0)
+    expect(damageAfter(ACQUIRE_TICKS + 1)).toBe(dmg)
+  })
+
+  it('stays locked on: the second shot follows the cooldown with no second wait', () => {
+    const dmg = levelOf(TowerKind.Single, 1).damage
+    const cd = levelOf(TowerKind.Single, 1).cooldownTicks
+    expect(damageAfter(ACQUIRE_TICKS + 1 + cd)).toBe(dmg)
+    expect(damageAfter(ACQUIRE_TICKS + 2 + cd)).toBe(2 * dmg)
+  })
+
+  it('waits again once it has had a tick with nothing to shoot', () => {
+    const dmg = levelOf(TowerKind.Single, 1).damage
+    const cd = levelOf(TowerKind.Single, 1).cooldownTicks
+    let { s } = standoff()
+    const next = stepper(s)
+    for (let t = 0; t < ACQUIRE_TICKS + 1; t++) s = next()
+    expect(1e6 - (s.lanes[0]!.creeps.hp[0] as number)).toBe(dmg)
+    // Out of range for the whole cooldown and one idle tick beyond it.
+    const back = s.lanes[0]!.creeps.x[0] as number
+    s.lanes[0]!.creeps.x[0] = back + 30
+    const away = stepper(s)
+    for (let t = 0; t < cd + 1; t++) s = away()
+    expect(s.lanes[0]!.towers.acquire[0]).toBe(ACQUIRE_TICKS)
+    // Back in range: the full delay again before the next shot.
+    s.lanes[0]!.creeps.x[0] = back
+    const again = stepper(s)
+    for (let t = 0; t < ACQUIRE_TICKS; t++) s = again()
+    expect(1e6 - (s.lanes[0]!.creeps.hp[0] as number)).toBe(dmg)
+    s = again()
+    expect(1e6 - (s.lanes[0]!.creeps.hp[0] as number)).toBe(2 * dmg)
+  })
+
+  it('does not count down while cooling down', () => {
+    // Between shots the counter stays at zero: cooldown and wind-up are one
+    // integer each and never overlap.
+    let { s } = standoff()
+    const next = stepper(s)
+    for (let t = 0; t < ACQUIRE_TICKS + 1; t++) s = next()
+    expect(s.lanes[0]!.towers.cooldown[0]).toBe(levelOf(TowerKind.Single, 1).cooldownTicks)
+    expect(s.lanes[0]!.towers.acquire[0]).toBe(0)
   })
 })
 

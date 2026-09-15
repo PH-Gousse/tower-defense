@@ -109,6 +109,7 @@ export function hashState(s: GameState): number {
       h.byte(t.kind[i] as number)
       h.byte(t.level[i] as number)
       h.int(t.cooldown[i] as number)
+      h.int(t.acquire[i] as number)
     }
 
     // The flow field is NOT hashed. It is derived from `blocked` by an integer

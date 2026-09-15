@@ -52,7 +52,7 @@ export interface Creeps {
  * Towers: a dense list of anchors, plus a per-tile cache of which tower
  * covers each cell.
  *
- * A tower is `{ id, anchorX, anchorY, kind, level, cooldown }` at slot `i`,
+ * A tower is `{ id, anchorX, anchorY, kind, level, cooldown, acquire }` at slot `i`,
  * and its 2x2 footprint is DERIVED from the anchor (ADR-0019). `at[tile]` is
  * the slot covering that tile, or -1; `Lane.blocked` is the same fact as a
  * byte per tile for the flow field. Both are caches, rebuilt by `insertTower`
@@ -76,6 +76,12 @@ export interface Towers {
   readonly kind: Int8Array
   readonly level: Int8Array
   readonly cooldown: Int32Array
+  /**
+   * Ticks still to wait before the first shot at whatever is in range now
+   * (ADR-0028). ACQUIRE_TICKS when the tower has nothing to shoot, counting
+   * down while it does, zero once it is locked on.
+   */
+  readonly acquire: Int32Array
   /** Per tile: slot of the tower covering it, or -1. Cache. */
   readonly at: Int32Array
   count: number
@@ -144,7 +150,7 @@ export { STARTING_GOLD, STARTING_INCOME } from './data'
 // needs to READ them. Imported separately, and as live bindings: reading them
 // inside `createState` rather than at module load is what makes a fixture's
 // installed purse take effect.
-import { STARTING_GOLD, STARTING_INCOME } from './data'
+import { STARTING_GOLD, STARTING_INCOME, ACQUIRE_TICKS } from './data'
 
 /**
  * Lives.
@@ -199,6 +205,7 @@ function createTowers(): Towers {
     kind: new Int8Array(MAX_TOWERS),
     level: new Int8Array(MAX_TOWERS),
     cooldown: new Int32Array(MAX_TOWERS),
+    acquire: new Int32Array(MAX_TOWERS),
     at,
     count: 0,
   }
@@ -278,6 +285,7 @@ export function cloneState(from: GameState, into: GameState): GameState {
     td.kind.set(ts.kind.subarray(0, tn))
     td.level.set(ts.level.subarray(0, tn))
     td.cooldown.set(ts.cooldown.subarray(0, tn))
+    td.acquire.set(ts.acquire.subarray(0, tn))
     td.at.set(ts.at)
     td.count = tn
 
@@ -382,6 +390,7 @@ export function insertTower(lane: Lane, id: number, ax: number, ay: number, kind
     t.kind[s] = t.kind[q] as number
     t.level[s] = t.level[q] as number
     t.cooldown[s] = t.cooldown[q] as number
+    t.acquire[s] = t.acquire[q] as number
     stampFootprint(lane, s, s)
   }
   t.id[p] = id
@@ -390,6 +399,9 @@ export function insertTower(lane: Lane, id: number, ax: number, ay: number, kind
   t.kind[p] = kind
   t.level[p] = 1
   t.cooldown[p] = 0
+  // A new tower has seen nothing yet: it waits the full delay even if a
+  // creep is standing in range when it lands.
+  t.acquire[p] = ACQUIRE_TICKS
   t.count += 1
   stampFootprint(lane, p, p)
   return p
@@ -407,6 +419,7 @@ export function removeTowerSlot(lane: Lane, slot: number): void {
     t.kind[q] = t.kind[s] as number
     t.level[q] = t.level[s] as number
     t.cooldown[q] = t.cooldown[s] as number
+    t.acquire[q] = t.acquire[s] as number
     stampFootprint(lane, q, q)
   }
   t.count -= 1

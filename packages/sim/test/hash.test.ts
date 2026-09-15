@@ -59,6 +59,7 @@ const MUTATIONS: readonly { name: string; apply: (s: GameState) => void }[] = [
   { name: 'towers.kind', apply: (s) => { const t = withTower(s); s.lanes[0]!.towers.kind[t] = TowerKind.Splash } },
   { name: 'towers.level', apply: (s) => { const t = withTower(s); s.lanes[0]!.towers.level[t] = 3 } },
   { name: 'towers.cooldown', apply: (s) => { const t = withTower(s); s.lanes[0]!.towers.cooldown[t] = 7 } },
+  { name: 'towers.acquire', apply: (s) => { const t = withTower(s); s.lanes[0]!.towers.acquire[t] = 3 } },
   { name: 'creeps.count', apply: (s) => { s.lanes[0]!.creeps.count = 1 } },
   { name: 'creeps.id', apply: (s) => { s.lanes[0]!.creeps.count = 1; s.lanes[0]!.creeps.id[0] = 42 } },
   { name: 'creeps.x', apply: (s) => { s.lanes[0]!.creeps.count = 1; s.lanes[0]!.creeps.x[0] = 3.5 } },
