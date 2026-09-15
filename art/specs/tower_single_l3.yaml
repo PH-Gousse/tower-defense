@@ -5,7 +5,7 @@ archetype: single
 level: 3
 derived_from: tower_single_l2
 params:
-  height: 0.82
+  height: 1.07
   roof: spire
   parts: [gold_ring]
 palette: { tier_shift: 0.5, trim: true }

@@ -5,7 +5,7 @@ class: tower
 archetype: slow
 level: 1
 body_plan: crystal_emitter
-params: { height: 0.85, crystal_height: 0.5, ring_crystals: 4 }
+params: { height: 0.85, crystal_height: 0.7, ring_crystals: 6 }
 palette:
   # Grey stone, not stone_blue: a blue-grey pedestal read as team colour
   # spread over the whole tower, and the band must be the only blue.
@@ -13,7 +13,7 @@ palette:
   secondary: stone_dark
   accent: ice_deep
   glow: ice
-  team_mask: [banner, ring]
+  team_mask: [ring]
 rig: turret
 animations:
   Build:   { gen: build_up, duration: 0.8 }
