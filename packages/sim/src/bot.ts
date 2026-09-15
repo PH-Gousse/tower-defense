@@ -305,8 +305,8 @@ const DEFAULT_COUNTER_PICK: CounterPick = 'model'
  * are chosen the way the harness test says to: by searching the sweep for an
  * ordered triple that is transitive on the shipped template, never by
  * assuming more aggressive is harder. Six ratios pairwise, 9,000 starting
- * gold, splash 1.8, sudden death at 15:00, the model counter-pick,
- * 2026-09-15 -- "beats" reads row over column:
+ * gold, splash 1.8, sudden death at 15:00, the model counter-pick, on the
+ * 16 x 200 lane, 2026-09-15 -- "beats" reads row over column:
  *
  *   template 0 (shipped)   beats                  loses to
  *     0.2                  0.3                    0.4 0.5 0.6 0.75
@@ -316,12 +316,28 @@ const DEFAULT_COUNTER_PICK: CounterPick = 'model'
  *     0.6                  0.2 0.3 0.4            0.5 0.75
  *     0.75                 0.2 0.3 0.4 0.6        0.5
  *
- * 0.2 / 0.4 / 0.6 is transitive on all three templates in that sweep -- the
- * first triple to be since the lane grew -- with the winner keeping 15 to
- * 20 lives on the shipped one. Note what 0.75 losing to 0.5 means: the
- * hardest bot is not the most aggressive one that exists, it is the most
- * aggressive one that still beats everything below it, and a thin maze dies
- * in three minutes to a flood the ratio cannot cover.
+ * 0.2 / 0.4 / 0.6 was transitive on all three templates in that sweep, with
+ * the winner keeping 15 to 20 lives on the shipped one.
+ *
+ * The same sweep on the 17 x 100 lane with the half-second acquisition
+ * delay (ADR-0027, ADR-0028), later on 2026-09-15, both seats, 40,000-tick
+ * ceiling; "beats" means wins from both seats:
+ *
+ *   template 0 (shipped)   beats                  loses to
+ *     0.2                  0.75                   0.3 0.4 0.5 0.6
+ *     0.3                  0.2 0.4 0.75           0.5 0.6
+ *     0.4                  0.2 0.6 0.75           0.3 0.5
+ *     0.5                  0.2 0.3 0.4 0.75       0.6
+ *     0.6                  0.2 0.3 0.5 0.75       0.4
+ *     0.75                 nothing                everything
+ *
+ * 0.4 now loses to 0.6's old rung-mate 0.3 and BEATS 0.6, so 0.2 / 0.4 / 0.6
+ * inverted at the top and the ladder test went red. Every match but the
+ * 0.75 ones runs to sudden death and ends 20 lives to 0; the 0.75 maze dies
+ * in two minutes. Transitive triples with a 20-life margin on every rung:
+ * 0.2/0.3/0.5, 0.2/0.3/0.6, 0.2/0.5/0.6, 0.3/0.5/0.6. Shipped: 0.2 / 0.3 /
+ * 0.6, the one whose labels stay true -- normal still builds more than it
+ * sends, hard sends more than it builds -- with the widest spread.
  */
 /**
  * Template 0, the half-slot serpentine with a two-row corridor (maze.ts).
@@ -349,7 +365,7 @@ const DEFAULT_COUNTER_PICK: CounterPick = 'model'
  * after the next balance rule without re-writing it.
  */
 export const BOT_EASY: BotConfig = { sendRatio: 0.2, reactionTicks: 10, template: 0 }
-export const BOT_NORMAL: BotConfig = { sendRatio: 0.4, reactionTicks: 10, template: 0 }
+export const BOT_NORMAL: BotConfig = { sendRatio: 0.3, reactionTicks: 10, template: 0 }
 export const BOT_HARD: BotConfig = { sendRatio: 0.6, reactionTicks: 10, template: 0 }
 
 /**
