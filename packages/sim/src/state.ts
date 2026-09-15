@@ -428,8 +428,8 @@ export function removeTowerSlot(lane: Lane, slot: number): void {
 // --- spawning ----------------------------------------------------------------
 
 /**
- * Where a creep appears: spread across the whole spawn zone, plus a fractional
- * setback along the route (ADR-0022).
+ * Where a creep appears: a scattered cell of the spawn zone (ADR-0030), plus a
+ * fractional setback along the route (ADR-0022).
  *
  * Sending is unpaced -- a purchase puts its creep on the board that tick, and
  * only gold limits how many you buy -- so many creeps can enter on one tick.
@@ -437,11 +437,16 @@ export function removeTowerSlot(lane: Lane, slot: number): void {
  * identically forever, so they read as a single dot with N health bars and one
  * splash shot clears the lot, which erases the Splash tower's reason to exist.
  *
- * Three coordinates come out of the lane's release counter:
+ * Two things come out of the lane's release counter:
  *
- *   column   release % LANE_WIDTH            consecutive arrivals form a FRONT
- *   row      (release / LANE_WIDTH) % SPAWN_ROWS   across the zone, then fill it
+ *   cell     spawnCellFor(release)   a fixed scramble of the zone's cells
  *   setback  a fraction of a tile, backwards along `field.dir` at that cell
+ *
+ * The cell used to be the counter itself -- column `release % LANE_WIDTH`, then
+ * the next row -- so a burst filled the zone as a tidy line and read as a
+ * queue. The scramble keeps what that had (every cell once before any repeats)
+ * and loses the line. It is not random: independent random draws would repeat
+ * a cell within a few dozen releases, and a repeat is a weld, see below.
  *
  * The setback is the load-bearing part, and it is worth saying why because a
  * later reader will be tempted to drop it "since the zone spreads them
@@ -458,7 +463,7 @@ export function removeTowerSlot(lane: Lane, slot: number): void {
  *
  * The setback slot walks the period with a coprime stride so a burst bought on
  * one tick spreads over the whole 0..SPAWN_SETBACK rather than clustering at
- * one end: 22 consecutive releases span it. 81 is coprime with 1760 (2^5.5.11).
+ * one end: 22 consecutive releases span it. 81 is coprime with 1870 (2.5.11.17).
  *
  * Direction comes from `field.dir` at the spawn cell, not from "up is back":
  * the zone is open so most cells point S, but a cell beside the first wall can
@@ -469,17 +474,55 @@ export function removeTowerSlot(lane: Lane, slot: number): void {
  * pattern repeats. It replaces the old 22, and the bot's burst cap is no longer
  * tied to it (see MAX_SEND_BURST in bot.ts).
  */
+const SPAWN_CELLS = LANE_WIDTH * SPAWN_ROWS
 const SPAWN_SLOTS = 11
-export const SPAWN_PERIOD = LANE_WIDTH * SPAWN_ROWS * SPAWN_SLOTS
+export const SPAWN_PERIOD = SPAWN_CELLS * SPAWN_SLOTS
 /** Coprime with SPAWN_PERIOD, so `release * stride mod period` is a bijection. */
 const SPAWN_SETBACK_STRIDE = 81
 /** Furthest back a creep may start. Under 0.5 so `floor` stays on its tile. */
 const SPAWN_SETBACK = 0.45
 
+/**
+ * Round keys of the cell scramble. Any four values give a bijection -- a
+ * Feistel network is invertible whatever its round function -- so these are
+ * chosen only for how well they scatter: the first seventeen releases cover
+ * six rows and twelve columns, and 9 of 169 consecutive pairs are neighbours.
+ */
+const SCRAMBLE_KEYS: readonly number[] = [0x9e, 0x3c, 0xb5, 0x61]
+
+/** A four-round Feistel permutation of 0..255, integer operations only. */
+function feistel8(x: number): number {
+  let l = x >>> 4
+  let r = x & 15
+  for (let i = 0; i < 4; i++) {
+    const f = (Math.imul(r ^ (SCRAMBLE_KEYS[i] as number), 0x2f) ^ (r >>> 1)) & 15
+    const t = r
+    r = l ^ f
+    l = t
+  }
+  return (l << 4) | r
+}
+
+/**
+ * The spawn cell for a release, as a row-major index into the zone (ADR-0030).
+ *
+ * `feistel8` permutes 256 values and the zone has 170 cells, so an output past
+ * the zone is fed back in until it lands inside -- cycle walking, which keeps a
+ * permutation a permutation because every cycle through an in-range value
+ * returns to one. At most four steps for these keys. Needs SPAWN_CELLS <= 256;
+ * a bigger zone needs a wider network.
+ */
+function spawnCellFor(release: number): number {
+  let cell = feistel8(release % SPAWN_CELLS)
+  while (cell >= SPAWN_CELLS) cell = feistel8(cell)
+  return cell
+}
+
 export function spawnPointFor(release: number, field: FlowField): { x: number; y: number } {
   const n = release % SPAWN_PERIOD
-  const col = n % LANE_WIDTH
-  const row = ((n - col) / LANE_WIDTH) % SPAWN_ROWS
+  const cell = spawnCellFor(n)
+  const col = cell % LANE_WIDTH
+  const row = (cell - col) / LANE_WIDTH
   const slot = (n * SPAWN_SETBACK_STRIDE) % SPAWN_PERIOD
   const back = ((slot + 0.5) / SPAWN_PERIOD) * SPAWN_SETBACK
   const d = field.dir[row * GRID_W + col] as number

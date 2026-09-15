@@ -1,8 +1,9 @@
 {
-  "_comment": "FROZEN. Do not edit to make a red test green \u2014 find out what diverged. Companion to match-01: where that one plays a rounded match, this one exists for MASS SENDING. Twenty creeps bought on a single tick spawn in one call, spread across the spawn zone by spawnPointFor (ADR-0022), and must stay twenty distinct points through a row of towers. Recorded on the 16x213 lane (ADR-0019), re-hashed on the 17x113 lane (ADR-0027) since the fixture pins balance data, not geometry, and again with acquireTicks 10 pinned in its data (ADR-0028).",
+  "_comment": "FROZEN. Do not edit to make a red test green \u2014 find out what diverged. Companion to match-01: where that one plays a rounded match, this one exists for MASS SENDING. Twenty creeps bought on a single tick spawn in one call, scattered across the spawn zone by spawnPointFor (ADR-0022, ADR-0030), and must stay twenty distinct points through a row of towers. Recorded on the 16x213 lane (ADR-0019), re-hashed on the 17x113 lane (ADR-0027) since the fixture pins balance data, not geometry, again with acquireTicks 10 pinned in its data (ADR-0028), and again when spawn cells were scrambled (ADR-0030).",
   "_hashHistory": [
     "0e2fe8d7 - first recording, added with the spawn queue removal",
-    "e0355b68 - re-recorded for the 16x213 lane and 2x2 towers (ADR-0019), with the derived flow field dropped from hashState; every earlier hash was the 8x24 board"
+    "e0355b68 - re-recorded for the 16x213 lane and 2x2 towers (ADR-0019), with the derived flow field dropped from hashState; every earlier hash was the 8x24 board",
+    "26181613 - spawn cells are scrambled (ADR-0030). The twenty creeps used to fill the top row and a bit of the next; they now land scattered over the zone. Confirmed by reverting only state.ts: the old hash came back. Coverage is unchanged: 9 killed, 11 alive at distinct points."
   ],
   "_coverage": "1400 ticks: 20 swarm on one tick, 9 killed by two single-target towers and a splash tower, 11 alive at distinct points",
   "ticks": 1400,
@@ -152,7 +153,7 @@
       "creep": 0
     }
   ],
-  "expectedHash": "26181613",
+  "expectedHash": "61939ee9",
   "data": {
     "sellRefund": 0.6,
     "acquireTicks": 10,

@@ -184,13 +184,16 @@ for both players.** `[confirmed]`
   - ⚠️ **`Refusal.BuildPhase`**: nobody may send for the first **400 ticks (20 s)**. This
     opening build phase is not in the confirmed rules but is load-bearing — the income
     clock anchors to it (§7). `[proposed]` — needs confirming as a rule.
-- **Creeps spawn spread across the whole 10 × 16 spawn zone**, at a position derived from
-  the lane's release counter (column, row, and a fractional setback along the flow field),
-  so a mass send arrives as a front rather than a column. The fractional setback is
+- **Creeps spawn at scattered points across the whole 10 × 17 spawn zone.** The cell comes
+  from the lane's release counter run through a fixed scramble, so a mass send lands spread
+  over the zone in no visible order, and all 170 cells are used once before any repeats.
+  The scramble is the same every match: the sim reads no seed (ADR-0010). `[confirmed]`
+  2026-09-15. A fractional setback along the flow field goes on top, and it is
   load-bearing: it is what keeps two creeps symmetric about the first gap from arriving
-  together and welding. **1760 distinct points** before the pattern repeats. `[confirmed]`
-  ([ADR-0022](adr/0022-spawns-spread-across-the-zone-with-a-fractional-setback.md);
-  `spawnPointFor`, `SPAWN_PERIOD`.)
+  together and welding. **1870 distinct points** before the pattern repeats. `[confirmed]`
+  ([ADR-0030](adr/0030-spawn-cells-are-scrambled.md) for the scramble,
+  [ADR-0022](adr/0022-spawns-spread-across-the-zone-with-a-fractional-setback.md) for the
+  setback; `spawnPointFor`, `SPAWN_PERIOD`.)
 - **Creeps do not collide with each other.** They overlap freely; a 1-wide gap passes any
   number of them, and separation is visual only, done by the client from the creep id.
   `[confirmed]` ([ADR-0021](adr/0021-creeps-do-not-collide.md))

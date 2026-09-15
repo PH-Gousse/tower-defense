@@ -70,9 +70,9 @@ describe('sends and where creeps enter', () => {
     expect(run(1, { 0: wave }).lanes[0]!.creeps.count).toBe(6)
   })
 
-  it('spawns inside the spawn zone, spread across its whole width and depth', () => {
-    // ADR-0022: a mass send arrives as a front. Every cell of the zone is used
-    // before any repeats, and nothing lands outside the zone.
+  it('spawns inside the spawn zone, at every cell once, in scattered order', () => {
+    // ADR-0030: a mass send lands scattered over the zone, not as a line. Every
+    // cell of the zone is used before any repeats, and nothing lands outside it.
     const field = createState().lanes[0]!.field
     const cellsSeen = new Set<number>()
     for (let r = 0; r < LANE_WIDTH * SPAWN_ROWS; r++) {
@@ -85,9 +85,24 @@ describe('sends and where creeps enter', () => {
       cellsSeen.add(cy * GRID_W + cx)
     }
     expect(cellsSeen.size).toBe(LANE_WIDTH * SPAWN_ROWS)
-    // Consecutive releases walk across a row: the front.
-    expect(Math.floor(spawnPointFor(0, field).y)).toBe(Math.floor(spawnPointFor(1, field).y))
-    expect(Math.floor(spawnPointFor(1, field).x)).toBe(Math.floor(spawnPointFor(0, field).x) + 1)
+    // A burst of one lane-width is scattered, not a line. Under the old
+    // row-fill rule these seventeen shared one row and each was the next
+    // creep's neighbour; the scramble spreads them over most of the zone.
+    const rows = new Set<number>()
+    const cols = new Set<number>()
+    let neighbours = 0
+    for (let r = 0; r < LANE_WIDTH; r++) {
+      const p = spawnPointFor(r, field)
+      const q = spawnPointFor(r + 1, field)
+      rows.add(Math.floor(p.y))
+      cols.add(Math.floor(p.x))
+      const dx = Math.abs(Math.floor(p.x) - Math.floor(q.x))
+      const dy = Math.abs(Math.floor(p.y) - Math.floor(q.y))
+      if (dx + dy <= 1) neighbours += 1
+    }
+    expect(rows.size).toBeGreaterThanOrEqual(5)
+    expect(cols.size).toBeGreaterThanOrEqual(10)
+    expect(neighbours).toBeLessThanOrEqual(3)
   })
 
   it('gives every release in a period a distinct setback, and repeats only after it', () => {
@@ -115,7 +130,7 @@ describe('sends and where creeps enter', () => {
 
   it('keeps a burst apart long after it has funnelled through a gap', () => {
     // A wall with one 2-wide gap at the right forces every creep of a
-    // 40-creep burst -- spread over two and a half rows of the zone -- through
+    // 40-creep burst -- scattered over the whole zone (ADR-0030) -- through
     // the same cells. If any two shared a point they would be welded forever.
     let s = createState()
     wall(s, 0, R + 2, [GRID_W - 2, GRID_W - 1])
@@ -126,9 +141,13 @@ describe('sends and where creeps enter', () => {
     for (let i = 0; i < 40; i++) s.lanes[0]!.creeps.hp[i] = 1e9
     // Short of a lap: a swarm that has been round once is back in the spawn
     // zone, and "past the wall" below would be false for the wrong reason.
-    s = advance(s, Math.floor((GRID_H - SPAWN_ROWS - 1) / creepSpec(SWARM).speed))
+    // Sized from the exit, not the grid: a scattered spawn (ADR-0030) can start
+    // a creep on the zone's last row, 100 rows from the exit, and the old
+    // GRID_H-based walk of 102 tiles took that one round a lap.
+    s = advance(s, Math.floor((EXIT_ROW_MIN - SPAWN_ROWS - 1) / creepSpec(SWARM).speed))
     const c = s.lanes[0]!.creeps
     expect(c.count).toBe(40)
+    for (let i = 0; i < c.count; i++) expect(c.laps[i], `creep ${i} lapped`).toBe(0)
     const seen = new Set<string>()
     for (let i = 0; i < c.count; i++) seen.add(`${c.x[i]},${c.y[i]}`)
     expect(seen.size).toBe(40)
@@ -260,8 +279,12 @@ describe('the half-slot rule', () => {
     expect(f.dist[tileIndex({ x: 3, y: R + 4 })]).toBe(UNREACHABLE)
 
     // A creep from the far right of the zone walks the whole width to the
-    // slot, through it, and out the other side.
-    ;(s.lanes[0] as { released: number }).released = GRID_W - 1
+    // slot, through it, and out the other side. Spawn cells are scrambled
+    // (ADR-0030), so find a release that lands in the last column rather than
+    // assuming release GRID_W - 1 does, as the row-fill order used to.
+    let release = 0
+    while (Math.floor(spawnPointFor(release, f).x) !== GRID_W - 1) release += 1
+    ;(s.lanes[0] as { released: number }).released = release
     s = tick(s, [send(RUNNER)])
     expect(Math.floor(s.lanes[0]!.creeps.x[0] as number)).toBe(GRID_W - 1)
     // Unkillable: the wall's towers shoot, and this is a test of the route.
