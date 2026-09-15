@@ -1,5 +1,5 @@
 import { TowerKind, CreepArchetypeKind } from '@ltw/sim'
-import { Budget, crowdGain, place, pitch, arpeggio, CHORDS, MOTIF, BPM, BEATS_PER_CHORD } from './mixer'
+import { Budget, crowdGain, place, pitch } from './mixer'
 import { seeded } from '../render/textures'
 
 /**
@@ -13,7 +13,7 @@ import { seeded } from '../render/textures'
  * is all synthesis:
  *
  *   - everything sits in a hall. One convolution reverb with a synthesised
- *     impulse, fed by per-bus sends: a little on effects, a lot on music.
+ *     impulse, fed by a send from the effects bus.
  *   - a hit is three layers: a click, a body with real low end, a tail. A
  *     mortar is a crack, a sub thump and a second of falling rumble, not a
  *     sine sweep.
@@ -22,9 +22,10 @@ import { seeded } from '../render/textures'
  *     would carry.
  *   - nothing repeats exactly. Every event is pitch-varied a few percent, the
  *     way a sound bank with five variants would play.
- *   - the music is orchestral pastiche at a march's pace: detuned string
- *     swells, a formant choir, harp arpeggios on the chord, a solemn horn
- *     line, timpani on the changes when the field is busy.
+ *   - there is no music and no ambience. A bed was tried twice -- a slow
+ *     orchestral march, then a war march with drums and horns -- and both
+ *     were cut: a synthesised loop wears thin over a long match in a way an
+ *     event sound never does. The field is silent until something happens.
  *
  * Events arrive from the scene, which already infers shots, hits, deaths and
  * leaks by comparing two ticks (ADR-0015). Nothing here reads sim state.
@@ -39,10 +40,6 @@ export interface Audio {
   start(): void
   /** Where the camera is looking and how wide the frame is, in world units. */
   setListener(x: number, z: number, halfWidth: number): void
-  /** How busy the field is, 0..1. Drives the bed and the ambience. */
-  setIntensity(v: number): void
-  /** Advance the music scheduler. Once a frame is fine; it looks ahead. */
-  update(): void
   setMuted(muted: boolean): void
   readonly muted: boolean
   /** 0..1, applied before the master compressor. */
@@ -66,9 +63,8 @@ export interface Audio {
   matchEnd(won: boolean): void
 }
 
-/** The key everything sits in: A. The pad's root an octave below the horn. */
+/** The key the pitched sounds sit in: A. */
 const ROOT = 110
-const BEAT = 60 / BPM
 
 type Ctx = AudioContext
 
@@ -81,8 +77,6 @@ export function createAudio(): Audio {
   let ctx: Ctx | null = null
   let master: GainNode | null = null
   let sfx: GainNode | null = null
-  let music: GainNode | null = null
-  let ambience: GainNode | null = null
   let reverbIn: GainNode | null = null
   let noiseBuffer: AudioBuffer | null = null
   let muted = false
@@ -92,7 +86,6 @@ export function createAudio(): Audio {
   let lz = 0
   let halfW = 12
   const placed = { pan: 0, gain: 1 }
-  let intensityNow = 0
 
   const budgets = {
     shot: [new Budget(70, 10), new Budget(160, 5), new Budget(90, 8)],
@@ -171,8 +164,6 @@ export function createAudio(): Audio {
       return g
     }
     sfx = bus(0.85, 0.28)
-    music = bus(0.5, 0.55)
-    ambience = bus(0.45, 0.2)
 
     // Two seconds of noise, reused by every noisy sound.
     const len = ctx.sampleRate * 2
@@ -180,9 +171,6 @@ export function createAudio(): Audio {
     const data = noiseBuffer.getChannelData(0)
     const r = seeded(3)
     for (let i = 0; i < len; i++) data[i] = r() * 2 - 1
-
-    startBed()
-    startAmbience()
 
     const resume = (): void => {
       if (ctx && ctx.state === 'suspended') void ctx.resume()
@@ -638,246 +626,6 @@ export function createAudio(): Audio {
     }
   }
 
-  // ---- the bed ------------------------------------------------------------
-  //
-  // Strings: six detuned saws in two octaves under a slow lowpass. A choir:
-  // two saws through a pair of formant filters on an "ah". Both glide to the
-  // next chord every two bars. Over them, scheduled a bar ahead of the clock
-  // from `update()`: a harp arpeggiating the chord, a horn carrying the
-  // phrase every other turn of the cycle, timpani on the changes when the
-  // field is busy.
-
-  let stringVoices: OscillatorNode[] = []
-  let choirVoices: OscillatorNode[] = []
-  let stringFilter: BiquadFilterNode | null = null
-  let stringGain: GainNode | null = null
-  let choirGain: GainNode | null = null
-  let chordIndex = 0
-  let beatIndex = 0
-  let nextBeatAt = 0
-  let motifStep = 0
-  let motifRemaining = 0
-  let motifCycle = 0
-  let nextBirdAt = 0
-  let windGain: GainNode | null = null
-
-  function startBed(): void {
-    if (!ctx || !music) return
-    const c = ctx
-    // Strings.
-    stringGain = c.createGain()
-    stringGain.gain.value = 0.0001
-    stringFilter = c.createBiquadFilter()
-    stringFilter.type = 'lowpass'
-    stringFilter.frequency.value = 900
-    stringFilter.Q.value = 1.1
-    stringGain.connect(stringFilter)
-    stringFilter.connect(music)
-    const swell = c.createOscillator()
-    swell.frequency.value = 0.045
-    const swellDepth = c.createGain()
-    swellDepth.gain.value = 260
-    swell.connect(swellDepth)
-    swellDepth.connect(stringFilter.frequency)
-    swell.start()
-
-    const chord = CHORDS[0] as readonly number[]
-    stringVoices = []
-    chord.forEach((s, i) => {
-      // Two voices per chord tone, detuned against each other: a section,
-      // not a soloist. The bass gets one, an octave down.
-      const voices = i === 0 ? 1 : 2
-      for (let k = 0; k < voices; k++) {
-        const o = c.createOscillator()
-        o.type = 'sawtooth'
-        o.frequency.value = pitch(i === 0 ? ROOT * 0.5 : ROOT, s)
-        o.detune.value = (k === 0 ? 1 : -1) * (5 + i * 1.5)
-        const g = c.createGain()
-        g.gain.value = i === 0 ? 0.5 : 0.28
-        o.connect(g)
-        g.connect(stringGain as GainNode)
-        o.start()
-        stringVoices.push(o)
-      }
-    })
-    stringGain.gain.setTargetAtTime(0.11, c.currentTime, 3)
-
-    // Choir: saws through two formant bandpasses -- an open "ah" -- swelling
-    // slowly, an octave above the strings' middle.
-    choirGain = c.createGain()
-    choirGain.gain.value = 0.0001
-    const f1 = c.createBiquadFilter()
-    f1.type = 'bandpass'
-    f1.frequency.value = 720
-    f1.Q.value = 6
-    const f2 = c.createBiquadFilter()
-    f2.type = 'bandpass'
-    f2.frequency.value = 1180
-    f2.Q.value = 8
-    const mix = c.createGain()
-    mix.gain.value = 1
-    f1.connect(mix)
-    f2.connect(mix)
-    mix.connect(choirGain)
-    choirGain.connect(music)
-    const breath = c.createOscillator()
-    breath.frequency.value = 0.09
-    const breathDepth = c.createGain()
-    breathDepth.gain.value = 0.05
-    breath.connect(breathDepth)
-    breathDepth.connect(choirGain.gain)
-    breath.start()
-    choirVoices = []
-    for (const idx of [2, 3]) {
-      const o = c.createOscillator()
-      o.type = 'sawtooth'
-      o.frequency.value = pitch(ROOT, chord[idx] as number)
-      const vib = c.createOscillator()
-      vib.frequency.value = 5.5
-      const vibDepth = c.createGain()
-      vibDepth.gain.value = 9
-      vib.connect(vibDepth)
-      vibDepth.connect(o.detune)
-      vib.start()
-      o.connect(f1)
-      o.connect(f2)
-      o.start()
-      choirVoices.push(o)
-    }
-    choirGain.gain.setTargetAtTime(0.09, c.currentTime, 6)
-
-    nextBeatAt = c.currentTime + 1.0
-    beatIndex = 0
-    chordIndex = 0
-    motifStep = 0
-    motifRemaining = 0
-    motifCycle = 0
-  }
-
-  function startAmbience(): void {
-    if (!ctx || !ambience || !noiseBuffer) return
-    const c = ctx
-    // Wind: low noise under a slowly moving lowpass, and a very low rumble
-    // under that -- the room tone every Warcraft map has.
-    const src = c.createBufferSource()
-    src.buffer = noiseBuffer
-    src.loop = true
-    const f = c.createBiquadFilter()
-    f.type = 'lowpass'
-    f.frequency.value = 340
-    f.Q.value = 0.6
-    windGain = c.createGain()
-    windGain.gain.value = 0.0001
-    src.connect(f)
-    f.connect(windGain)
-    windGain.connect(ambience)
-    const lfo = c.createOscillator()
-    lfo.frequency.value = 0.05
-    const lfoGain = c.createGain()
-    lfoGain.gain.value = 160
-    lfo.connect(lfoGain)
-    lfoGain.connect(f.frequency)
-    lfo.start()
-    src.start()
-    windGain.gain.setTargetAtTime(0.14, c.currentTime, 3)
-    nextBirdAt = c.currentTime + 2
-  }
-
-  function bird(at: number): void {
-    if (!ctx || !ambience) return
-    // Two or three quick chirps with a warble, far off to one side.
-    const pan = (rnd() - 0.5) * 1.6
-    const base = 2300 + rnd() * 1400
-    const n = 2 + Math.floor(rnd() * 2)
-    for (let i = 0; i < n; i++) {
-      tone({ type: 'sine', f0: base, f1: base * 1.3, dur: 0.1, gain: 0.05, attack: 0.01, vibrato: [60, 30], pan, bus: ambience, at: at + i * 0.14 })
-    }
-  }
-
-  /** One beat of the score, scheduled at `at`. */
-  function beat(at: number): void {
-    if (!ctx || !music) return
-    const chord = CHORDS[chordIndex] as readonly number[]
-    const beatInChord = beatIndex % BEATS_PER_CHORD
-
-    // The change: glide strings and choir, and a timpani when it is a fight.
-    if (beatInChord === 0) {
-      let v = 0
-      chord.forEach((s, i) => {
-        const voices = i === 0 ? 1 : 2
-        for (let k = 0; k < voices; k++) {
-          const o = stringVoices[v++]
-          if (o) o.frequency.setTargetAtTime(pitch(i === 0 ? ROOT * 0.5 : ROOT, s), at, 0.5)
-        }
-      })
-      choirVoices.forEach((o, i) => o.frequency.setTargetAtTime(pitch(ROOT, chord[i + 2] as number), at, 0.7))
-      if (intensityNow > 0.3) timpani(pitch(ROOT * 0.5, chord[0] as number), 0.25 + intensityNow * 0.3, at, music)
-    }
-
-    // Harp: the chord, up and down, one note a beat, with the odd rest so it
-    // breathes. Louder over a quiet field, where it is the foreground.
-    if (rnd() > 0.18) {
-      const s = arpeggio(chord, beatInChord)
-      const f = pitch(ROOT * 2, s)
-      const g = 0.11 * (1 - intensityNow * 0.5)
-      tone({ type: 'triangle', f0: f, dur: 1.3, gain: g, attack: 0.003, lowpass: 3200, pan: (rnd() - 0.5) * 0.7, bus: music, at })
-      tone({ type: 'sine', f0: f * 2, dur: 0.6, gain: g * 0.35, attack: 0.003, bus: music, at })
-      noise({ dur: 0.012, gain: g * 0.5, attack: 0.001, filter: 'highpass', f0: 3000, bus: music, at })
-    }
-
-    // The horn phrase, every other turn of the cycle, quieter under a fight
-    // where the drums have the floor.
-    if (motifCycle % 2 === 1) {
-      if (motifRemaining <= 0 && motifStep < MOTIF.length) {
-        const [s, beats] = MOTIF[motifStep] as readonly [number | null, number]
-        if (s !== null) horn(pitch(ROOT * 2, s), beats * BEAT * 0.95, 0.09 * (1 - intensityNow * 0.4), 0.1, at, music)
-        motifRemaining = beats
-        motifStep += 1
-      }
-      motifRemaining -= 1
-    }
-
-    // War drums under pressure: a low drum on the strong beats, a rim on the
-    // weak ones, building with the field.
-    if (intensityNow > 0.2) {
-      const g = (intensityNow - 0.2) * 0.35
-      if (beatIndex % 2 === 0) {
-        tone({ type: 'sine', f0: 100, f1: 40, dur: 0.3, gain: g, attack: 0.003, bus: music, at })
-        noise({ dur: 0.05, gain: g * 0.6, attack: 0.001, filter: 'lowpass', f0: 700, bus: music, at })
-      } else {
-        noise({ dur: 0.035, gain: g * 0.35, attack: 0.001, filter: 'bandpass', f0: 2200, q: 2, bus: music, at })
-      }
-    }
-
-    beatIndex += 1
-    if (beatIndex % BEATS_PER_CHORD === 0) {
-      chordIndex = (chordIndex + 1) % CHORDS.length
-      if (chordIndex === 0) {
-        motifCycle += 1
-        motifStep = 0
-        motifRemaining = 0
-      }
-    }
-  }
-
-  function update(): void {
-    if (!ctx || !music) return
-    const now = ctx.currentTime
-    const ahead = now + BEAT
-    while (nextBeatAt < ahead) {
-      beat(nextBeatAt)
-      nextBeatAt += BEAT
-    }
-    while (nextBirdAt < ahead) {
-      if (intensityNow < 0.3) bird(nextBirdAt)
-      nextBirdAt += 3 + rnd() * 7
-    }
-    // The strings open up and the choir steps back as the fight builds.
-    if (stringFilter) stringFilter.frequency.setTargetAtTime(800 + intensityNow * 1400, now, 1.5)
-    if (choirGain) choirGain.gain.setTargetAtTime(0.09 * (1 - intensityNow * 0.6), now, 2)
-    if (windGain) windGain.gain.setTargetAtTime(0.14 - intensityNow * 0.08, now, 2)
-  }
-
   return {
     start,
     setListener: (x, z, half) => {
@@ -885,10 +633,6 @@ export function createAudio(): Audio {
       lz = z
       halfW = half
     },
-    setIntensity: (v) => {
-      intensityNow = v
-    },
-    update,
     setMuted: (m) => {
       muted = m
       applyMaster()

@@ -68,7 +68,6 @@ import { glowTexture, ringTexture, puffTexture, chevronTexture } from './render/
 import { SpritePool, ProjectilePool, CorpsePool } from './render/effects'
 import { HealthBars } from './render/bars'
 import { renderIcon } from './render/icons'
-import { intensity } from './audio/mixer'
 import { createAudio, type Audio } from './audio/audio'
 import { AssetLayer } from './assets/layer'
 import type { AssetRegistry } from './assets/registry'
@@ -1774,8 +1773,6 @@ const scratchV = new THREE.Vector3()
         rig.distance * Math.tan((rig.fovDeg * Math.PI) / 360) * camera.aspect,
       )
       fileSfx?.setListener(scratchV.x, rig.distance * Math.tan((rig.fovDeg * Math.PI) / 360) * camera.aspect)
-      audio.setIntensity(intensity((state.lanes[me()] as Lane).creeps.count))
-      audio.update()
       renderer.render(scene, camera)
   }
 }
