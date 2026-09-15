@@ -338,6 +338,46 @@ const DEFAULT_COUNTER_PICK: CounterPick = 'model'
  * 0.2/0.3/0.5, 0.2/0.3/0.6, 0.2/0.5/0.6, 0.3/0.5/0.6. Shipped: 0.2 / 0.3 /
  * 0.6, the one whose labels stay true -- normal still builds more than it
  * sends, hard sends more than it builds -- with the widest spread.
+ *
+ * Scattered spawns (ADR-0030) reshuffled it again the same day, and normal
+ * started beating hard. Same sweep, both seats, 60,000-tick ceiling as the
+ * ladder test; every match decided and no pairing split by seat:
+ *
+ *   template 0 (shipped)   beats                  loses to
+ *     0.2                  0.5                    0.3 0.4 0.6 0.75
+ *     0.3                  0.2 0.6                0.4 0.5 0.75
+ *     0.4                  0.2 0.3 0.5 0.6        0.75
+ *     0.5                  0.3 0.75               0.2 0.4 0.6
+ *     0.6                  0.2 0.5 0.75           0.3 0.4
+ *     0.75                 0.2 0.3 0.4            0.5 0.6
+ *
+ * 0.3 now beats 0.6. The rising triples that order are 0.2/0.3/0.4,
+ * 0.2/0.3/0.75, 0.2/0.4/0.75 and 0.3/0.4/0.75, and 0.75 is no use as a
+ * preset: it orders the ladder, but its own mirror is a double knockout in
+ * 1.5 minutes, under the two-minute floor in match.test.ts. So the sweep was
+ * redone at 0.05 steps, mirrors included, and filtered by every pin in that
+ * file (the ladder from both seats, the winner on 5+ lives, each mirror a draw
+ * of 2 to 25 minutes at 60+ sends a minute, peak creeps under 3,000):
+ *
+ *   ratio   beats (both seats)             mirror minutes
+ *     0.2   0.5 0.55 0.65                      20.2
+ *     0.25  0.2 0.3 0.35 0.45 0.6 0.65         20.9
+ *     0.3   0.2 0.35 0.45 0.6                  21.7
+ *     0.35  0.2 0.5 0.65                       20.8
+ *     0.4   0.2 0.25 0.3 0.35 0.45 0.5 0.6     21.3
+ *     0.45  0.2 0.35 0.5 0.55 0.6 0.75         22.9
+ *     0.5   0.25 0.3 0.75                      22.2
+ *     0.55  0.25 0.3 0.35 0.4 0.5 0.6 0.75     19.8
+ *     0.6   0.2 0.35 0.5 0.65 0.75             22.7
+ *     0.65  0.3 0.4 0.45 0.5 0.55 0.75         17.1
+ *     0.75  0.2 0.25 0.3 0.35 0.4               1.5
+ *
+ * Rising triples with true labels that pass every pin: 0.2/0.35/0.6,
+ * 0.25/0.4/0.55, 0.3/0.4/0.55, 0.3/0.4/0.65 and 0.35/0.4/0.55, each won 20
+ * lives to 0 on every rung. Shipped: 0.2 / 0.35 / 0.6, the widest spread and
+ * the smallest step from what shipped -- only normal moves, 0.3 to 0.35.
+ * The closest any preset comes to a pin is the easy mirror, at 64 sends a
+ * minute per seat against the floor of 60.
  */
 /**
  * Template 0, the half-slot serpentine with a two-row corridor (maze.ts).
@@ -365,7 +405,7 @@ const DEFAULT_COUNTER_PICK: CounterPick = 'model'
  * after the next balance rule without re-writing it.
  */
 export const BOT_EASY: BotConfig = { sendRatio: 0.2, reactionTicks: 10, template: 0 }
-export const BOT_NORMAL: BotConfig = { sendRatio: 0.3, reactionTicks: 10, template: 0 }
+export const BOT_NORMAL: BotConfig = { sendRatio: 0.35, reactionTicks: 10, template: 0 }
 export const BOT_HARD: BotConfig = { sendRatio: 0.6, reactionTicks: 10, template: 0 }
 
 /**
