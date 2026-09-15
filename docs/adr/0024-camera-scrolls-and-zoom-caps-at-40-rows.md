@@ -1,7 +1,7 @@
 # ADR-0024 — The camera scrolls the lane, zoom caps at 40 rows, and a minimap shows the rest
 
 - **Date:** 2026-09-13
-- **Status:** Accepted — implemented 2026-09-13 (issues #44, #45); the 20-row default and the input bindings remain `[proposed]`
+- **Status:** Accepted — implemented 2026-09-13 (issues #44, #45); the input bindings remain `[proposed]`. The default moved from 20 rows to 30 on 2026-09-15, confirmed by play on the 100-row lane (ADR-0027): 20 opened too close.
 
 ## Context
 
@@ -25,7 +25,8 @@ At 1080p a row is 27 px at 40 rows and 18 px at 60. A 2-tile tower is therefore 
 ## Decision
 
 - **Maximum zoom-out shows 40 rows.** About five screens per lane at full zoom-out.
-- **Default framing shows 20 rows `[proposed]`**, about ten screens per lane.
+- **Default framing shows 20 rows `[proposed]`**, about ten screens per lane. *(Moved to 30
+  on 2026-09-15; see Status.)*
 - **Portrait is width-bound.** On a 390×844 viewport 20 rows shows 9 tiles, less than a
   lane, so the default there fits the lane's 16 tiles instead (about 35 rows). 40 rows shows
   18 tiles, one lane with 2 to spare, so the cap holds on phones.

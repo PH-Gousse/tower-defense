@@ -30,11 +30,13 @@ import { DEFAULT_ROWS_IN_VIEW } from './render/CameraRig'
  * `MIN_VIEW_ASPECT`, derived from the lane constants so a geometry change
  * moves it rather than quietly invalidating a tuned number.
  *
- * Why a strip of the other lane rather than all of it: both lanes with margin
- * are 38 tiles across against 20 rows, an aspect of 1.9, which no common
- * screen reaches once any chrome is subtracted. Insisting on it would send
- * every laptop to bars for a view they cannot have anyway. Panning and the
- * lane-swap hotkey are how the opponent's maze is read (ADR-0024, ADR-0029).
+ * Why a strip of the other lane rather than all of it: the rule was set when
+ * the default was 20 rows, where both lanes with margin (40 tiles at 17 wide)
+ * needed an aspect of 2.0 that no common screen reaches once chrome is
+ * subtracted. At 30 rows that aspect is 1.33 and a wide screen does show both
+ * lanes, but the rule still asks only for the strip, so a laptop keeps its
+ * rails. Panning and the lane-swap hotkey are how the opponent's maze is read
+ * (ADR-0024, ADR-0029).
  */
 
 /** Gap between the two lanes, in tiles. The camera and the layout must agree. */

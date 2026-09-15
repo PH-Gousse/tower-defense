@@ -157,20 +157,24 @@ export const DEFAULT_PITCH_DEG = 70
 /**
  * How much of the lane is in frame, in rows (ADR-0024).
  *
- * The lane is 213 rows and no framing that shows it all is readable, so the
- * camera SCROLLS and the zoom is stated in rows rather than in distance:
- * `MAX_ROWS_IN_VIEW` is the furthest out the player may go, about five screens
- * per lane; `DEFAULT_ROWS_IN_VIEW` is where a match opens, about ten. At 40
- * rows on a 1080p screen a row is 27px, so a 2x2 tower is a readable shape and
- * a creep a clear dot; at 60 they were judged colour rather than shape. The
- * numbers were reasoned from the rig's own factors rather than rendered, which
- * is why the default is still `[proposed]`.
+ * No framing that shows the whole lane is readable, so the camera SCROLLS and
+ * the zoom is stated in rows rather than in distance: `MAX_ROWS_IN_VIEW` is
+ * the furthest out the player may go; `DEFAULT_ROWS_IN_VIEW` is where a match
+ * opens. At 40 rows on a 1080p screen a row is 27px, so a 2x2 tower is a
+ * readable shape and a creep a clear dot; at 60 they were judged colour rather
+ * than shape.
  *
- * Portrait is width-bound: 20 rows on a 390x844 phone shows nine tiles of a
- * sixteen-wide lane, so `frameRows` backs off until the lane fits across.
+ * The default was 20, reasoned from the rig's factors when the lane was 213
+ * rows. Played on the 100-row lane it opened far too close -- a tower filled
+ * 108px and the maze around it was off-screen -- so it moved to 30, halfway to
+ * the cap, which leaves the player room to zoom out further.
+ *
+ * Portrait is width-bound: 30 rows on a 390x844 phone shows about thirteen
+ * tiles of a seventeen-wide lane, so `frameRows` backs off until the lane fits
+ * across. A taller tablet already holds the lane at 30 rows and is not.
  */
 export const MAX_ROWS_IN_VIEW = 40
-export const DEFAULT_ROWS_IN_VIEW = 20
+export const DEFAULT_ROWS_IN_VIEW = 30
 
 function factors(pitchRad: number, fovRad: number) {
   const t = Math.tan(fovRad / 2)

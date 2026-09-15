@@ -241,9 +241,10 @@ for both players.** `[confirmed]`
 - **Warcraft 3-style:** a real 3D scene, fixed high-angle perspective camera, **fixed yaw,
   zoom and pan only.** `[confirmed]`
 - **The camera scrolls the lane; it never shows all of it.** Zoom is stated in rows in
-  frame: at most **40 rows**, and a match opens on **20 `[proposed]`** with the top of your
-  lane at the top of the view. Portrait viewports are width-bound: the framing backs off
-  until your whole lane fits across, which lands near 35 rows on a phone. `[confirmed]`
+  frame: at most **40 rows**, and a match opens on **30 `[confirmed]`** 2026-09-15 (20 opened
+  too close on the 100-row lane) with the top of your lane at the top of the view. A viewport
+  too narrow to show your whole lane across at 30 rows backs off until it fits, which on a
+  phone runs into the 40-row cap. `[confirmed]`
   ([ADR-0024](adr/0024-camera-scrolls-and-zoom-caps-at-40-rows.md))
 - Pan along the lane is the primary input: drag (any button, one finger on touch), arrow
   keys, edge scroll inside the usable area, and **Shift + wheel `[proposed]`**; a sideways

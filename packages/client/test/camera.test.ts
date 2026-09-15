@@ -499,7 +499,7 @@ describe('rows in frame', () => {
     expect(DEFAULT_MAX_DISTANCE).toBeGreaterThan(110)
     expect(DEFAULT_MAX_DISTANCE).toBeLessThan(125)
     expect(MAX_ROWS_IN_VIEW).toBe(40)
-    expect(DEFAULT_ROWS_IN_VIEW).toBe(20)
+    expect(DEFAULT_ROWS_IN_VIEW).toBe(30)
   })
 
   it('is linear in rows, so half the rows is half the distance', () => {
@@ -538,20 +538,23 @@ describe('rows in frame', () => {
     }
   })
 
-  it('is width-bound in portrait, and still inside the zoom cap', () => {
-    // 20 rows on a phone shows nine tiles of a seventeen-wide lane, so the
-    // framing backs off until the lane fits; ADR-0024 said that lands near
-    // 35 rows for 16 wide, and at 17 wide (ADR-0027) a 390-wide phone runs
-    // into the 40-row cap with the lane in frame and its margin not.
+  it('backs off in portrait only where the lane does not fit, and stays inside the zoom cap', () => {
+    // 30 rows on a phone shows about thirteen tiles of a seventeen-wide lane,
+    // so the framing backs off until the lane fits, and a 390-wide phone runs
+    // into the 40-row cap with the lane in frame and its margin not. An
+    // 820x1180 tablet already holds the lane at 30 rows and opens on them; at
+    // the old 20-row default it was width-bound too.
     for (const [name, w, h] of VIEWPORTS) {
       if (h <= w) continue
       const f = frameAs(w, h, DEFAULT_ROWS_IN_VIEW, GRID_W / 2)
-      expect(f.bound, name).toBe('width')
       const atCap = f.distance >= DEFAULT_MAX_DISTANCE - 1e-9
       expect(f.tilesAcross, name).toBeGreaterThanOrEqual((atCap ? GRID_W : GRID_W + 2) - 0.01)
       expect(f.rows, name).toBeLessThanOrEqual(MAX_ROWS_IN_VIEW)
-      expect(f.rows, name).toBeGreaterThan(DEFAULT_ROWS_IN_VIEW)
+      if (f.bound === 'width') expect(f.rows, name).toBeGreaterThan(DEFAULT_ROWS_IN_VIEW)
+      else expect(f.rows, name).toBeCloseTo(DEFAULT_ROWS_IN_VIEW, 6)
     }
+    expect(frameAs(390, 844, DEFAULT_ROWS_IN_VIEW, GRID_W / 2).bound).toBe('width')
+    expect(frameAs(820, 1180, DEFAULT_ROWS_IN_VIEW, GRID_W / 2).bound).toBe('rows')
   })
 
   it('shows at least one lane at the zoom cap on a phone', () => {

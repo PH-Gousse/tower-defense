@@ -56,8 +56,10 @@ describe('railWidth', () => {
     // Two rules can send a viewport to bars and it matters which one fires. The
     // orientation check (`viewH > viewW`) passes square through as landscape --
     // so `maxRail` is consulted and answers honestly that a square screen has
-    // nothing spare: its aspect is below the view's own.
-    expect(maxRail(900, 900)).toBe(0)
+    // too little spare to hold a rail: at 30 rows the view's own aspect is
+    // 0.83, which leaves 75px a side, under RAIL_MIN.
+    expect(maxRail(900, 900)).toBeGreaterThan(0)
+    expect(maxRail(900, 900)).toBeLessThan(RAIL_MIN)
     expect(railWidth(900, 900)).toBe(0)
   })
 
@@ -78,9 +80,11 @@ describe('railWidth', () => {
   })
 
   it('gives a laptop rails, but not the whole RAIL_MAX', () => {
-    // 1456x830 is not wide enough to spend 300px a side and still show the
-    // view: the rail shrinks to what is free, and stays above RAIL_MIN.
-    const rail = railWidth(1456, 830)
+    // 1280x800 is not wide enough to spend 300px a side and still show the
+    // view: the rail shrinks to what is free, and stays above RAIL_MIN. (This
+    // was 1456x830 at a 20-row default; at 30 rows that laptop has the room for
+    // the whole RAIL_MAX.)
+    const rail = railWidth(1280, 800)
     expect(rail).toBeGreaterThan(0)
     expect(rail).toBeLessThan(RAIL_MAX)
     expect(rail).toBeGreaterThanOrEqual(RAIL_MIN)
