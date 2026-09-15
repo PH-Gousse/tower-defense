@@ -14,8 +14,8 @@ withoutBuildPhase()
  *
  * ADR-0019 puts up to 800 towers and hundreds of creeps in a lane, and the
  * spatial hash exists so that targeting does not go quadratic there. This
- * builds the board the brief names -- a full maze of 400 towers and 500
- * creeps -- and measures a tick against the 50 ms budget with room to spare
+ * builds the board the brief names -- a full maze of towers and 500 creeps --
+ * and measures a tick against the 50 ms budget with room to spare
  * for the renderer, which shares the frame.
  *
  * Generous on purpose: CI machines are slow and noisy, and a flaky budget test
@@ -23,6 +23,13 @@ withoutBuildPhase()
  * over two hundred ticks; a regression that mattered would be several times
  * that, not a few percent.
  */
+/**
+ * Towers a lane holds once the serpentine is built and every remaining legal
+ * anchor is taken. Pinned rather than computed so that a geometry or rule
+ * change that moves it is noticed here, not hidden by the fill.
+ */
+const FULL_LANE = 280
+
 describe('tick budget', () => {
   function fullMaze(): GameState {
     const s = createState()
@@ -30,26 +37,26 @@ describe('tick budget', () => {
     const tiles = templateAt(1).tiles
     let placed = 0
     const kindFor = (i: number) => (i % 5 === 3 ? TowerKind.Splash : i % 5 === 4 ? TowerKind.Slow : TowerKind.Single)
-    for (let i = 0; i < tiles.length && placed < 400; i++) {
+    for (let i = 0; i < tiles.length; i++) {
       const t = tiles[i]!
       place(s, 0, t.x, t.y, kindFor(i), 1 + (i % 3))
       placed += 1
     }
-    // The tight half-slot serpentine fills the lane at 320 towers. The rest
-    // go into its pockets -- the dead space behind each plug -- which is
-    // where a player's extra towers end up too: they shoot, they do not maze.
-    for (let ay = R; placed < 400 && ay + TOWER_SIZE - 1 <= BUILD_ROW_MAX; ay++) {
-      for (let ax = 0; placed < 400 && ax + TOWER_SIZE <= GRID_W; ax++) {
+    // The tight half-slot serpentine fills the lane. The rest go into its
+    // pockets -- the dead space behind each plug -- which is where a player's
+    // extra towers end up too: they shoot, they do not maze.
+    for (let ay = R; ay + TOWER_SIZE - 1 <= BUILD_ROW_MAX; ay++) {
+      for (let ax = 0; ax + TOWER_SIZE <= GRID_W; ax++) {
         if (checkBuild(s, 0, ax, ay, TowerKind.Single).refusal !== Refusal.None) continue
         place(s, 0, ax, ay, kindFor(placed), 1 + (placed % 3))
         placed += 1
       }
     }
-    expect(s.lanes[0]!.towers.count).toBe(400)
+    expect(s.lanes[0]!.towers.count).toBe(FULL_LANE)
     return s
   }
 
-  it('stays well inside the tick with 400 towers and 500 creeps', () => {
+  it('stays well inside the tick with a full lane of towers and 500 creeps', () => {
     let s = fullMaze()
     ;(s.players[1] as { gold: number }).gold = 1e9
     ;(s.players[0] as { lives: number }).lives = 1e6
@@ -67,8 +74,8 @@ describe('tick budget', () => {
     // timing below is that the crowd is still a crowd.
     expect(s.lanes[0]!.creeps.count).toBeGreaterThan(400)
 
-    // Unkillable from here: four hundred towers with a 9-tile range clear five
-    // hundred creeps inside three hundred ticks, and a budget test with no
+    // Unkillable from here: a full lane of towers with a 9-tile range clears
+    // five hundred creeps inside three hundred ticks, and a budget test with no
     // crowd left measures nothing. With the HP out of the way every tower
     // fires on every cooldown, which is the worst tick the board can produce.
     const c = s.lanes[0]!.creeps

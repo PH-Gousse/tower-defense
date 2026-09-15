@@ -21,10 +21,10 @@
  *        |     (LANE_LENGTH rows)       |   and anchor on any tile whose
  *        |                              |   footprint stays inside this area.
  *        |                              |
- * y=210  +------------------------------+
+ * y=110  +------------------------------+
  *        |          EXIT ZONE           |   EXIT_ROWS rows. A creep whose
  *        |      (3 rows, not buildable) |   position enters here has leaked.
- * y=212  +------------------------------+
+ * y=112  +------------------------------+
  *
  * Why the zones are whole rows rather than a few tiles: a creep entering or
  * leaving is then never adjacent to a wall at the moment it is being placed,
@@ -34,9 +34,10 @@
  * Length derivation, for the record (ADR-0019): the Reforged map is 160 x 128
  * terrain tiles, one terrain tile holds one tower, so a lane is 8 terrain tiles
  * = 16 creep tiles wide and the map is 256 creep tiles tall; after the border
- * and the two zones, about 200 buildable rows. Nothing in the code depends on
- * it being exactly 200 -- but every lap time scales with it, which is what
- * ADR-0025 is about.
+ * and the two zones, about 200 buildable rows. That is what shipped on
+ * 2026-09-13, and two days of play said it was far too long: the lane is
+ * half that now. Nothing in the code depends on the exact figure -- but every
+ * lap time scales with it, which is what ADR-0025 is about.
  *
  * Row-major indexing throughout: index = y * GRID_W + x. Every ordered
  * iteration in the sim breaks ties on this index, so it is load-bearing for
@@ -53,8 +54,11 @@ export const CREEP_SIZE = 1
 export const SPAWN_ROWS = 10
 /** Rows of the exit zone, at the bottom. */
 export const EXIT_ROWS = 3
-/** Buildable rows between the two zones. `[proposed]` 200 -- see ADR-0019. */
-export const LANE_LENGTH = 200
+/**
+ * Buildable rows between the two zones. `[proposed]` 100 -- see ADR-0019 for
+ * the 200 it started at and ADR-0027 for the cut to half.
+ */
+export const LANE_LENGTH = 100
 /**
  * Tiles between the two lanes when they are drawn side by side. `[proposed]`.
  * The sim never reads it -- lanes do not touch -- but it is a lane dimension,

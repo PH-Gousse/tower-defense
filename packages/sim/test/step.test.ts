@@ -122,7 +122,9 @@ describe('sends and where creeps enter', () => {
     // The wall's towers shoot. This is a test of positions, not of damage,
     // so the creeps are made unkillable after they spawn.
     for (let i = 0; i < 40; i++) s.lanes[0]!.creeps.hp[i] = 1e9
-    s = advance(s, 900)
+    // Short of a lap: a swarm that has been round once is back in the spawn
+    // zone, and "past the wall" below would be false for the wrong reason.
+    s = advance(s, Math.floor((GRID_H - SPAWN_ROWS - 1) / creepSpec(SWARM).speed))
     const c = s.lanes[0]!.creeps
     expect(c.count).toBe(40)
     const seen = new Set<string>()

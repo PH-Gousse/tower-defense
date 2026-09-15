@@ -43,7 +43,7 @@ Assets are read from the fixed high-angle camera (ADR-0014). The numbers in code
 | Field of view | 18° vertical | `DEFAULT_FOV_DEG`, `CameraRig.ts` |
 | Pitch | 70° below horizontal | `DEFAULT_PITCH_DEG` |
 | Yaw | 0, fixed; the camera looks toward −z | `CameraRig.ts` |
-| Default framing | 20 rows in frame, ≈ 59 units | `DEFAULT_ROWS_IN_VIEW`, `distanceForRows` (ADR-0024); the lane is 213 rows and the camera scrolls |
+| Default framing | 20 rows in frame, ≈ 59 units | `DEFAULT_ROWS_IN_VIEW`, `distanceForRows` (ADR-0024); the lane is 113 rows and the camera scrolls |
 | Zoom range | 16 to ≈ 118 units (5 to 40 rows) | `minDistance` in `scene.ts`, `DEFAULT_MAX_DISTANCE`, derived from `MAX_ROWS_IN_VIEW` |
 
 At the default framing on a 1080p screen a row of ground is 54 px and one world unit of
@@ -238,8 +238,8 @@ lands facing +Z in the game. The exporter applies transforms, so object transfor
 The existing procedural models in `models.ts` face **+X** and are rotated by heading in
 `scene.ts`. They are the exception, and they go away as the catalogue replaces them.
 
-The lane: a 10-row spawn zone from z = 0 (top of the screen), 200 buildable rows, and a
-3-row exit zone ending at z = 213 (bottom). World x is the lane origin plus the sim's x;
+The lane: a 10-row spawn zone from z = 0 (top of the screen), 100 buildable rows, and a
+3-row exit zone ending at z = 113 (bottom). World x is the lane origin plus the sim's x;
 world z is the sim's y. Tile assets: `tile_entrance` and `tile_exit` mark a zone's seam
 and are one tile; `tile_cursor`, `tile_blocked` and `tile_wait` are the three states of
 the 2 × 2 placement ghost (legal, refused, a creep on the footprint -- ADR-0023).

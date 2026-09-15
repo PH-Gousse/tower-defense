@@ -42,8 +42,10 @@ The **tile** is the creep tile and the only unit the sim speaks. See
 - The lane runs **vertically**: creeps enter at the top, leave at the bottom. `[confirmed]`
 - Along its length the lane has three zones, in the order creeps meet them:
   - a **spawn zone** of `SPAWN_ROWS = 10` rows, where creeps appear. Not buildable. `[confirmed]`
-  - a **buildable area** of `LANE_LENGTH` rows. **200 `[proposed]`** — nothing in the code
-    depends on the exact figure, but every lap time scales with it.
+  - a **buildable area** of `LANE_LENGTH` rows. **100 `[proposed]`** — halved from 200 on
+    2026-09-15 ([ADR-0027](adr/0027-lane-is-17-wide-and-100-rows.md)): the Warcraft
+    3-length lane was too long to play. Nothing in the code depends on the exact figure,
+    but every lap time scales with it.
   - an **exit zone** of `EXIT_ROWS = 3` rows. A creep whose position enters it has leaked.
     Not buildable. `[confirmed]`
 - Two lanes sit side by side, `LANE_GAP` tiles apart. **4 `[proposed]`**
