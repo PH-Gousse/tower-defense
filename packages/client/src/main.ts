@@ -4,7 +4,7 @@ import { holdToRepeat } from './hold'
 import { createSender } from './send'
 import { STALL_TICKS } from '@ltw/sim'
 import {
-  TowerKind, levelOf, MAX_LEVEL, TICK_HZ, MatchResult, Refusal,
+  TowerKind, ARCHETYPES, type TowerArchetype, levelOf, MAX_LEVEL, TICK_HZ, MatchResult, Refusal,
   CREEPS, tierUnlockTick, SEND_UNLOCK_TICKS, INCOME_EVERY_TICKS,
   BOT_EASY, BOT_NORMAL, BOT_HARD, type BotConfig,
 } from '@ltw/sim'
@@ -199,17 +199,16 @@ window.addEventListener('keydown', (ev) => {
 // --- build palette ---------------------------------------------------------
 
 /**
- * What a tower is called on screen.
+ * What a tower is called on screen: its archetype's `name` in towers.json.
  *
- * The sim names its archetypes by what they do -- single-target, splash, slow
- * -- which is right for a rule book and flat for a card. These are the names
- * the models were built to, and they are presentation only: nothing in the
- * sim, the protocol or the GDD reads them.
+ * This used to be a map here, because the data named archetypes by what they
+ * do (single-target, splash, slow) while the models were built as a guard
+ * tower, a mortar and a frost shrine. Two sources for one name drift on the
+ * first rename, so the data now carries the card names and this reads them.
+ * Presentation only: the sim and the protocol key towers by `TowerKind`.
  */
-const TOWER_NAME: Record<TowerKind, string> = {
-  [TowerKind.Single]: 'Guard tower',
-  [TowerKind.Splash]: 'Mortar',
-  [TowerKind.Slow]: 'Frost shrine',
+function towerName(kind: TowerKind): string {
+  return (ARCHETYPES[kind] as TowerArchetype).name
 }
 
 for (const kind of [TowerKind.Single, TowerKind.Splash, TowerKind.Slow]) {
@@ -251,7 +250,7 @@ scene.onSelect((sel: Selection | null) => {
   }
   panel.hidden = false
   const spec = levelOf(sel.tower, sel.level)
-  if (panelTitle) panelTitle.textContent = `${TOWER_NAME[sel.tower]} · Lv ${sel.level}`
+  if (panelTitle) panelTitle.textContent = `${towerName(sel.tower)} · Lv ${sel.level}`
   if (panelDamage) panelDamage.textContent = String(spec.damage)
   if (panelRange) panelRange.textContent = spec.range.toFixed(1)
   // Cooldown is in ticks; shots per second is what a player can reason about.

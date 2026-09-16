@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createState, type GameState } from '../src/state'
+import { createState, MatchResult, type GameState } from '../src/state'
 import { botCommand, BOT_NORMAL, BOT_HARD } from '../src/bot'
 import { tierUnlockTick, creepSpec } from '../src/data'
 import { MAZE_TEMPLATES, templateAt } from '../src/maze'
@@ -11,6 +11,30 @@ import { send, run, TANK, withoutBuildPhase } from './helpers'
 
 // Not a test of the opening: see withoutBuildPhase.
 withoutBuildPhase()
+
+/**
+ * Step with no commands until the tick is a bot decision tick.
+ *
+ * Bounded, and it asserts the match is still on. A finished match stops
+ * advancing the tick, so the obvious `while (tick % reactionTicks)` never
+ * exits once a leak ends the game inside the alignment window -- which is
+ * what the 2026-09-16 tower rework did to a test that sets a player to one
+ * life: the suite hung instead of failing, and a hang names no rule.
+ */
+function alignToDecision(
+  s: GameState,
+  into: GameState,
+  advance: (s: GameState, into: GameState) => GameState,
+): [GameState, GameState] {
+  for (let i = 0; i < BOT_NORMAL.reactionTicks && s.tick % BOT_NORMAL.reactionTicks !== 0; i++) {
+    const out = advance(s, into)
+    into = s
+    s = out
+  }
+  expect(s.result, 'the match ended while aligning to a decision tick').toBe(MatchResult.Playing)
+  expect(s.tick % BOT_NORMAL.reactionTicks).toBe(0)
+  return [s, into]
+}
 
 const cells = new Int32Array(FOOTPRINT_CELLS)
 function occupy(blocked: Uint8Array, ax: number, ay: number): void {
@@ -143,7 +167,7 @@ describe('bot', () => {
     expect(s.lanes[0]!.creeps.laps[0] as number).toBeGreaterThanOrEqual(1)
 
     // Align to a decision tick, then the bot must act on its own lane.
-    while (s.tick % BOT_NORMAL.reactionTicks !== 0) s = advance(s)
+    ;[s] = alignToDecision(s, s, (st) => advance(st))
     const cmds = botCommand(s, 0, BOT_NORMAL)
     // An emergency yields one tile, not a burst: a maze is placed a tile at a
     // time and the next one depends on where the last went.
@@ -235,11 +259,7 @@ describe('bot', () => {
     }
     ;(s.players[1] as { lives: number }).lives = 1
     ;(s.players[0] as { gold: number }).gold = 20_000
-    while (s.tick % BOT_NORMAL.reactionTicks !== 0) {
-      const out = step(s, [], into)
-      into = s
-      s = out
-    }
+    ;[s, into] = alignToDecision(s, into, (st, buf) => step(st, [], buf))
     const cmds = botCommand(s, 0, BOT_NORMAL)
     expect(cmds.length).toBeGreaterThan(0)
     expect(cmds.every((c) => c.kind === Kind.Send)).toBe(true)
@@ -273,11 +293,7 @@ describe('bot', () => {
     let out = step(s, flood, into)
     into = s
     s = out
-    while (s.tick % BOT_NORMAL.reactionTicks !== 0) {
-      out = step(s, [], into)
-      into = s
-      s = out
-    }
+    ;[s, into] = alignToDecision(s, into, (st, buf) => step(st, [], buf))
     ;(s.players[0] as { gold: number }).gold = 5_000
     // The opponent is out of reach of any wave this purse buys (see the
     // lethal-wave test above for why twenty lives is not), so the decision is

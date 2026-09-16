@@ -195,7 +195,13 @@ describe('towers', () => {
   })
 
   it('leaves a slowed creep behind an unslowed one', () => {
-    const slowed = run(600, { 0: [build(0, R, TowerKind.Slow, 0)], 1: [send(TANK, 1)] })
+    // Build beside the column the tank actually walks. Spawns are scattered
+    // (ADR-0030), and a shrine at x = 0 only reached this tank while ranges were
+    // 6.75 tiles; at the 2026-09-16 rework's 5.47 it never slowed it, and both
+    // creeps finished on the identical y -- a test of the spawn table, not the slow.
+    const column = Math.floor(run(1, { 0: [send(TANK, 1)] }).lanes[0]!.creeps.x[0] as number)
+    const anchor = Math.min(Math.max(column + 1, 0), GRID_W - TOWER_SIZE)
+    const slowed = run(600, { 0: [build(anchor, R, TowerKind.Slow, 0)], 1: [send(TANK, 1)] })
     const free = run(600, { 1: [send(TANK, 1)] })
     // Down the lane is +y, so "behind" is a smaller y.
     expect(slowed.lanes[0]!.creeps.y[0] as number).toBeLessThan(
@@ -375,6 +381,45 @@ describe('data integrity', () => {
         expect(a.levels[l]!.range).toBeGreaterThanOrEqual(a.levels[l - 1]!.range)
       }
     }
+  })
+})
+
+describe('the tower rework (user, 2026-09-16)', () => {
+  // Gold is stored at x10 (see creeps.json _scaleComment), so 10 gold is 100.
+  const GOLD = 10
+  // The original's units: 64 to a creep tile (ADR-0025).
+  const UNITS_PER_TILE = 64
+  // Sixty shots a minute at 20 Hz.
+  const ONE_SHOT_A_SECOND = 20
+
+  it('prices every level-1 tower at 10 gold and fires it once a second', () => {
+    for (const kind of [TowerKind.Single, TowerKind.Splash, TowerKind.Slow]) {
+      expect(levelOf(kind, 1).cost, ARCHETYPES[kind]!.name).toBe(10 * GOLD)
+      expect(levelOf(kind, 1).cooldownTicks, ARCHETYPES[kind]!.name).toBe(ONE_SHOT_A_SECOND)
+    }
+  })
+
+  it('gives the guard tower 10 damage at range 500', () => {
+    expect(levelOf(TowerKind.Single, 1).damage).toBe(10)
+    expect(levelOf(TowerKind.Single, 1).range * UNITS_PER_TILE).toBe(500)
+  })
+
+  it('gives the mortar 20 damage at range 150: twice the guard, for the same price', () => {
+    expect(levelOf(TowerKind.Splash, 1).damage).toBe(20)
+    expect(levelOf(TowerKind.Splash, 1).range * UNITS_PER_TILE).toBe(150)
+  })
+
+  it('names the towers as the player sees them', () => {
+    expect(ARCHETYPES.map((a) => a.name)).toEqual(['Guard tower', 'Mortar', 'Frost shrine'])
+  })
+
+  it('lets a mortar reach the corridor beside its wall and nothing past it', () => {
+    // 150 units is 2.34 tiles from the footprint centre: one tile of footprint,
+    // then 1.34 tiles of reach. The user kept it knowing that; this pins the
+    // consequence so a range change cannot quietly widen it.
+    const reach = levelOf(TowerKind.Splash, 1).range - TOWER_SIZE / 2
+    expect(reach).toBeGreaterThan(1)
+    expect(reach).toBeLessThan(2)
   })
 })
 

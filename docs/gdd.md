@@ -111,9 +111,14 @@ research, no damage types. Do not copy Warcraft 3's tower or tech system.** `[co
 
 | Archetype | Answers | Shape | Status |
 |---|---|---|---|
-| Single-target | tanks | high damage, long range | `[confirmed]` |
-| Splash | swarms | area damage, short range | `[confirmed]` |
-| Slow | runners | low damage, applies a movement slow | `[confirmed]` |
+| Guard tower (single-target) | tanks | single target, long range | `[confirmed]` |
+| Mortar (splash) | swarms | area damage, very short range, twice the guard's damage for the same price | `[confirmed]` 2026-09-16 |
+| Frost shrine (slow) | runners | low damage, applies a movement slow | `[confirmed]` |
+
+**All three cost the same at level 1 and fire once a second** `[confirmed]` 2026-09-16 (user):
+Guard tower 10 gold, 10 damage, range 500; Mortar 10 gold, 20 damage, range 150. Ranges are
+given in the original's units, 64 to a creep tile (ADR-0025). The Frost shrine's numbers were
+inferred from those two and are `[proposed]`. On-screen names come from `towers.json`.
 
 - **Selling refunds a fraction of total gold sunk in** (base + upgrades), floored.
   `[confirmed]` that it is a fraction of the invested total; the **fraction itself is
@@ -343,23 +348,30 @@ hashed as a 32-bit integer, so sub-unit prices are unavailable at any scale.
 
 | Archetype | Lvl | Cost | Damage | Range | Cooldown | Extra |
 |---|---|---|---|---|---|---|
-| Single-target | 1 | 600 | 30 | 9.00 | 25 t | |
-| | 2 | 900 | 55 | 9.75 | 24 t | |
-| | 3 | 1 400 | 84 | 10.50 | 22 t | |
-| Splash | 1 | 1 100 | 12 | 4.50 | 12 t | splash radius 1.8 (was 3.6; second retune 2026-09-14, #12) |
-| | 2 | 1 600 | 20 | 5.10 | 12 t | |
-| | 3 | 2 400 | 32 | 5.70 | 11 t | |
-| Slow | 1 | 800 | 4 | 6.75 | 10 t | slow 30%, 20 t |
-| | 2 | 1 200 | 6 | 7.20 | 10 t | slow 40% |
-| | 3 | 1 800 | 9 | 7.80 | 10 t | slow 50% |
+| Guard tower | 1 | 100 | 10 | 7.8125 (500 u) | 20 t | level 1 `[confirmed]` 2026-09-16 |
+| | 2 | 150 | 18 | 8.4375 (540 u) | 19 t | |
+| | 3 | 230 | 27 | 9.0625 (580 u) | 18 t | |
+| Mortar | 1 | 100 | 20 | 2.34375 (150 u) | 20 t | level 1 `[confirmed]` 2026-09-16 · splash radius 1.8 (was 3.6; second retune 2026-09-14, #12) |
+| | 2 | 150 | 33 | 2.578125 (165 u) | 20 t | |
+| | 3 | 220 | 53 | 2.8125 (180 u) | 19 t | |
+| Frost shrine | 1 | 100 | 5 | 5.46875 (350 u) | 20 t | slow 30%, 20 t · inferred |
+| | 2 | 150 | 8 | 5.859375 (375 u) | 20 t | slow 40% |
+| | 3 | 220 | 12 | 6.25 (400 u) | 20 t | slow 50% |
+
+**Tower rework, 2026-09-16 (`towers.json` v7).** The user fixed level 1 of the guard tower and
+the mortar in the original's units; costs are at the ×10 gold scale, so 100 is 10 gold. Sixty
+shots a minute is a 20-tick cooldown. Levels 2–3 and the whole frost shrine follow the previous
+curves (cost about ×1.5 and ×2.2 of level 1, damage ×1.8 and ×2.7) and are `[proposed]`. At
+150 units a mortar reaches 1.34 tiles past its own footprint, which is the reach ADR-0025
+tripled ranges to escape. The user chose to keep it and measure it: the mortar's compensation
+is double damage, in an area, for the same price. A guard at 7.8 tiles reaches across the
+whole 17-wide lane. Both are open risks for `/balance`.
 
 Range is in tiles from the footprint centre, so it moves with the board. It was **halved**
 when the lane went from 40×24 horizontal to 8×24 vertical (a range-6 single-target covered
 three quarters of an 8-wide lane), and **tripled** when the lane went to 16 wide with 2×2
 towers (ADR-0025): at 1.5–3.5 tiles a tower's range was shorter than the tower, and the
-original's 600–900 units are 9–14 creep tiles. A level-1 single-target now covers a little
-over half the lane's width from a wall; a level-1 splash reaches the corridor on either
-side of its own wall and no further.
+original's 600–900 units are 9–14 creep tiles. Those ×3 figures were replaced by the 2026-09-16 rework above.
 
 The splash radius did **not** keep the ×3. A blast is an area over a crowd, and creeps do
 not collide (ADR-0021), so they pack far denser than the original's: at 3.6 tiles a

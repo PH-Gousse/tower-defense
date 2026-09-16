@@ -1,43 +1,44 @@
 {
-  "version": 6,
+  "version": 7,
   "_comment": "Step 4 values are placeholders with the right SHAPE, not tuned numbers. Tuning is step 8 and needs the harness. sellRefund is a fraction of total gold spent on the tower including upgrades. RANGES WERE HALVED when the lane went from 40 x 24 horizontal to 8 x 24 vertical: range is measured in tiles, so shrinking the board made every tower cover a far larger share of the route without a single number changing -- a range-6 single-target covered three quarters of an 8-wide lane. Before/after measurements are in the P0 in TODOS.md. version bumped to 2 because versionsMatch gates peers, and two clients whose towers deal different damage have desynced.",
   "_scaleComment": "Version 3: every cost multiplied by ten, and nothing else touched. The scale exists so creep prices can be divided by a pack size without rounding away a tenth of the card -- see the _scaleComment in creeps.json. damage, range, cooldownTicks and slowPercent are not gold and did not move, so every tower's gold-per-damage is exactly what it was and no tuning result from step 8 is invalidated. sellRefund is a fraction, so it is scale-free.",
   "_rangeComment": "Version 4: every range and the splash radius multiplied by three, and nothing else touched (ADR-0025). Range is in tiles from the footprint centre, and the tile is what changed: the lane went from 8 wide to 16 wide with 2x2 towers, so a level-1 range of 1.5 tiles was shorter than the tower it belonged to and could not reach the corridor beside its own wall. The factor is the original's units -- roughly 600-900 units on 64-unit creep tiles is 9-14 tiles, three to four times our 1.5-3.5 -- and it is the same factor the creep speeds took, so a creep crosses a range circle in exactly the ticks it did before. damage, cost and cooldownTicks did not move, so gold per damage is what it was. Nothing here has been measured on the new board; every number is [retune] until /balance has run on it. version bumped because versionsMatch gates peers.",
   "_splashComment": "Version 5: splashRadius 3.6 -> 1.8, the second retune on the 16-wide lane (issue #12). Range is a distance and converted x3 cleanly; a blast is an AREA over a crowd, and creeps here do not collide (ADR-0021), so they pack far denser than the original's and a x3 radius (x9 area) hit everything in a column at once. Measured by streaming 60,000 gold of each creep at 22 per 10 ticks into 20 level-1 towers (`pnpm --filter @ltw/harness flood` is the shape; the sweep is in reports/balance/2026-09-14.md's commit): at 3.6, swarm leaked 3,331 lives against a maze with no mortar and exactly 0 against one with a mortar in every five towers, so sending swarm was never pressure and the bot's counter-pick was a wrong belief. At 1.8, Swarm II leaks 437 against that 3:1:1 maze where a tank leaks 62, and a mortar-heavy maze still holds swarm to 0 while tanks and runners get 19 and 32 through it: each creep has a maze it beats and a maze that beats it, which is the 3x3 the design rests on. 2.4 gave 324 / 42 and 1.2 (the old, unconverted radius) 700 / 69; 1.8 is the middle that keeps the mortar-heavy maze a real answer. Still [retune] until /balance says otherwise. version bumped because versionsMatch gates peers.",
   "_acquireComment": "Version 6: acquireTicks 10, the delay between a tower first seeing a creep and its first shot (ADR-0028). Before this a tower fired on the very tick a creep entered its range, so an idle tower was a perfect sentry and a creep's first step into range was always its worst. Ten ticks is half a second at 20 Hz, [proposed] and [retune]: a runner covers about three tiles in that time, a tank about one and a half, against ranges of 4.5 to 10.5 tiles. A tower that keeps finding targets stays locked on and fires on every cooldown; it only waits again after a tick with nothing to shoot. version bumped because versionsMatch gates peers.",
+  "_reworkComment": "Version 7: the tower rework the user specified on 2026-09-16, replacing every level. The user fixed level 1 of two towers in the original's units: Guard tower 10 gold, 10 damage, range 500, 60 shots a minute; Mortar 10 gold, 20 damage, range 150, 60 shots a minute. Gold is stored x10 (the existing scale), so 10 gold is 100. 60 shots a minute at 20 Hz is a 20-tick cooldown. Range converts at 64 units per creep tile (ADR-0025): 500 is 7.8125 tiles and 150 is 2.34375, both exact binary fractions. The Frost shrine was left to us: the same 10-gold price, half the guard's damage because the slow is its value, and range 350 (5.46875), between the two and short of the guard so it is never a cheaper guard. Levels 2 and 3 follow the old curves: cost about x1.5 and x2.2 of level 1, damage x1.8 and x2.7, range +40 and +80 units. At 150 units a mortar reaches 1.34 tiles past its own 2x2 footprint -- the reach ADR-0025 tripled ranges to escape -- and the user chose to keep it and measure it: its compensation is double the guard's damage, in an area, for the same price. splashRadius, slowTicks, acquireTicks and sellRefund did not move. Every number is [proposed] [retune]. version bumped because versionsMatch gates peers.",
   "acquireTicks": 10,
   "sellRefund": 0.6,
   "archetypes": [
     {
       "key": "single",
-      "name": "Single-target",
+      "name": "Guard tower",
       "answers": "tanks",
       "levels": [
-        { "cost": 600,  "damage": 30, "range": 9.0,  "cooldownTicks": 25 },
-        { "cost": 900,  "damage": 55, "range": 9.75, "cooldownTicks": 24 },
-        { "cost": 1400, "damage": 84, "range": 10.5,  "cooldownTicks": 22 }
+        { "cost": 100, "damage": 10, "range": 7.8125, "cooldownTicks": 20 },
+        { "cost": 150, "damage": 18, "range": 8.4375, "cooldownTicks": 19 },
+        { "cost": 230, "damage": 27, "range": 9.0625, "cooldownTicks": 18 }
       ]
     },
     {
       "key": "splash",
-      "name": "Splash",
+      "name": "Mortar",
       "answers": "swarms",
       "splashRadius": 1.8,
       "levels": [
-        { "cost": 1100, "damage": 12, "range": 4.5, "cooldownTicks": 12 },
-        { "cost": 1600, "damage": 20, "range": 5.1, "cooldownTicks": 12 },
-        { "cost": 2400, "damage": 32, "range": 5.7, "cooldownTicks": 11 }
+        { "cost": 100, "damage": 20, "range": 2.34375,  "cooldownTicks": 20 },
+        { "cost": 150, "damage": 33, "range": 2.578125, "cooldownTicks": 20 },
+        { "cost": 220, "damage": 53, "range": 2.8125,   "cooldownTicks": 19 }
       ]
     },
     {
       "key": "slow",
-      "name": "Slow",
+      "name": "Frost shrine",
       "answers": "runners",
       "slowTicks": 20,
       "levels": [
-        { "cost": 800,  "damage": 4, "range": 6.75, "cooldownTicks": 10, "slowPercent": 30 },
-        { "cost": 1200, "damage": 6, "range": 7.2,  "cooldownTicks": 10, "slowPercent": 40 },
-        { "cost": 1800, "damage": 9, "range": 7.8,  "cooldownTicks": 10, "slowPercent": 50 }
+        { "cost": 100, "damage": 5,  "range": 5.46875,  "cooldownTicks": 20, "slowPercent": 30 },
+        { "cost": 150, "damage": 8,  "range": 5.859375, "cooldownTicks": 20, "slowPercent": 40 },
+        { "cost": 220, "damage": 12, "range": 6.25,     "cooldownTicks": 20, "slowPercent": 50 }
       ]
     }
   ]
