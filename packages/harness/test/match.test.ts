@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { BOT_EASY, BOT_NORMAL, BOT_HARD, MatchResult, type BotConfig } from '@ltw/sim'
+import { BOT_EASY, BOT_NORMAL, BOT_HARD, MatchResult, STARTING_INCOME, INCOME_EVERY_TICKS, type BotConfig } from '@ltw/sim'
 import { runMatch, type MatchResultSummary } from '../src/match'
 
 const LADDER: readonly [string, BotConfig][] = [
@@ -204,14 +204,30 @@ describe('the match is a contest, not a wait', () => {
       expect(minutes, `${name} mirror length`).toBeLessThan(25)
       expect(minutes, `${name} mirror length`).toBeGreaterThan(2)
       for (let p = 0; p < 2; p++) {
-        // A rate, not a count. This was "more than 500 sends", which is a
-        // count that only a long match can reach: the hard mirror at 0.75 is
-        // a 2.4-minute double knockout in which both seats send 139 times a
-        // minute, and 332 sends in 2.4 minutes is the opposite of idling.
-        // One send a second is far below every measured mirror (139-185 a
-        // minute) and far above the twenty-minutes-of-nothing bot this
-        // exists to catch.
-        expect((m.sends[p] as number) / minutes, `${name} mirror: player ${p} sends per minute`).toBeGreaterThan(60)
+        // Gold, not creeps, and a rate, not a total.
+        //
+        // A rate because this was once "more than 500 sends", a count only a
+        // long match can reach: a 2.4-minute double knockout sending 139 a
+        // minute is the opposite of idling.
+        //
+        // Gold because a count stopped measuring attack when one purchase could
+        // be a 5-gold Scrapling or a 125,000-gold Storm Drake (ADR-0031). The
+        // pin was 60 sends a minute, set when mirrors sent 139-185 of a 2-gold
+        // swarm. On the ladder the easy mirror sent 5.8 a minute -- and 1,024
+        // gold a minute, with the normal and hard mirrors at 1,498 and 1,343
+        // (measured 2026-09-16) -- while every other idle check passed. The
+        // user chose to measure gold (issue #52).
+        //
+        // Five times starting income a minute: a bot that never sends sends 0,
+        // and one that only ever spent its base income on creeps could send
+        // 1x. Measured mirrors send 25-37x. Derived from the data so an economy
+        // change moves it with the purse rather than silently turning it green
+        // or red.
+        const incomePerMinute = (STARTING_INCOME * 1200) / INCOME_EVERY_TICKS
+        expect(
+          (m.goldSent[p] as number) / minutes,
+          `${name} mirror: player ${p} gold sent per minute`,
+        ).toBeGreaterThan(5 * incomePerMinute)
       }
     }
   })
