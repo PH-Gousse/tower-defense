@@ -385,8 +385,8 @@ describe('data integrity', () => {
 })
 
 describe('the tower rework (user, 2026-09-16)', () => {
-  // Gold is stored at x10 (see creeps.json _scaleComment), so 10 gold is 100.
-  const GOLD = 10
+  // Gold is stored as the player sees it (towers.json v8).
+  const GOLD = 1
   // The original's units: 64 to a creep tile (ADR-0025).
   const UNITS_PER_TILE = 64
   // Sixty shots a minute at 20 Hz.

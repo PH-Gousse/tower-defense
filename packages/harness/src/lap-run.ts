@@ -1,3 +1,4 @@
+import { investedIn, TowerKind } from '@ltw/sim'
 import { measureLapDamage } from './lap-damage'
 
 /**
@@ -14,8 +15,9 @@ const SPEEDS = [0.055, 0.075, 0.145]
 
 console.log('\nHP needed to survive one lap\n')
 console.log('defence      cost   maze  ' + SPEEDS.map((s) => `spd ${s}`.padStart(12)).join(''))
-// Cumulative gold for a single-target tower at level 1/2/3, at the x10 scale.
-const COST = [600, 1500, 2900]
+// Cumulative gold for a guard tower at level 1/2/3, read from the data: this was
+// a literal at the old x10 scale and silently wrong after every retune.
+const COST = [1, 2, 3].map((level) => investedIn(TowerKind.Single, level))
 for (const [towers, level] of DEFENCES) {
   let line = `${towers}x L${level}`.padEnd(10)
   let cells = ''

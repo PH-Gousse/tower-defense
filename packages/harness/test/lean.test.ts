@@ -19,11 +19,11 @@ function sends(spec: Record<string, number>): number[] {
 
 describe('goldShares', () => {
   it('weighs by gold and folds the ladder into its three shapes', () => {
-    // 10 Scrapling at 50 = 500 and one Ember Imp at 500, both horde; one Bog
-    // Brute at 220, armoured (stored gold, x10).
+    // 10 Scrapling at 5 = 50 and one Ember Imp at 50, both horde; one Bog
+    // Brute at 22, armoured.
     const s = goldShares(sends({ Scrapling: 10, 'Bog Brute': 1, 'Ember Imp': 1 }))
-    expect(s.get('Horde')).toBeCloseTo(1000 / 1220, 9)
-    expect(s.get('Armoured')).toBeCloseTo(220 / 1220, 9)
+    expect(s.get('Horde')).toBeCloseTo(100 / 122, 9)
+    expect(s.get('Armoured')).toBeCloseTo(22 / 122, 9)
     expect(s.has('Scrapling')).toBe(false)
     expect(shapeOf(CreepArchetypeKind.Fast)).toBe('Fast')
   })
@@ -44,7 +44,7 @@ describe('leanAcross', () => {
   })
 
   it('flags the shape winners lean on more than losers, match after match', () => {
-    const winner = sends({ 'Iron Golem': 4, Scrapling: 10 }) // 100000 + 500: armoured-heavy
+    const winner = sends({ 'Iron Golem': 4, Scrapling: 10 }) // 10000 + 50: armoured-heavy
     const loser = sends({ Scrapling: 40 })
     const out = leanAcross(Array.from({ length: 10 }, () => ({ winner, loser })), 0.7, 0.1)
     const armoured = out.find((l) => l.archetype === 'Armoured')!

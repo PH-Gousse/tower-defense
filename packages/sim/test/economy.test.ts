@@ -10,8 +10,8 @@ import { build, upgrade, sell, send, run, tick, withGold, R, SCRAPLING, DASHER_H
 withoutBuildPhase()
 
 describe('the opening purse (user, 2026-09-16)', () => {
-  // Gold is stored at x10, so 100 gold is 1,000.
-  const GOLD = 10
+  // Gold is stored as the player sees it (creeps.json v11).
+  const GOLD = 1
 
   it('starts a match on 100 gold and 10 gold a period', () => {
     const s = createState()
@@ -87,8 +87,8 @@ describe('sending raises income', () => {
 })
 
 describe('the creep ladder (ADR-0031)', () => {
-  // Gold is stored at x10, so 5 gold is 50.
-  const GOLD = 10
+  // Gold is stored as the player sees it (creeps.json v11).
+  const GOLD = 1
 
   it("prices the first four rungs exactly as the user gave them", () => {
     const given = [

@@ -340,8 +340,8 @@ Source of truth: `packages/sim/data/towers.json`, `packages/sim/data/creeps.json
 | Constant | Value | Where | Note |
 |---|---|---|---|
 | Tick rate | 20 Hz | `step.ts` `TICK_HZ` | `[confirmed]` — a determinism invariant, not balance |
-| Starting gold | 1 000 (100 gold) | `data.ts` `STARTING_GOLD` | `[confirmed]` 2026-09-16 (user) — ten level-1 towers. Was 9 000; first retune 2026-09-14, was 6 000: a first half-slot wall is eight towers on 16 tiles (#48). A longer build phase was measured first and bought nothing, because income anchors to send-unlock |
-| Starting income | 100 (10 gold a period) | `data.ts` `STARTING_INCOME` | `[proposed]` 2026-09-16, chosen by the user in review · `[retune]` — was 250 |
+| Starting gold | 100 | `data.ts` `STARTING_GOLD` | `[confirmed]` 2026-09-16 (user) — ten level-1 towers. Was 9 000; first retune 2026-09-14, was 6 000: a first half-slot wall is eight towers on 16 tiles (#48). A longer build phase was measured first and bought nothing, because income anchors to send-unlock |
+| Starting income | 10 a period | `data.ts` `STARTING_INCOME` | `[proposed]` 2026-09-16, chosen by the user in review · `[retune]` — was 250 |
 | Starting lives | 20 | `state.ts` `STARTING_LIVES` | not in a JSON file yet; "one bad leak is a crisis with time to respond" is the intent |
 | Income interval | 300 ticks (15 s) | `state.ts` `INCOME_EVERY_TICKS` | interval `[confirmed]` on the old board, now `[retune]`: 3 to 5 payouts per bare lap instead of 1 or 2; anchor `[proposed]` |
 | Build phase | 400 ticks (20 s) | `creeps.json` `sendUnlockTicks` | `[retune]` — a 16-wide opening maze costs more than an 8-wide one |
@@ -353,26 +353,27 @@ Source of truth: `packages/sim/data/towers.json`, `packages/sim/data/creeps.json
 | Tower acquisition | 10 ticks (0.5 s) | `towers.json` `acquireTicks` | ADR-0028, 2026-09-15; the wait before a tower's first shot at a newly seen creep · `[retune]` |
 | Max tower level | 3 | `data.ts` `MAX_LEVEL` | `[confirmed]` |
 
-**Gold is scaled ×10 from the source table**, so a pack price can divide by its pack size
-without rounding away a tenth of a card, and a half-gold bounty can exist at all. Gold is
-hashed as a 32-bit integer, so sub-unit prices are unavailable at any scale.
+**Gold is stored as the player sees it** since 2026-09-16 (`towers.json` v8, `creeps.json`
+v11). It was ×10 the source table so a pack price could divide by its pack size; packs are
+gone and the ladder has no sub-gold figure, and the client shows stored gold as it is. Gold
+is hashed as a 32-bit integer, so sub-unit prices are unavailable.
 
 ### Towers (all `[proposed]` `[retune]`)
 
 | Archetype | Lvl | Cost | Damage | Range | Cooldown | Extra |
 |---|---|---|---|---|---|---|
-| Guard tower | 1 | 100 | 10 | 7.8125 (500 u) | 20 t | level 1 `[confirmed]` 2026-09-16 |
-| | 2 | 150 | 18 | 8.4375 (540 u) | 19 t | |
-| | 3 | 230 | 27 | 9.0625 (580 u) | 18 t | |
-| Mortar | 1 | 100 | 20 | 2.34375 (150 u) | 20 t | level 1 `[confirmed]` 2026-09-16 · splash radius 1.8 (was 3.6; second retune 2026-09-14, #12) |
-| | 2 | 150 | 33 | 2.578125 (165 u) | 20 t | |
-| | 3 | 220 | 53 | 2.8125 (180 u) | 19 t | |
-| Frost shrine | 1 | 100 | 5 | 5.46875 (350 u) | 20 t | slow 30%, 20 t · inferred |
-| | 2 | 150 | 8 | 5.859375 (375 u) | 20 t | slow 40% |
-| | 3 | 220 | 12 | 6.25 (400 u) | 20 t | slow 50% |
+| Guard tower | 1 | 10 | 10 | 7.8125 (500 u) | 20 t | level 1 `[confirmed]` 2026-09-16 |
+| | 2 | 15 | 18 | 8.4375 (540 u) | 19 t | |
+| | 3 | 23 | 27 | 9.0625 (580 u) | 18 t | |
+| Mortar | 1 | 10 | 20 | 2.34375 (150 u) | 20 t | level 1 `[confirmed]` 2026-09-16 · splash radius 1.8 (was 3.6; second retune 2026-09-14, #12) |
+| | 2 | 15 | 33 | 2.578125 (165 u) | 20 t | |
+| | 3 | 22 | 53 | 2.8125 (180 u) | 19 t | |
+| Frost shrine | 1 | 10 | 5 | 5.46875 (350 u) | 20 t | slow 30%, 20 t · inferred |
+| | 2 | 15 | 8 | 5.859375 (375 u) | 20 t | slow 40% |
+| | 3 | 22 | 12 | 6.25 (400 u) | 20 t | slow 50% |
 
 **Tower rework, 2026-09-16 (`towers.json` v7).** The user fixed level 1 of the guard tower and
-the mortar in the original's units; costs are at the ×10 gold scale, so 100 is 10 gold. Sixty
+the mortar in the original's units. Sixty
 shots a minute is a 20-tick cooldown. Levels 2–3 and the whole frost shrine follow the previous
 curves (cost about ×1.5 and ×2.2 of level 1, damage ×1.8 and ×2.7) and are `[proposed]`. At
 150 units a mortar reaches 1.34 tiles past its own footprint, which is the reach ADR-0025
@@ -395,7 +396,7 @@ holds it, and tanks and runners get through the mortar-heavy maze that swarm can
 
 ### Creeps — the ladder (ADR-0031; rungs 1–4 `[confirmed]`, the rest `[proposed]` `[retune]`)
 
-Gold figures are player gold; `creeps.json` stores ×10. Unlock times assume the 20 s
+Gold figures are as stored. Unlock times assume the 20 s
 build phase and one rung a minute. Bounty equals income on every rung.
 
 | # | Name | Shape | Cost | Income | HP | Speed (tiles/s) | Unlocks |

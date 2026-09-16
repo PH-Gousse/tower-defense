@@ -396,22 +396,23 @@ export let MAX_TIER = CREEPS.length - 1
  * in the batch shifted by exactly the extra ticks. Fifteen towers is a wall
  * and its plug with change for the second.
  *
- * 1,000 since 2026-09-16, the user's number: a match starts with 100 gold at
- * the x10 scale, and with every level-1 tower at 10 gold that is ten towers.
+ * 100 since 2026-09-16, the user's number: a match starts with 100 gold, and
+ * with every level-1 tower at 10 gold that is ten towers. (Gold was stored x10
+ * until the same day, when the scale went: the figures above are x10 ones.)
  * The fifteen-tower finding above was measured against 600-gold towers and the
  * old creep roster, so it is a warning to re-measure, not a rule this breaks:
  * if the opening double-knockout returns, `/balance` says so.
  */
-export let STARTING_GOLD = 1000
+export let STARTING_GOLD = 100
 /**
  * Paid into gold every INCOME_EVERY_TICKS. Sending is the only way it grows.
  *
- * 100 (10 gold a period) since 2026-09-16, chosen by the user in review: one
+ * 10 gold a period since 2026-09-16, chosen by the user in review: one
  * level-1 tower every fifteen seconds before a single send. Was 250 against a
- * 9,000 purse; the new creeps pay 20% of their price as income where the old
+ * 9,000 purse at the old x10 scale; the new creeps pay 20% of their price as income where the old
  * swarm paid 10%, so sending takes over the economy sooner.
  */
-export let STARTING_INCOME = 100
+export let STARTING_INCOME = 10
 
 const DEFAULT_STARTING_GOLD = STARTING_GOLD
 const DEFAULT_STARTING_INCOME = STARTING_INCOME
