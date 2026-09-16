@@ -7,9 +7,9 @@ import { TowerKind, CREEPS } from '../src/data'
 import { hashState } from '../src/hash'
 import { floodLeaks, laneThreat, waveLeaks, routeOf, population } from '../src/threat'
 import { step, Kind, type Command } from '../src/step'
-import { SWARM, TANK, withoutBuildPhase } from './helpers'
+import { SCRAPLING, BOG_BRUTE, withEveryCreepUnlocked } from './helpers'
 
-withoutBuildPhase()
+withEveryCreepUnlocked()
 
 /**
  * The maze-strength model the bot reads the board with.
@@ -51,38 +51,38 @@ function leaksOf(s: GameState, creep: number, count: number): number {
 describe('floodLeaks', () => {
   it('is zero for an empty lane and for an empty route', () => {
     const s = fortified(singles(12))
-    expect(leaksOf(s, TANK, 0)).toBe(0)
+    expect(leaksOf(s, BOG_BRUTE, 0)).toBe(0)
     const counts = new Int32Array(CREEPS.length)
-    counts[TANK] = 50
+    counts[BOG_BRUTE] = 50
     expect(floodLeaks([], s.lanes[1]!.towers, counts)).toBe(0)
   })
 
   it('never exceeds the crowd and never goes negative', () => {
     const s = fortified(singles(6))
     for (const n of [1, 10, 100, 1000]) {
-      const l = leaksOf(s, TANK, n)
+      const l = leaksOf(s, BOG_BRUTE, n)
       expect(l).toBeGreaterThanOrEqual(0)
       expect(l).toBeLessThanOrEqual(n)
     }
   })
 
   it('leaks less as the maze grows', () => {
-    const a = leaksOf(fortified(singles(6)), TANK, 200)
-    const b = leaksOf(fortified(singles(20)), TANK, 200)
-    const c = leaksOf(fortified(singles(40)), TANK, 200)
+    const a = leaksOf(fortified(singles(6)), BOG_BRUTE, 200)
+    const b = leaksOf(fortified(singles(20)), BOG_BRUTE, 200)
+    const c = leaksOf(fortified(singles(40)), BOG_BRUTE, 200)
     expect(a).toBeGreaterThan(b)
     expect(b).toBeGreaterThan(c)
   })
 
   it('leaks less as towers level up', () => {
-    const a = leaksOf(fortified(singles(20), 1), TANK, 200)
-    const b = leaksOf(fortified(singles(20), 3), TANK, 200)
+    const a = leaksOf(fortified(singles(20), 1), BOG_BRUTE, 200)
+    const b = leaksOf(fortified(singles(20), 3), BOG_BRUTE, 200)
     expect(b).toBeLessThan(a)
   })
 
   it('leaks more as the crowd grows', () => {
     const s = fortified(singles(20))
-    expect(leaksOf(s, TANK, 300)).toBeGreaterThan(leaksOf(s, TANK, 100))
+    expect(leaksOf(s, BOG_BRUTE, 300)).toBeGreaterThan(leaksOf(s, BOG_BRUTE, 100))
   })
 
   it('knows splash answers numbers: swarm floods die to mortars and not to guard towers', () => {
@@ -106,13 +106,13 @@ describe('floodLeaks', () => {
     // and a level-1 mortar reached nothing on this board. At 4.5 it does.
     const guards = fortified(singles(20))
     const withMortars = fortified(mix(20))
-    expect(leaksOf(guards, SWARM, 5000)).toBeGreaterThan(300)
-    expect(leaksOf(withMortars, SWARM, 5000)).toBe(0)
+    expect(leaksOf(guards, SCRAPLING, 5000)).toBeGreaterThan(300)
+    expect(leaksOf(withMortars, SCRAPLING, 5000)).toBe(0)
   })
 
   it('knows a tank flood walks through single-target fire', () => {
     // Twenty guard towers killed 122 of 880 streamed tanks in the sim.
-    expect(leaksOf(fortified(singles(20)), TANK, 300)).toBeGreaterThan(150)
+    expect(leaksOf(fortified(singles(20)), BOG_BRUTE, 300)).toBeGreaterThan(150)
   })
 
   it('costs a candidate through the override exactly as building it would', () => {
@@ -120,7 +120,7 @@ describe('floodLeaks', () => {
     const lane = s.lanes[1]!
     const tile = tileIndex(templateAt(1).tiles[12]!)
     const counts = new Int32Array(CREEPS.length)
-    counts[TANK] = 200
+    counts[BOG_BRUTE] = 200
     const route = routeOf(lane)
     const viaOverride = floodLeaks(route, lane.towers, counts, {
       tile,
@@ -141,13 +141,13 @@ describe('laneThreat and waveLeaks', () => {
     ;(s.players[0] as { gold: number }).gold = 1e9
     const into = createState()
     const cmds: Command[] = []
-    for (let i = 0; i < 5; i++) cmds.push({ tick: 0, player: 0, kind: Kind.Send, creep: TANK })
-    for (let i = 0; i < 3; i++) cmds.push({ tick: 0, player: 0, kind: Kind.Send, creep: SWARM })
+    for (let i = 0; i < 5; i++) cmds.push({ tick: 0, player: 0, kind: Kind.Send, creep: BOG_BRUTE })
+    for (let i = 0; i < 3; i++) cmds.push({ tick: 0, player: 0, kind: Kind.Send, creep: SCRAPLING })
     s = step(s, cmds, into)
     const pop = new Int32Array(CREEPS.length)
     expect(population(s.lanes[1]!, pop)).toBe(8)
-    expect(pop[TANK]).toBe(5)
-    expect(pop[SWARM]).toBe(3)
+    expect(pop[BOG_BRUTE]).toBe(5)
+    expect(pop[SCRAPLING]).toBe(3)
   })
 
   it('a wave adds leaks on top of the lane, never below zero', () => {
@@ -155,9 +155,9 @@ describe('laneThreat and waveLeaks', () => {
     const lane = s.lanes[1]!
     const route = routeOf(lane)
     expect(laneThreat(lane, route)).toBe(0)
-    const w = waveLeaks(lane, route, TANK, 22)
+    const w = waveLeaks(lane, route, BOG_BRUTE, 22)
     expect(w).toBeGreaterThanOrEqual(0)
-    expect(waveLeaks(lane, route, TANK, 200)).toBeGreaterThan(w)
+    expect(waveLeaks(lane, route, BOG_BRUTE, 200)).toBeGreaterThan(w)
   })
 
   it('reads state without writing it', () => {
@@ -166,7 +166,7 @@ describe('laneThreat and waveLeaks', () => {
     const lane = s.lanes[1]!
     const route = routeOf(lane)
     laneThreat(lane, route, { tile: tileIndex(templateAt(1).tiles[20]!), kind: TowerKind.Slow, level: 2 })
-    waveLeaks(lane, route, TANK, 50)
+    waveLeaks(lane, route, BOG_BRUTE, 50)
     expect(hashState(s)).toBe(before)
     expect(lane.towers.kind.length).toBe(MAX_TOWERS)
   })

@@ -58,13 +58,40 @@ export function withoutBuildPhase(): void {
   })
 }
 
+/**
+ * Open every rung of the creep ladder from tick 0, for one test file.
+ *
+ * The mechanic tests reach a tower, a leak or a loop by sending a creep, and
+ * pick the creep for its HP or its speed. On the three-by-three roster the
+ * slow, fat probe (a tank) and the fast one (a runner) were tier 0; on the
+ * ladder (ADR-0031) they are rungs 2 and 1 and open at minutes 2 and 1, so
+ * every such send was refused as TierLocked and the tests measured an empty
+ * lane. The unlock clock is a balance number with its own tests in
+ * `test/opening.test.ts` and `test/economy.test.ts`; like the build phase, it
+ * has nothing to say about how a tower shoots. Implies withoutBuildPhase.
+ */
+export function withEveryCreepUnlocked(): void {
+  let restore: BalanceData | null = null
+  beforeAll(() => {
+    const live = liveBalanceData()
+    restore = installBalanceData({
+      ...live,
+      sendUnlockTicks: 0,
+      creeps: live.creeps.map((c) => ({ ...c, tier: 0 })),
+    })
+  })
+  afterAll(() => {
+    if (restore) installBalanceData(restore)
+  })
+}
+
 /** Creep indices into data/creeps.json, in file order. */
-export const SWARM = 0
-export const RUNNER = 1
-export const TANK = 2
-export const SWARM2 = 3
-export const RUNNER2 = 4
-export const TANK2 = 5
+export const SCRAPLING = 0
+export const DASHER_HOUND = 1
+export const BOG_BRUTE = 2
+export const EMBER_IMP = 3
+export const WIND_WOLF = 4
+export const STONE_TROLL = 5
 
 export const build = (
   x: number,

@@ -196,15 +196,20 @@ const OPENING_TOWERS = 6
  * richer, and can then afford a bigger one. Which is how a person plays: you do
  * not open by building forty-five towers.
  *
- * ITS UNITS ARE TOWERS PER GOLD, so it is the one constant here that the x10
- * gold rescale had to move -- 0.16 became 0.016. Everything else in this file
- * counts towers, periods or ticks and was scale-free, which is exactly why this
- * one is easy to miss: nothing fails loudly. Left at 0.16 both spend ratios
- * simply saturate the tower ceiling, build the identical fifteen-tower maze,
- * and the ratio silently stops meaning anything at all. `spends the ratio` in
- * test/bot.test.ts is the test that catches it.
+ * ITS UNITS ARE TOWERS PER LEVEL-1 GUARD TOWER OF INCOME: income is divided by
+ * what a level-1 guard tower costs before this multiplies it. It used to be
+ * towers per gold, 0.016, and that made it the one constant here that every
+ * gold rescale had to move by hand -- 0.16 became 0.016 at the x10 rescale, and
+ * nothing failed loudly: both spend ratios simply saturate the tower ceiling,
+ * build the identical maze, and the ratio silently stops meaning anything.
+ * The 2026-09-16 tower rework cut a guard tower from 600 to 100 while income
+ * went from 250 to 100, and 0.016 read the new economy as wanting one extra
+ * tower where it had wanted four, so the bot sent into a lane it should have
+ * been building. 9.6 is 0.016 x 600: identical to the old constant on the old
+ * data, and it follows the tower price from here on. `spends the ratio` and
+ * `sends the wave that ends the match` in test/bot.test.ts catch it.
  */
-const TOWERS_PER_INCOME = 0.016
+const TOWER_PRICES_PER_INCOME = 9.6
 
 
 /**
@@ -535,7 +540,8 @@ function decideByTable(
   const defensiveness = (1 - config.sendRatio) * 2
   const towerTarget = Math.min(
     MAX_TOWER_TARGET,
-    OPENING_TOWERS + Math.round(me.income * TOWERS_PER_INCOME * defensiveness),
+    OPENING_TOWERS +
+      Math.round((me.income / levelOf(TowerKind.Single, 1).cost) * TOWER_PRICES_PER_INCOME * defensiveness),
   )
   const canBuild = towerCount(lane) < towerTarget
   // In the build phase gold is for towers; in the banking phase it is not.
@@ -688,9 +694,8 @@ function sendBurst(
 /**
  * The heaviest creep within reach of a budget, preferring the highest tier.
  *
- * Tier first, then cost: HP per gold rises as you buy up, so a tier-6 swarm is
- * a better use of the same gold than a tier-3 tank, and the ladder is the only
- * thing that ever breaks a maze.
+ * Tier first, then cost: HP per gold rises as you buy up (ADR-0031's 1.1 a
+ * rung), and the ladder is the only thing that ever breaks a maze.
  */
 function affordableSoon(
   state: GameState,
@@ -698,10 +703,13 @@ function affordableSoon(
   maxTier: number,
   prefer: CreepArchetypeKind | null,
 ): number {
-  // Two passes rather than a weighted score. The preferred archetype wins only
-  // if it can be had at the same tier the budget already reaches -- dropping a
-  // tier to get the right shape is a bad trade, because HP per gold rises with
-  // the ladder and a tier is worth more than a matchup.
+  // Two passes rather than a weighted score. The preferred shape wins only if
+  // it can be had inside the gold band of the best creep the budget reaches
+  // (SHAPE_BAND). On the three-by-three roster that band was "the same tier";
+  // on the ladder every rung is its own tier and its own shape, so "the same
+  // tier" would only ever have offered one creep and the preference would have
+  // been decoration. Dropping further than the band to get the right shape is
+  // still a bad trade: HP per gold rises with the ladder.
   const pick = (want: CreepArchetypeKind | null): number => {
     let best = -1
     let bestTier = -1
@@ -724,7 +732,20 @@ function affordableSoon(
   if (prefer === null || any === -1) return any
   const wanted = pick(prefer)
   if (wanted === -1) return any
-  return creepSpec(wanted).tier === creepSpec(any).tier ? wanted : any
+  return inBand(creepSpec(wanted), creepSpec(any)) ? wanted : any
+}
+
+/**
+ * How far below the best affordable creep a counter-pick may reach, as a cost
+ * ratio (ADR-0031). The ladder steps x2 to x2.27, so 2.5 admits exactly the
+ * rung below and never two rungs down: two of the three shapes are always on
+ * offer, the third is a x4.8 drop in HP for the gold.
+ */
+const SHAPE_BAND = 2.5
+
+/** Whether `c` is close enough in price to `best` to be picked in its place. */
+function inBand(c: CreepSpec, best: CreepSpec): boolean {
+  return c.cost * SHAPE_BAND >= best.cost
 }
 
 /** Highest creep tier buyable at this tick. */
@@ -920,7 +941,7 @@ function readThreat(lane: Lane): CreepArchetypeKind | null {
     hp[spec.archetype] = (hp[spec.archetype] as number) + (c.hp[i] as number)
     total += c.hp[i] as number
   }
-  let best: CreepArchetypeKind = CreepArchetypeKind.Swarm
+  let best: CreepArchetypeKind = CreepArchetypeKind.Horde
   for (let k = 1; k < hp.length; k++) {
     if ((hp[k] as number) > (hp[best] as number)) best = k as CreepArchetypeKind
   }
@@ -933,14 +954,14 @@ function readThreat(lane: Lane): CreepArchetypeKind | null {
  * The tower that answers a threat.
  *
  * Straight from the data: each tower archetype declares what it `answers`, and
- * the three form a cycle -- splash for swarms, slow for runners, single-target
- * for tanks. Hard-coding the pairing here rather than reading the string keeps
+ * the three form a cycle -- the mortar for hordes, the frost shrine for fast
+ * creeps, the guard tower for armoured ones. Hard-coding the pairing here rather than reading the string keeps
  * it out of the hot path; `assertData` pins the file order it depends on.
  */
 const ANSWERS: readonly TowerKind[] = [
-  TowerKind.Splash, // swarms
-  TowerKind.Slow, // runners
-  TowerKind.Single, // tanks
+  TowerKind.Splash, // hordes
+  TowerKind.Slow, // fast creeps
+  TowerKind.Single, // armoured creeps
 ]
 
 /**
@@ -949,8 +970,8 @@ const ANSWERS: readonly TowerKind[] = [
  * The inverse of the table above, and the reason the opponent's board is drawn
  * on your screen at all: counter-picking is premise-level, so a bot that never
  * looks at the maze it is sending into is not playing the same game as its
- * opponent. A maze of anti-tank towers kills one target at a time and drowns in
- * swarm; a maze of splash does little to a single fat creep.
+ * opponent. A maze of guard towers kills one target at a time and drowns in a
+ * horde; a maze of mortars does little to a single armoured creep.
  */
 /** The table's answer: the archetype EXPLOITS names for the opponent's dominant tower. */
 function tablePick(state: GameState, player: 0 | 1): CreepArchetypeKind | null {
@@ -959,13 +980,19 @@ function tablePick(state: GameState, player: 0 | 1): CreepArchetypeKind | null {
 }
 
 /**
- * The model's answer: of the archetypes a bank buys at the tier the bank
- * reaches, the one predicted to leak most per gold against the opponent's
- * actual maze; failing any predicted leak, the best earner. See CounterPick.
+ * The model's answer: of the creeps a bank buys inside the gold band of the
+ * best one it reaches (SHAPE_BAND), the shape of the one predicted to leak most
+ * per gold against the opponent's actual maze; failing any predicted leak, the
+ * best earner. See CounterPick.
  *
- * Per gold rather than absolute, because the bank buys twenty-two swarm or
- * one tank and the question is which spends the gold better. Ties go to the
- * lower archetype index, which is the roster's order and never a clock.
+ * Per gold rather than absolute, because the bank buys twenty-two of a cheap
+ * rung or a few of the next and the question is which spends the gold better.
+ * Candidates are scored cheapest first and a tie keeps the first, so ties go
+ * down the ladder, which is the roster's order and never a clock.
+ *
+ * It used to compare the three archetypes at the tier the bank reached. On
+ * the ladder a tier holds one creep, so that loop compared a creep with
+ * itself and the counter-pick silently became "send the dearest" (ADR-0031).
  */
 function modelPick(
   state: GameState,
@@ -978,17 +1005,16 @@ function modelPick(
   const bank = me.income * (config.savingPeriods ?? MAX_SAVING_PERIODS)
   const any = affordableSoon(state, bank, unlocked, null)
   if (any === -1) return null
-  const tier = creepSpec(any).tier
+  const top = creepSpec(any)
   const opp = state.lanes[opponentOf(player)] as Lane
   const route = routeOf(opp, routeA)
   let best: CreepArchetypeKind | null = null
   let bestScore = 0
-  for (let k = 0; k < ARCHETYPE_KINDS.length; k++) {
-    const kind = ARCHETYPE_KINDS[k] as CreepArchetypeKind
-    const creep = affordableSoon(state, bank, unlocked, kind)
-    if (creep === -1) continue
+  for (let creep = 0; creep < CREEPS.length; creep++) {
     const spec = creepSpec(creep)
-    if (spec.archetype !== kind || spec.tier !== tier) continue
+    if (spec.tier > unlocked || spec.cost > bank) continue
+    if (state.tick < tierUnlockTick(spec.tier)) continue
+    if (!inBand(spec, top)) continue
     let count = Math.floor(bank / spec.cost)
     if (count > MAX_SEND_BURST) count = MAX_SEND_BURST
     if (count < 1) continue
@@ -996,25 +1022,24 @@ function modelPick(
     const score = leaks / (count * spec.cost)
     if (score > bestScore) {
       bestScore = score
-      best = kind
+      best = spec.archetype
     }
   }
   return best !== null ? best : BEST_EARNER
 }
 
-const ARCHETYPE_KINDS: readonly CreepArchetypeKind[] = [
-  CreepArchetypeKind.Swarm,
-  CreepArchetypeKind.Runner,
-  CreepArchetypeKind.Tank,
-]
-
-/** The tier-0 archetype with the most income per gold; the send when nothing can hurt. */
+/**
+ * The shape of the creep with the most income per gold; the send when nothing
+ * can hurt. Ties keep the cheaper creep. On the ladder that is the first rung,
+ * a horde: income per gold never rises going up (asserted in data.ts). It used
+ * to scan tier 0 only, which held all three archetypes and now holds one.
+ */
 const BEST_EARNER: CreepArchetypeKind = (() => {
-  let best = CreepArchetypeKind.Swarm
+  let best = CreepArchetypeKind.Horde
   let bestRate = -1
   for (let i = 0; i < CREEPS.length; i++) {
     const spec = CREEPS[i] as CreepSpec
-    if (spec.tier !== 0 || spec.cost <= 0) continue
+    if (spec.cost <= 0) continue
     const rate = spec.incomeBonus / spec.cost
     if (rate > bestRate) {
       bestRate = rate
@@ -1025,9 +1050,9 @@ const BEST_EARNER: CreepArchetypeKind = (() => {
 })()
 
 const EXPLOITS: readonly CreepArchetypeKind[] = [
-  CreepArchetypeKind.Swarm, // vs single-target
-  CreepArchetypeKind.Tank, // vs splash
-  CreepArchetypeKind.Tank, // vs slow
+  CreepArchetypeKind.Horde, // vs the guard tower
+  CreepArchetypeKind.Armoured, // vs the mortar
+  CreepArchetypeKind.Armoured, // vs the frost shrine
 ]
 
 /** The dominant tower archetype in a lane, weighted by gold sunk into it. */

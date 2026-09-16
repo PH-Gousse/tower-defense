@@ -437,7 +437,7 @@ export function createAudio(): Audio {
     const v = voiceAt(x, z)
     const t = ctx.currentTime
     switch (kind) {
-      case CreepArchetypeKind.Swarm: {
+      case CreepArchetypeKind.Horde: {
         // A beetle crushed: a wet squish falling in pitch and a chitin snap.
         const g = crowdGain(n, 1) * v.gain
         noise({ dur: 0.16, gain: 0.3 * g, attack: 0.004, filter: 'lowpass', f0: vary(1600), f1: 300, q: 2, pan: v.pan, at: t })
@@ -445,7 +445,7 @@ export function createAudio(): Audio {
         tone({ type: 'sawtooth', f0: vary(900), f1: 250, dur: 0.11, gain: 0.05 * g, attack: 0.003, lowpass: 1800, pan: v.pan, at: t + 0.01 })
         return
       }
-      case CreepArchetypeKind.Runner: {
+      case CreepArchetypeKind.Fast: {
         // A hound's yelp: a formant sweep, up then down, with breath on it.
         const g = crowdGain(n, 1) * v.gain
         const f = vary(560, 150)
@@ -454,7 +454,7 @@ export function createAudio(): Audio {
         noise({ dur: 0.25, gain: 0.06 * g, attack: 0.02, filter: 'bandpass', f0: 1800, f1: 900, q: 1, pan: v.pan, at: t + 0.05 })
         return
       }
-      case CreepArchetypeKind.Tank: {
+      case CreepArchetypeKind.Armoured: {
         // An ogre going down: a chest groan with vibrato, then the ground
         // taking a very heavy thing -- sub thump and a spray of gravel.
         const g = crowdGain(n, 1) * v.gain

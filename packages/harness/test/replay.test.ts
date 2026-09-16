@@ -98,14 +98,14 @@ describe('replaying a dump', () => {
       ...dump,
       balance: {
         ...dump.balance,
-          // `incomeBonus`, because a single send changes the sender's income on
-        // the tick it lands and income is hashed. Perturbing HP or speed only
-        // shows up once a creep has been alive long enough to matter, which
-        // makes the test hostage to whatever the current tuning does in the
-        // first thirty seconds -- it went green, then red, then green again
-        // across two tuning passes without the behaviour it names ever
-        // changing.
-        creeps: dump.balance.creeps.map((c) => ({ ...c, incomeBonus: c.incomeBonus + 100 })),
+        // `startingGold`, because gold is hashed from tick 0 whatever anybody
+        // does. Perturbing HP or speed only showed up once a creep had lived
+        // long enough to matter, and went green, red and green again across two
+        // tuning passes. `incomeBonus` replaced it and needed a send to land
+        // inside the window -- which stopped happening on the 2026-09-16
+        // economy, where bots open on a 100-gold purse and build before they
+        // send. The purse is in the frozen data and moves no matter the tuning.
+        startingGold: (dump.balance.startingGold ?? 0) + 10,
       },
     }
     const other = replayDump(retuned)

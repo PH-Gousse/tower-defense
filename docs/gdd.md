@@ -111,9 +111,9 @@ research, no damage types. Do not copy Warcraft 3's tower or tech system.** `[co
 
 | Archetype | Answers | Shape | Status |
 |---|---|---|---|
-| Guard tower (single-target) | tanks | single target, long range | `[confirmed]` |
-| Mortar (splash) | swarms | area damage, very short range, twice the guard's damage for the same price | `[confirmed]` 2026-09-16 |
-| Frost shrine (slow) | runners | low damage, applies a movement slow | `[confirmed]` |
+| Guard tower (single-target) | armoured creeps | single target, long range | `[confirmed]` |
+| Mortar (splash) | hordes | area damage, very short range, twice the guard's damage for the same price | `[confirmed]` 2026-09-16 |
+| Frost shrine (slow) | fast creeps | low damage, applies a movement slow | `[confirmed]` |
 
 **All three cost the same at level 1 and fire once a second** `[confirmed]` 2026-09-16 (user):
 Guard tower 10 gold, 10 damage, range 500; Mortar 10 gold, 20 damage, range 150. Ranges are
@@ -141,14 +141,22 @@ inferred from those two and are `[proposed]`. On-screen names come from `towers.
 
 ## 5. Creeps (v1)
 
-**Three archetypes, three tiers each. Tiers unlock on the match clock, at the same moment
-for both players.** `[confirmed]`
+**A ladder of fourteen creeps, one per rung. Each rung unlocks on the match clock, at the
+same moment for both players.** `[confirmed]` 2026-09-16 (user: "a lot more types of
+creeps"). [ADR-0031](adr/0031-a-fourteen-creep-ladder-replaces-the-three-by-three-roster.md)
+supersedes the three archetypes × three tiers this section used to describe.
 
-| Archetype | Answers | Shape | Status |
+**The first four rungs are the user's** `[confirmed]` 2026-09-16: 5 gold / +1 income / 1 gold
+bounty, 10 / 2 / 2, 22 / 4 / 4, 50 / 8 / 8. The other ten, their names and their design
+are inferred and `[proposed]`.
+
+Every creep has one of three shapes, cycling up the ladder:
+
+| Shape | Answered by | Look | Status |
 |---|---|---|---|
-| Swarm | splash | cheap, low HP | `[confirmed]` |
-| Runner | slow | fast, low HP | `[confirmed]` |
-| Tank | single-target | slow, very high HP | `[confirmed]` |
+| Horde | Mortar | normal speed, the least soak per gold, the thing to mass-send | `[proposed]` |
+| Fast | Frost shrine | twice as fast, least HP per gold | `[proposed]` |
+| Armoured | Guard tower | two thirds as fast, most HP per gold | `[proposed]` |
 
 - ⚠️ **Swarm's pack size.** The confirmed rules describe swarm as *"cheap, **many per
   purchase**, low HP"* — but they also confirm *"one click = one creep (one command in the
@@ -159,8 +167,13 @@ for both players.** `[confirmed]`
   button could reach it. Splash still has swarms to answer because five clicks still make
   five creeps. **Open: confirm one-per-purchase, or restore packs and drop "one click =
   one creep".**
-- Tier N's stats are **`base × growth^N`, generated at load** — the roster is a rule, not a
-  list. `[proposed]` (`expandCreeps`, `packages/sim/src/data.ts`)
+- **The roster is a list, not a rule.** A creep's tier is its position in
+  `creeps.json`; the loader asserts each rung costs more than the one below and pays no
+  more income per gold. `[confirmed]` 2026-09-16 (ADR-0031; `creepsFromFile`,
+  `packages/sim/src/data.ts`)
+- **Sudden death's HP cap is derived from the roster**: `floor((2³¹ − 1) / heaviest HP)`,
+  refused at load under ×100, because creep HP is an Int32. ×1 036 for this ladder.
+  `[proposed]` (ADR-0031)
 - **Sudden death guarantees the match ends.** From `suddenDeathTick` the HP of every creep
   *spawned* is multiplied by `suddenDeathGrowth` once per income period, compounding — the
   guarantee the twenty-tier ladder gave and the three-tier one lost. Sized `[proposed]`
@@ -335,7 +348,7 @@ Source of truth: `packages/sim/data/towers.json`, `packages/sim/data/creeps.json
 | Tier unlock spacing | 1 200 ticks (1 min) | `creeps.json` `unlockEveryTicks` | `[proposed]` 2026-09-16, chosen by the user in review: one new creep a minute, the fourteenth at 13:20, before sudden death. Was 6 000, measured 2026-09-15 on the three-tier roster against 4 500 and 3 000 under sudden death and kept: 6 000 gives the shortest matches (median 22 156 ticks), the lowest peak (943 creeps) and the only monotone ladder of the three; 3 000 breaks the ladder (#48) |
 | Sudden death start | 18 000 ticks (15:00) | `creeps.json` `suddenDeathTick` | ADR-0026; one unlock interval after the last tier · `[retune]` |
 | Sudden death growth | ×1.15 per income period | `creeps.json` `suddenDeathGrowth` | compounding, applied to HP at spawn · `[retune]` |
-| Max tier | 2 (→ three tiers, 0–2) | `creeps.json` `maxTier` | |
+| Ladder length | 14 (tiers 0–13) | `creeps.json` `creeps` | the list's length; ADR-0031 |
 | Sell refund | 0.60 | `towers.json` `sellRefund` | ⚠️ stated default is 0.75 |
 | Tower acquisition | 10 ticks (0.5 s) | `towers.json` `acquireTicks` | ADR-0028, 2026-09-15; the wait before a tower's first shot at a newly seen creep · `[retune]` |
 | Max tower level | 3 | `data.ts` `MAX_LEVEL` | `[confirmed]` |
@@ -380,30 +393,44 @@ never pressure. At 1.8 a swarm flood beats a single-target maze, a mortar-heavy 
 holds it, and tanks and runners get through the mortar-heavy maze that swarm cannot — the
 3×3 the design rests on, measured 2026-09-14 (issue #12).
 
-### Creeps — tier 0 base (all `[proposed]` `[retune]`)
+### Creeps — the ladder (ADR-0031; rungs 1–4 `[confirmed]`, the rest `[proposed]` `[retune]`)
 
-| Archetype | Cost | Count | HP | Speed (tiles/tick) | Speed (tiles/s) | Bare lap (213 rows) | Income | Bounty |
-|---|---|---|---|---|---|---|---|---|
-| Swarm | 20 | 1 | 20 | 0.225 | 4.5 | 47 s | 2 | 5 |
-| Runner | 250 | 1 | 40 | 0.450 | 9.0 | 24 s | 20 | 60 |
-| Tank | 600 | 1 | 250 | 0.150 | 3.0 | 71 s | 40 | 150 |
+Gold figures are player gold; `creeps.json` stores ×10. Unlock times assume the 20 s
+build phase and one rung a minute. Bounty equals income on every rung.
 
-Speeds are ×3 the old 0.075 / 0.150 / 0.050 (ADR-0025). Before the conversion a swarm's bare
-lap on the 213-row lane was 142 s, nine income payouts; a full half-slot maze may still take
-several minutes a lap, which is why the tier clock and the income interval are the expected
-first `/balance` proposals rather than the speeds.
+| # | Name | Shape | Cost | Income | HP | Speed (tiles/s) | Unlocks |
+|---|---|---|---|---|---|---|---|
+| 1 | Scrapling | Horde | 5 | 1 | 30 | 4.5 | 0:20 |
+| 2 | Dasher Hound | Fast | 10 | 2 | 50 | 9.0 | 1:20 |
+| 3 | Bog Brute | Armoured | 22 | 4 | 570 | 3.0 | 2:20 |
+| 4 | Ember Imp | Horde | 50 | 8 | 400 | 4.5 | 3:20 |
+| 5 | Wind Wolf | Fast | 110 | 16 | 770 | 9.0 | 4:20 |
+| 6 | Stone Troll | Armoured | 240 | 32 | 8 350 | 3.0 | 5:20 |
+| 7 | Hive Drone | Horde | 520 | 64 | 5 530 | 4.5 | 6:20 |
+| 8 | Shadow Stalker | Fast | 1 150 | 128 | 11 000 | 9.0 | 7:20 |
+| 9 | Iron Golem | Armoured | 2 500 | 256 | 116 000 | 3.0 | 8:20 |
+| 10 | Wraith | Horde | 5 500 | 512 | 78 000 | 4.5 | 9:20 |
+| 11 | Nightmare Steed | Fast | 12 000 | 1 024 | 149 000 | 9.0 | 10:20 |
+| 12 | Siege Behemoth | Armoured | 26 000 | 2 048 | 1 602 000 | 3.0 | 11:20 |
+| 13 | Doom Herald | Horde | 57 000 | 4 096 | 1 073 000 | 4.5 | 12:20 |
+| 14 | Storm Drake | Fast | 125 000 | 8 192 | 2 071 000 | 9.0 | 13:20 |
 
-### Growth per tier (all `[proposed]` `[retune]`)
+**How the ten inferred rungs were derived.** Cost ×~2.2 a step, income ×2, bounty = income,
+so income per gold falls from 20% to 6.6%: cheap sends are economy, dear sends are
+pressure. HP is equal threat per gold. The damage a creep takes crossing the maze goes as
+1/speed, so
 
-| Field | Multiplier | Intent |
-|---|---|---|
-| cost | ×5 | |
-| hp | ×5 | moves with cost, so **HP per gold is flat** — buying up concentrates threat, it does not buy it more cheaply |
-| income | ×5 | income per gold stays constant within an archetype |
-| bounty | ×4 | grows slower than cost, so the bounty tax falls ~25% → ~15%: early sends are economy, late sends are pressure |
+```
+HP = cost × 12 × 1.1^(n−1) × threat × (0.225 / speed)     threat: Horde 0.5 · Fast 0.8 · Armoured 1.2
+```
 
-Speed is held constant per archetype across tiers — deliberately not drifted, because speed
-is not part of the growth rule and a per-tier speed column buys a difference nobody can feel.
+rounded. Measured the same day, a saturated guard-tower board deals 66 771 / 31 671 / 98 145
+per lap at 4.5 / 9 / 3 tiles/s. The top rungs therefore end matches, at about thirteen full
+boards of gold each. Horde was cut from 0.6 to 0.5 so the bot's 3:1:1 maze still holds a
+Scrapling flood (#12). The 1.1^n is the first lever if late matches end too abruptly.
+
+Speeds are the measured swarm / runner / tank speeds the shapes replace, ×3 from the old
+0.075 / 0.150 / 0.050 (ADR-0025), and held constant per shape up the ladder.
 
 ---
 

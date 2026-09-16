@@ -11,7 +11,7 @@ import {
 } from '../src/data'
 import { botCommand, BOT_NORMAL } from '../src/bot'
 import { towerSlotAt } from '../src/state'
-import { SWARM, RUNNER, build, send, run, R } from './helpers'
+import { SCRAPLING, DASHER_HOUND, build, send, run, R } from './helpers'
 
 /**
  * The opening build phase.
@@ -28,8 +28,8 @@ import { SWARM, RUNNER, build, send, run, R } from './helpers'
 describe('the opening build phase', () => {
   it('refuses every send before it ends', () => {
     const s = createState()
-    expect(checkSend(s, 0, SWARM)).toBe(Refusal.BuildPhase)
-    expect(checkSend(s, 1, SWARM)).toBe(Refusal.BuildPhase)
+    expect(checkSend(s, 0, SCRAPLING)).toBe(Refusal.BuildPhase)
+    expect(checkSend(s, 1, SCRAPLING)).toBe(Refusal.BuildPhase)
   })
 
   it('blames the build phase, not the tier, while both would refuse', () => {
@@ -37,18 +37,18 @@ describe('the opening build phase', () => {
     // two rules coincide and either could claim the refusal. The build phase is
     // the one that explains what the player is looking at -- "not unlocked yet"
     // about the cheapest creep in the game, on turn one, teaches nothing.
-    expect(tierUnlockTick(creepSpec(SWARM).tier)).toBe(SEND_UNLOCK_TICKS)
-    expect(checkSend(createState(), 0, SWARM)).toBe(Refusal.BuildPhase)
+    expect(tierUnlockTick(creepSpec(SCRAPLING).tier)).toBe(SEND_UNLOCK_TICKS)
+    expect(checkSend(createState(), 0, SCRAPLING)).toBe(Refusal.BuildPhase)
   })
 
   it('opens on exactly the unlock tick, not a tick either side', () => {
     const before = createState()
     before.tick = SEND_UNLOCK_TICKS - 1
-    expect(checkSend(before, 0, SWARM)).toBe(Refusal.BuildPhase)
+    expect(checkSend(before, 0, SCRAPLING)).toBe(Refusal.BuildPhase)
 
     const on = createState()
     on.tick = SEND_UNLOCK_TICKS
-    expect(checkSend(on, 0, SWARM)).toBe(Refusal.None)
+    expect(checkSend(on, 0, SCRAPLING)).toBe(Refusal.None)
   })
 
   it('drops a send command issued during the phase, rather than applying it', () => {
@@ -57,7 +57,7 @@ describe('the opening build phase', () => {
     const a = createState()
     const b = createState()
     const goldBefore = a.players[1]!.gold
-    const out = step(a, [send(SWARM, 1)], b)
+    const out = step(a, [send(SCRAPLING, 1)], b)
     expect(out.lanes[0]!.creeps.count).toBe(0)
     expect(out.players[1]!.gold).toBe(goldBefore)
     // Income is the real tell: a send that landed would have raised it.
@@ -65,7 +65,7 @@ describe('the opening build phase', () => {
   })
 
   it('lets the same send through once the phase is over', () => {
-    const s = run(SEND_UNLOCK_TICKS + 5, { [SEND_UNLOCK_TICKS]: [send(SWARM, 1)] })
+    const s = run(SEND_UNLOCK_TICKS + 5, { [SEND_UNLOCK_TICKS]: [send(SCRAPLING, 1)] })
     expect(s.players[1]!.income).toBeGreaterThan(createState().players[1]!.income)
   })
 
@@ -81,11 +81,11 @@ describe('the opening build phase', () => {
     expect(SEND_UNLOCK_TICKS).toBeLessThan(tierUnlockTick(1))
     const atOpen = createState()
     atOpen.tick = SEND_UNLOCK_TICKS
-    expect(checkSend(atOpen, 0, RUNNER)).toBe(Refusal.None)
+    expect(checkSend(atOpen, 0, SCRAPLING)).toBe(Refusal.None)
     // ...and tier 1 is still genuinely locked at that moment.
-    const tier1 = creepSpec(3)
+    const tier1 = creepSpec(DASHER_HOUND)
     expect(tier1.tier).toBe(1)
-    expect(checkSend(atOpen, 0, 3)).toBe(Refusal.TierLocked)
+    expect(checkSend(atOpen, 0, DASHER_HOUND)).toBe(Refusal.TierLocked)
   })
 
   it('is a round number of seconds, so the countdown can be honest', () => {

@@ -1,4 +1,4 @@
-import { CREEPS } from '@ltw/sim'
+import { CREEPS, CreepArchetypeKind } from '@ltw/sim'
 
 /**
  * The degenerate-strategy check, as a comparison rather than a count.
@@ -11,8 +11,8 @@ import { CREEPS } from '@ltw/sim'
  * version could tell the two apart (issue #12).
  *
  * So the check is now: did the winner lean on an archetype MORE than the
- * loser did? Per decided match, each seat's send gold is split by archetype
- * across tiers and normalised; the lean is the winner's share minus the
+ * loser did? Per decided match, each seat's send gold is split by shape
+ * (horde, fast, armoured) across the ladder and normalised; the lean is the winner's share minus the
  * loser's. An archetype is degenerate when the winner leaned on it by more
  * than the margin in more than the threshold share of decided matches. A
  * mirror, or two seats that sent the same mix, leans on nothing.
@@ -33,9 +33,17 @@ export interface Lean {
   readonly flagged: boolean
 }
 
-/** Strip the tier suffix: "Swarm II" and "Swarm" are the same card. */
-export function archetypeOf(name: string): string {
-  return name.replace(/ (II|III|IV|V|VI|VII|VIII|IX|X)$/, '')
+/**
+ * The shape a creep counts toward, by name.
+ *
+ * Read from the roster's `archetype`, not from the creep's name. The
+ * three-by-three roster spelled the shape into the name ("Swarm III" was a
+ * Swarm); the ladder's creeps are named for what they are (ADR-0031), so
+ * a Stone Troll and an Iron Golem are both Armoured and nothing in their names
+ * says so.
+ */
+export function shapeOf(kind: CreepArchetypeKind): string {
+  return CreepArchetypeKind[kind] ?? `shape ${kind}`
 }
 
 /** A seat's send gold by archetype, normalised to shares. Empty when it sent nothing. */
@@ -48,7 +56,7 @@ export function goldShares(sendsByCreep: readonly number[] | undefined): Map<str
     if (n === 0) continue
     const spec = CREEPS[i]
     const g = n * (spec?.cost ?? 0)
-    const a = archetypeOf(spec?.name ?? `creep ${i}`)
+    const a = spec ? shapeOf(spec.archetype) : `creep ${i}`
     gold.set(a, (gold.get(a) ?? 0) + g)
     total += g
   }

@@ -1,12 +1,16 @@
 import { describe, it, expect } from 'vitest'
-import { CREEPS } from '@ltw/sim'
-import { goldShares, leanAcross, archetypeOf } from '../tools/lib/lean'
+import { CREEPS, CreepArchetypeKind } from '@ltw/sim'
+import { goldShares, leanAcross, shapeOf } from '../tools/lib/lean'
 
 /**
  * The degenerate flag compares the winner's send mix with the loser's. A
  * pattern both sides play is not a pattern that is winning.
  */
-const idx = (name: string) => CREEPS.findIndex((c) => c.name === name)
+const idx = (name: string) => {
+  const i = CREEPS.findIndex((c) => c.name === name)
+  if (i === -1) throw new Error(`no creep named ${name}`)
+  return i
+}
 function sends(spec: Record<string, number>): number[] {
   const by = new Array<number>(CREEPS.length).fill(0)
   for (const [name, n] of Object.entries(spec)) by[idx(name)] = n
@@ -14,13 +18,14 @@ function sends(spec: Record<string, number>): number[] {
 }
 
 describe('goldShares', () => {
-  it('weighs by gold and folds tiers into their archetype', () => {
-    // 30 swarm at 20 gold = 600; 1 tank at 600 = 600; one Swarm II at 100.
-    const s = goldShares(sends({ Swarm: 30, Tank: 1, 'Swarm II': 1 }))
-    expect(s.get('Swarm')).toBeCloseTo(700 / 1300, 9)
-    expect(s.get('Tank')).toBeCloseTo(600 / 1300, 9)
-    expect(s.has('Swarm II')).toBe(false)
-    expect(archetypeOf('Runner III')).toBe('Runner')
+  it('weighs by gold and folds the ladder into its three shapes', () => {
+    // 10 Scrapling at 50 = 500 and one Ember Imp at 500, both horde; one Bog
+    // Brute at 220, armoured (stored gold, x10).
+    const s = goldShares(sends({ Scrapling: 10, 'Bog Brute': 1, 'Ember Imp': 1 }))
+    expect(s.get('Horde')).toBeCloseTo(1000 / 1220, 9)
+    expect(s.get('Armoured')).toBeCloseTo(220 / 1220, 9)
+    expect(s.has('Scrapling')).toBe(false)
+    expect(shapeOf(CreepArchetypeKind.Fast)).toBe('Fast')
   })
 
   it('is empty for a seat that sent nothing', () => {
@@ -31,31 +36,31 @@ describe('goldShares', () => {
 
 describe('leanAcross', () => {
   it('flags nothing when both seats sent the same mix, however lopsided that mix is', () => {
-    // Both seats 100% Swarm III, ten matches: the old flag fired on this.
-    const mix = sends({ 'Swarm III': 40 })
+    // Both seats all horde, ten matches: the old flag fired on this.
+    const mix = sends({ Wraith: 40 })
     const out = leanAcross(Array.from({ length: 10 }, () => ({ winner: mix, loser: mix })), 0.7, 0.1)
     expect(out.every((l) => !l.flagged)).toBe(true)
-    expect(out.find((l) => l.archetype === 'Swarm')!.lean).toBe(0)
+    expect(out.find((l) => l.archetype === 'Horde')!.lean).toBe(0)
   })
 
-  it('flags the archetype winners lean on more than losers, match after match', () => {
-    const winner = sends({ 'Tank III': 4, 'Swarm III': 10 }) // 60000 + 5000: tank-heavy
-    const loser = sends({ 'Swarm III': 40 })
+  it('flags the shape winners lean on more than losers, match after match', () => {
+    const winner = sends({ 'Iron Golem': 4, Scrapling: 10 }) // 100000 + 500: armoured-heavy
+    const loser = sends({ Scrapling: 40 })
     const out = leanAcross(Array.from({ length: 10 }, () => ({ winner, loser })), 0.7, 0.1)
-    const tank = out.find((l) => l.archetype === 'Tank')!
-    expect(tank.flagged).toBe(true)
-    expect(tank.leanedIn).toBe(10)
-    expect(tank.lean).toBeGreaterThan(0.8)
-    expect(out.find((l) => l.archetype === 'Swarm')!.flagged).toBe(false)
-    expect(out[0]!.archetype).toBe('Tank')
+    const armoured = out.find((l) => l.archetype === 'Armoured')!
+    expect(armoured.flagged).toBe(true)
+    expect(armoured.leanedIn).toBe(10)
+    expect(armoured.lean).toBeGreaterThan(0.8)
+    expect(out.find((l) => l.archetype === 'Horde')!.flagged).toBe(false)
+    expect(out[0]!.archetype).toBe('Armoured')
   })
 
   it('does not flag a lean that only shows in a minority of matches', () => {
-    const tanky = sends({ 'Tank III': 4 })
-    const swarmy = sends({ 'Swarm III': 40 })
+    const armoured = sends({ 'Iron Golem': 4 })
+    const horde = sends({ Scrapling: 40 })
     const matches = [
-      ...Array.from({ length: 4 }, () => ({ winner: tanky, loser: swarmy })),
-      ...Array.from({ length: 6 }, () => ({ winner: swarmy, loser: tanky })),
+      ...Array.from({ length: 4 }, () => ({ winner: armoured, loser: horde })),
+      ...Array.from({ length: 6 }, () => ({ winner: horde, loser: armoured })),
     ]
     const out = leanAcross(matches, 0.7, 0.1)
     expect(out.every((l) => !l.flagged)).toBe(true)

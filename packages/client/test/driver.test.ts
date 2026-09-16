@@ -103,7 +103,8 @@ describe('Driver', () => {
     const d = new Driver(0, null)
     d.advance(0)
     let t = openBuildPhase(d)
-    d.queueSend(1)
+    // The first rung: the only creep open when sending opens (ADR-0031).
+    d.queueSend(0)
     for (let f = 1; f <= 40; f++) { t += TICK_MS * 10; d.advance(t) }
     expect(d.current.lanes[1]!.creeps.count).toBe(1)
     // Down the lane is +y: an empty lane's field points every cell south.
