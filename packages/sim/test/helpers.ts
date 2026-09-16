@@ -103,8 +103,10 @@ export function runUntil(
   predicate: (s: GameState) => boolean,
   maxTicks: number,
   cmdsAt: Record<number, Command[]> = {},
+  setup: (s: GameState) => void = () => {},
 ): GameState {
   let a = createState()
+  setup(a)
   let b = createState()
   for (let t = 0; t < maxTicks; t++) {
     const out = step(a, cmdsAt[t] ?? [], b)

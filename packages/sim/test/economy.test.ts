@@ -9,6 +9,23 @@ import { build, upgrade, sell, send, run, tick, withGold, R, SWARM, RUNNER, TANK
 // Not a test of the opening: see withoutBuildPhase.
 withoutBuildPhase()
 
+describe('the opening purse (user, 2026-09-16)', () => {
+  // Gold is stored at x10, so 100 gold is 1,000.
+  const GOLD = 10
+
+  it('starts a match on 100 gold and 10 gold a period', () => {
+    const s = createState()
+    for (const p of s.players) {
+      expect(p.gold).toBe(100 * GOLD)
+      expect(p.income).toBe(10 * GOLD)
+    }
+  })
+
+  it('buys exactly ten level-1 towers with the opening purse', () => {
+    expect(Math.floor(STARTING_GOLD / levelOf(TowerKind.Single, 1).cost)).toBe(10)
+  })
+})
+
 describe('income', () => {
   it('pays into gold every 15 seconds, not continuously', () => {
     // The decision cadence of the whole game: roughly four times a minute you

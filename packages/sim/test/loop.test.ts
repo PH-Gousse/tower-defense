@@ -3,7 +3,7 @@ import { MatchResult, STARTING_LIVES, towerSlotAt } from '../src/state'
 import { hashState } from '../src/hash'
 import { GRID_H, SPAWN_ROWS } from '../src/grid'
 import { TowerKind, creepSpec, tierUnlockTick } from '../src/data'
-import { build, send, runUntil, tick, R, RUNNER, TANK, TANK2, withoutBuildPhase } from './helpers'
+import { build, send, runUntil, tick, withGold, R, RUNNER, TANK, TANK2, withoutBuildPhase } from './helpers'
 
 // Not a test of the opening: see withoutBuildPhase.
 withoutBuildPhase()
@@ -22,11 +22,22 @@ const lapTicks = (creep: number) => Math.ceil(GRID_H / creepSpec(creep).speed)
 
 /** Repeatedly send runners into lane 0, with no towers to stop them. */
 const RELENTLESS: Record<number, ReturnType<typeof send>[]> = {}
-for (let t = 0; t < 40; t++) RELENTLESS[t * 60] = [send(RUNNER, 1)]
+const RELENTLESS_RUNNERS = 40
+for (let t = 0; t < RELENTLESS_RUNNERS; t++) RELENTLESS[t * 60] = [send(RUNNER, 1)]
+
+/**
+ * Pay for RELENTLESS up front. These tests are about what a leak does, not
+ * about the purse: at the 2026-09-16 opening of 100 gold the sender could no
+ * longer afford forty runners, the match never ended, and three tests about
+ * zero lives failed on an economy number.
+ */
+const FUND_SENDER = (s: Parameters<typeof withGold>[0]) => {
+  withGold(s, 1, RELENTLESS_RUNNERS * creepSpec(RUNNER).cost)
+}
 
 describe('the loop', () => {
   it('costs the defender a life per leak', () => {
-    const s = runUntil((x) => x.players[0]!.leaks >= 3, lapTicks(RUNNER) * 3, RELENTLESS)
+    const s = runUntil((x) => x.players[0]!.leaks >= 3, lapTicks(RUNNER) * 3, RELENTLESS, FUND_SENDER)
     expect(s.players[0]!.leaks).toBeGreaterThanOrEqual(3)
     expect(s.players[0]!.lives).toBe(STARTING_LIVES - s.players[0]!.leaks)
   })
@@ -34,7 +45,7 @@ describe('the loop', () => {
   it('credits the sender nothing — lives only ever go down', () => {
     // The damping rule as shipped. ADR-0008 / issue #7 hold the confirmed rule
     // that overrides it; unchanged by the geometry.
-    const s = runUntil((x) => x.players[0]!.leaks >= 4, lapTicks(RUNNER) * 3, RELENTLESS)
+    const s = runUntil((x) => x.players[0]!.leaks >= 4, lapTicks(RUNNER) * 3, RELENTLESS, FUND_SENDER)
     expect(s.players[1]!.lives).toBe(STARTING_LIVES)
     expect(s.players[0]!.lives + s.players[0]!.leaks).toBe(STARTING_LIVES)
   })
@@ -64,7 +75,7 @@ describe('the loop', () => {
   })
 
   it('ends the match at zero lives, with the other player as winner', () => {
-    const s = runUntil((x) => x.result !== MatchResult.Playing, lapTicks(RUNNER) * 4, RELENTLESS)
+    const s = runUntil((x) => x.result !== MatchResult.Playing, lapTicks(RUNNER) * 4, RELENTLESS, FUND_SENDER)
     expect(s.result).toBe(MatchResult.Decided)
     expect(s.winner).toBe(1)
     expect(s.players[0]!.lives).toBe(0)
@@ -72,12 +83,12 @@ describe('the loop', () => {
   })
 
   it('never reports negative lives, even on the losing leak', () => {
-    const s = runUntil((x) => x.result !== MatchResult.Playing, lapTicks(RUNNER) * 4, RELENTLESS)
+    const s = runUntil((x) => x.result !== MatchResult.Playing, lapTicks(RUNNER) * 4, RELENTLESS, FUND_SENDER)
     expect(s.players[0]!.lives).toBe(0)
   })
 
   it('freezes once the match is over — no tick, no commands, no movement', () => {
-    const over = runUntil((x) => x.result !== MatchResult.Playing, lapTicks(RUNNER) * 4, RELENTLESS)
+    const over = runUntil((x) => x.result !== MatchResult.Playing, lapTicks(RUNNER) * 4, RELENTLESS, FUND_SENDER)
     const before = hashState(over)
     const tickBefore = over.tick
 
