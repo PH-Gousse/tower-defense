@@ -332,7 +332,7 @@ Source of truth: `packages/sim/data/towers.json`, `packages/sim/data/creeps.json
 | Starting lives | 20 | `state.ts` `STARTING_LIVES` | not in a JSON file yet; "one bad leak is a crisis with time to respond" is the intent |
 | Income interval | 300 ticks (15 s) | `state.ts` `INCOME_EVERY_TICKS` | interval `[confirmed]` on the old board, now `[retune]`: 3 to 5 payouts per bare lap instead of 1 or 2; anchor `[proposed]` |
 | Build phase | 400 ticks (20 s) | `creeps.json` `sendUnlockTicks` | `[retune]` — a 16-wide opening maze costs more than an 8-wide one |
-| Tier unlock spacing | 6 000 ticks (5 min) | `creeps.json` `unlockEveryTicks` | tiers at 0:00 / 5:00 / 10:00 · `[retune]` — measured 2026-09-15 against 4 500 and 3 000 under sudden death and kept: 6 000 gives the shortest matches (median 22 156 ticks), the lowest peak (943 creeps) and the only monotone ladder of the three; 3 000 breaks the ladder (#48) |
+| Tier unlock spacing | 1 200 ticks (1 min) | `creeps.json` `unlockEveryTicks` | `[proposed]` 2026-09-16, chosen by the user in review: one new creep a minute, the fourteenth at 13:20, before sudden death. Was 6 000, measured 2026-09-15 on the three-tier roster against 4 500 and 3 000 under sudden death and kept: 6 000 gives the shortest matches (median 22 156 ticks), the lowest peak (943 creeps) and the only monotone ladder of the three; 3 000 breaks the ladder (#48) |
 | Sudden death start | 18 000 ticks (15:00) | `creeps.json` `suddenDeathTick` | ADR-0026; one unlock interval after the last tier · `[retune]` |
 | Sudden death growth | ×1.15 per income period | `creeps.json` `suddenDeathGrowth` | compounding, applied to HP at spawn · `[retune]` |
 | Max tier | 2 (→ three tiers, 0–2) | `creeps.json` `maxTier` | |

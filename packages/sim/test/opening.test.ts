@@ -142,6 +142,12 @@ describe('the match clock starts when the contest does', () => {
     expect(tierUnlockTick(2)).toBe(SEND_UNLOCK_TICKS + UNLOCK_EVERY_TICKS * 2)
   })
 
+  it('opens a new creep every minute (user, 2026-09-16)', () => {
+    // Sixty seconds at 20 Hz. The ladder is a clock the player can count on.
+    expect(UNLOCK_EVERY_TICKS).toBe(60 * 20)
+    expect(tierUnlockTick(1) - tierUnlockTick(0)).toBe(1200)
+  })
+
   it('has nobody richer than they started when sending opens', () => {
     // The ordering whose loss caused the inversion: the first send has to come
     // before the first payout, so the attacker can compound it.

@@ -120,11 +120,17 @@ describe('the loop', () => {
     // The tower sits on the left edge so the tank, which spawns in column 0
     // and is routed around it, passes inside range every lap.
     const tier1At = tierUnlockTick(creepSpec(TANK2).tier)
+    // The race is about laps and lives, not about affording the tank: at a
+    // one-minute unlock (2026-09-16) the sender has banked 1,400 of its 3,000.
+    const FUND_TANK2 = (st: Parameters<typeof withGold>[0]) => {
+      withGold(st, 1, creepSpec(TANK2).cost)
+    }
     const horizon = tier1At + lapTicks(TANK2) * (STARTING_LIVES + 1)
     const weak = runUntil(
       (x) => x.players[0]!.kills > 0 || x.result !== MatchResult.Playing,
       horizon,
       { 0: [build(0, R + 4, TowerKind.Single, 0)], [tier1At]: [send(TANK2, 1)] },
+      FUND_TANK2,
     )
     expect(weak.players[0]!.kills + weak.players[0]!.leaks).toBeGreaterThan(0)
     expect(weak.players[0]!.leaks).toBeGreaterThan(0)
@@ -144,6 +150,7 @@ describe('the loop', () => {
         ],
         [tier1At]: [send(TANK2, 1)],
       },
+      FUND_TANK2,
     )
     expect(strong.players[0]!.kills).toBe(1)
     expect(strong.players[0]!.leaks).toBeLessThan(weak.players[0]!.leaks)
