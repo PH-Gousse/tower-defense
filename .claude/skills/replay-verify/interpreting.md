@@ -48,6 +48,9 @@ pnpm headless-match --seed 4 --max-ticks 9000  --out fixtures/replays/medium.jso
 pnpm headless-match --seed 1 --max-ticks 40000 --out fixtures/replays/long.json
 ```
 
+`--out` is relative to the repo root whatever directory you run from, and the tool prints
+where it wrote.
+
 Golden fixtures: `GOLDEN_UPDATE=1 pnpm --filter @ltw/sim test`, then commit the printed
 hashes. Treat this as a bigger deal — they are hand-built and pin cases the bots never
 reach.

@@ -1,7 +1,8 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { dirname, relative } from 'node:path'
 import { MatchResult } from '@ltw/sim'
-import { parseArgs, num, str, say, emit, gameSeconds } from './lib/cli'
+import { parseArgs, num, str, say, emit, gameSeconds, resolveOutPath } from './lib/cli'
+import { REPO_ROOT } from './lib/scan'
 import { configFor, SEED_CAVEAT, PRESET_NAMES } from './lib/config'
 import { runRecorded, currentBalance, type ReplayFile } from './lib/replay'
 
@@ -15,6 +16,9 @@ import { runRecorded, currentBalance, type ReplayFile } from './lib/replay'
  *   pnpm headless-match --seed 3
  *   pnpm headless-match --seed 3 --ai-a hard --ai-b easy --max-ticks 20000
  *   pnpm headless-match --seed 0 --out fixtures/replays/short.json
+ *
+ * `--out` is relative to the repo root, not to the directory you ran from;
+ * pass an absolute path to write anywhere else.
  *
  * On `--seed`: nothing in the sim consumes one (ADR-0010). It selects a
  * configuration — a maze template and a pair of bot presets — and the run
@@ -82,10 +86,14 @@ if (out) {
     expectedHash: m.hash,
     data: currentBalance(),
   }
-  mkdirSync(dirname(out), { recursive: true })
-  writeFileSync(out, JSON.stringify(file, null, 2) + '\n')
+  // Repo-root relative, not cwd relative: `pnpm headless-match` runs this tool
+  // inside packages/harness, so a plain `fixtures/replays/short.json` used to
+  // write a second fixtures tree there and leave the real replays stale.
+  const target = resolveOutPath(out, REPO_ROOT)
+  mkdirSync(dirname(target), { recursive: true })
+  writeFileSync(target, JSON.stringify(file, null, 2) + '\n')
   say()
-  say(`  wrote ${out}  (${m.commands.length} commands, expected hash ${m.hash})`)
+  say(`  wrote ${relative(REPO_ROOT, target)}  (${m.commands.length} commands, expected hash ${m.hash})`)
 }
 say()
 

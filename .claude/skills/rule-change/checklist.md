@@ -66,6 +66,9 @@ pnpm headless-match --seed 4 --max-ticks 9000  --out fixtures/replays/medium.jso
 pnpm headless-match --seed 1 --max-ticks 40000 --out fixtures/replays/long.json
 ```
 
+`--out` is relative to the repo root whatever directory you run from, and the tool prints
+where it wrote. Then append the reason to each file's `_comment`.
+
 The golden fixtures in `packages/sim/test/golden/` are hand-built and reach cases a bot never
 plays. Regenerate them with `GOLDEN_UPDATE=1 pnpm --filter @ltw/sim test` and treat doing so
 as a bigger deal than regenerating a recorded replay — they are the keystone.

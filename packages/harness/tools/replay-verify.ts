@@ -114,7 +114,7 @@ say()
 
 if (results.length === 0) {
   say('  no replays found. Record some with:')
-  say('    pnpm headless-match --seed 0 --max-ticks 3000 --out fixtures/replays/short.json')
+  say('    pnpm headless-match --seed 3 --max-ticks 4000 --out fixtures/replays/short.json')
 } else if (broken.length === 0) {
   say(`  all ${results.length} reproduce their stored hash bit for bit`)
 } else {

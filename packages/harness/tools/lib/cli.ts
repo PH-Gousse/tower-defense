@@ -108,6 +108,24 @@ export function resolvePath(p: string, repoRoot: string): string {
   return p // let the caller report a readable "cannot read" against what was typed
 }
 
+/**
+ * The same idea for a path being WRITTEN: relative means from the repo root.
+ *
+ * `resolvePath` cannot serve here. It picks a candidate by asking which one
+ * exists, and an output file does not exist yet, so it would fall through to
+ * the path as typed -- resolved against the tool's own cwd, which is
+ * `packages/harness`. That is what made `--out fixtures/replays/short.json`
+ * write a new `packages/harness/fixtures/` and leave the real replays stale
+ * while `replay-verify` stayed red, with nothing on screen saying why.
+ *
+ * So: absolute paths pass through, and everything else is repo-root relative,
+ * whichever directory the tool was started from. A path meant to be relative
+ * to the caller's cwd has to be spelled absolutely.
+ */
+export function resolveOutPath(p: string, repoRoot: string): string {
+  return isAbsolute(p) ? p : join(repoRoot, p)
+}
+
 export function pct(n: number): string {
   return `${(n * 100).toFixed(1)}%`
 }
