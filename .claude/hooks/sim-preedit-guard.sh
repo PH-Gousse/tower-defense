@@ -19,6 +19,10 @@ file_path=$(printf '%s' "$payload" | jq -r '.tool_input.file_path // empty')
 [ -z "$file_path" ] && exit 0
 
 # Repo-relative, which is what the exemption table is keyed on.
+# The checkout this file belongs to, which is a worktree when the session is
+# in one; CLAUDE_PROJECT_DIR stays the main checkout (lib/file-root.sh, #53).
+. "$(dirname "${BASH_SOURCE[0]}")/lib/file-root.sh"
+root="$(file_root "$file_path" "$root")"
 rel="${file_path#"$root"/}"
 case "$rel" in
   packages/sim/src/*.ts) ;;

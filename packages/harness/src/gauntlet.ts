@@ -8,6 +8,8 @@ import {
   templateAt,
   CREEPS,
   creepSpec,
+  installBalanceData,
+  liveBalanceData,
   levelOf,
   TowerKind,
   Kind,
@@ -69,6 +71,24 @@ function fortify(s: GameState, towers: number, level: number): void {
 }
 
 export function runGauntlet(creepIndex: number, towers: number, level: number): GauntletResult {
+  // Sudden death off for the measurement. The send goes out at tick 100,000
+  // (below) to clear the build phase and the tier clock, which is deep inside
+  // sudden death, so every creep spawned with up to x1,036 its HP and the whole
+  // table read LEAK -- a 30-HP Scrapling walking through eighty level-3 towers
+  // -- until 2026-09-17. `lap-damage.ts` had the same bug and the same fix.
+  const restoreData = installBalanceData({
+    ...liveBalanceData(),
+    suddenDeathTick: undefined,
+    suddenDeathGrowth: undefined,
+  })
+  try {
+    return measure(creepIndex, towers, level)
+  } finally {
+    installBalanceData(restoreData)
+  }
+}
+
+function measure(creepIndex: number, towers: number, level: number): GauntletResult {
   const spec: CreepSpec = creepSpec(creepIndex)
   let a: GameState = createState()
   let b: GameState = createState()
