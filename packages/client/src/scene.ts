@@ -153,6 +153,8 @@ export interface Stats {
   readonly result: MatchResult
   readonly winner: number
   readonly oppLives: number
+  /** The opponent's income per period. Public: both lanes are on screen anyway. */
+  readonly oppIncome: number
   readonly oppCreeps: number
   /** Non-null once a peer's hashes disagreed with ours. The sim is frozen. */
   readonly desync: Divergence | null
@@ -1733,6 +1735,7 @@ const scratchV = new THREE.Vector3()
           result: state.result,
           winner: state.winner,
           oppLives: state.players[1 - me()]!.lives,
+          oppIncome: state.players[1 - me()]!.income,
           oppCreeps: (state.lanes[1 - me()] as Lane).creeps.count,
           desync: driver.desync,
           peerLag: driver.lockstep ? driver.peerLag(me()) : 0,

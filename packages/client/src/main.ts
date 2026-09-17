@@ -39,6 +39,7 @@ const tierLeft = el('tierLeft')
 const lives = el('lives')
 const oppLives = el('oppLives')
 const income = el('income')
+const oppIncome = el('oppIncome')
 const leaks = el('leaks')
 const gold = el('gold')
 const over = el('over')
@@ -296,6 +297,9 @@ scene.onStats((s) => {
   // time the cadence is tuned -- and it would read as a balance bug, not a
   // display one.
   setText(income, `${s.income} /${INCOME_EVERY_TICKS / TICK_HZ}s`)
+  // The opponent's income, beside yours (user, 2026-09-17): what they earn is
+  // what they can send at you, and income only grows by sending.
+  setText(oppIncome, `${s.oppIncome} /${INCOME_EVERY_TICKS / TICK_HZ}s`)
   setText(oppLives, String(s.oppLives))
 
   // The three clocks. All fixed-width: the rail's width is what the camera
