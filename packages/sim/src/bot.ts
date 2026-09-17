@@ -15,6 +15,7 @@ import {
 import { pathFrom } from './path'
 import {
   TowerKind,
+  ARCHETYPES,
   CREEPS,
   CreepArchetypeKind,
   creepSpec,
@@ -439,12 +440,23 @@ export function botCommand(
   const lane = state.lanes[player] as Lane
   const me = state.players[player] as Player
 
-  const emergency = findLoopingCreep(lane)
+  let emergency = findLoopingCreep(lane)
   if (emergency !== -1) {
     const cmd = reinforceRoute(state, player, lane)
     if (cmd) return [cmd]
-    // Nothing affordable to reinforce with. Fall through rather than idling:
-    // sending back is still better than doing nothing.
+    // Nothing to reinforce with. Fall through rather than idling: sending back
+    // is still better than doing nothing.
+    //
+    // That promise was broken until 2026-09-17. Both readers only send when
+    // there is no emergency, so a bot whose maze was full and fully upgraded
+    // stopped sending the moment a creep lapped its lane, for the rest of the
+    // match: measured at send ratio 0.25, the counter-picker led on income
+    // (1,604 to 1,116) and lives (6 to 3), then banked 14,583 gold while it
+    // lost its last six (#52). `reinforceRoute` returns null for two reasons,
+    // and only one is worth saving for: not enough gold yet. With the dearest
+    // single tower step in hand, null means nothing can be reinforced at any
+    // price, so the emergency is not the bot's to answer with gold.
+    if (me.gold >= dearestTowerStep()) emergency = -1
   }
 
   // Build the opening before anything else. Sending with an empty lane is how
@@ -753,6 +765,18 @@ function unlockedTier(tick: number): number {
   let tier = 0
   while (tier + 1 <= MAX_TIER && tick >= tierUnlockTick(tier + 1)) tier += 1
   return tier
+}
+
+/** The most any one build or upgrade can cost, from the installed tower data. */
+function dearestTowerStep(): number {
+  let most = 0
+  for (let kind = 0; kind < ARCHETYPES.length; kind++) {
+    for (let level = 1; level <= MAX_LEVEL; level++) {
+      const cost = levelOf(kind as TowerKind, level).cost
+      if (cost > most) most = cost
+    }
+  }
+  return most
 }
 
 /** How many towers stand in a lane. */

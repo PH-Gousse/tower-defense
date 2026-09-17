@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import { createState, MatchResult, type GameState } from '../src/state'
 import { botCommand, BOT_NORMAL, BOT_HARD } from '../src/bot'
-import { tierUnlockTick, creepSpec } from '../src/data'
+import { tierUnlockTick, creepSpec, TowerKind, MAX_LEVEL } from '../src/data'
 import { MAZE_TEMPLATES, templateAt } from '../src/maze'
 import { step, Kind, Refusal, checkBuild, checkUpgrade, checkSend, type Command } from '../src/step'
 import { hashState } from '../src/hash'
 import { GRID_W, GRID_H, TOWER_SIZE, FOOTPRINT_CELLS, BUILD_ROW_MIN, BUILD_ROW_MAX, footprintCells, SPAWN_INDICES } from '../src/grid'
 import { buildField, spawnsReachable } from '../src/field'
-import { send, run, SCRAPLING, BOG_BRUTE, withoutBuildPhase } from './helpers'
+import { send, run, place, SCRAPLING, BOG_BRUTE, withoutBuildPhase } from './helpers'
 
 // Not a test of the opening: see withoutBuildPhase.
 withoutBuildPhase()
@@ -324,6 +324,45 @@ describe('bot', () => {
     // Turned off, the same board gets the ordinary decision.
     const off = botCommand(s, 0, { ...BOT_NORMAL, adaptive: 'send' })
     expect(off.length).toBeGreaterThan(0)
+  })
+
+  it('keeps sending while a creep laps a maze it can no longer reinforce', () => {
+    // The emergency branch falls through "rather than idling: sending back is
+    // still better than doing nothing" -- and until 2026-09-17 both readers then
+    // refused to send while the emergency stood, so a full, fully upgraded maze
+    // froze the bot for the rest of the match. Measured at ratio 0.25 (#52): it
+    // led on income and lives, then banked 14,583 gold while losing its last six.
+    for (const reader of ['table', 'estimate'] as const) {
+      let s: GameState = createState()
+      ;(s as { tick: number }).tick = tierUnlockTick(2) + 1000
+      const lane = s.lanes[0]!
+      // Every legal anchor, row-major, at the top level: nothing left to
+      // build and nothing left to upgrade.
+      ;(s.players[0] as { gold: number }).gold = 1_000_000
+      for (let ay = BUILD_ROW_MIN; ay <= BUILD_ROW_MAX; ay++) {
+        for (let ax = 0; ax + TOWER_SIZE <= GRID_W; ax++) {
+          if (checkBuild(s, 0, ax, ay, TowerKind.Single).refusal !== Refusal.None) continue
+          place(s, 0, ax, ay, TowerKind.Single, MAX_LEVEL)
+        }
+      }
+      // An unkillable creep that has already lapped: the emergency.
+      ;(s.players[1] as { gold: number }).gold = creepSpec(SCRAPLING).cost
+      let into: GameState = createState()
+      let out = step(s, [{ tick: s.tick, player: 1, kind: Kind.Send, creep: SCRAPLING }], into)
+      into = s
+      s = out
+      expect(s.lanes[0]!.creeps.count).toBe(1)
+      s.lanes[0]!.creeps.hp[0] = 1_000_000_000
+      s.lanes[0]!.creeps.laps[0] = 1
+      ;(s.players[0] as { lives: number }).lives = 1000
+      ;(s.players[0] as { gold: number }).gold = 1_000_000
+      ;[s, into] = alignToDecision(s, into, (st, buf) => step(st, [], buf))
+      expect(lane.towers.count, 'the maze was filled').toBeGreaterThan(0)
+
+      const cmds = botCommand(s, 0, { ...BOT_NORMAL, reader })
+      expect(cmds.length, `${reader}: the bot did something`).toBeGreaterThan(0)
+      expect(cmds.every((c) => c.kind === Kind.Send), `${reader}: and it was a send`).toBe(true)
+    }
   })
 
   it('always builds the opening before it sends anything', () => {
