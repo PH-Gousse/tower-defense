@@ -1,58 +1,33 @@
 {
-  "version": 9,
-  "_comment": "Step 8. The roster is a RULE, not a list: tier N stats are base * growth^N, generated at load up to maxTier.",
-  "_ladderComment": "Version 6 BOUNDS the ladder at three tiers with big steps, where it used to run twenty tiers with gentle ones. The two are alternatives and cannot be mixed. The old rule ended matches by arithmetic: growth was geometric and the tiers never stopped, so creep HP passed any maze eventually and somebody always lost. x5 cannot go back to twenty tiers either -- 5^19 overflows the 32-bit gold hash and 1.45^19 does not, which is why the step size and the tier count had to move together. THERE IS CURRENTLY NO REPLACEMENT FOR THAT GUARANTEE, and it is a known, deliberate gap rather than an oversight. Measured with `pnpm --filter @ltw/harness lap`: a maze saturates at 50 level-3 towers needing 40,572 HP to survive one lap (80 and 120 towers add nothing, because the route is fixed and the extra towers cannot reach it), while the heaviest creep this ladder can ever produce is Tank III at 250*5^2 = 6,250. Creeps are short by 6.5x, permanently. Two players who both build past 50 towers can therefore sit in a match that cannot end. Bots do not reach it -- MAX_TOWER_TARGET is 45, just under saturation, and mirror matches still decide in 4 to 17 minutes -- so the decision was to ship this and find out whether real play ever gets there before building a valve for it. See the P1 in TODOS.md for the shape a valve would take.",
-  "_pacingComment": "Unlocks at 0:00, 5:00 and 10:00 rather than every 30 seconds. The x5 step is what makes those two moments matter: a maze built for tier 1 is visibly inadequate the instant tier 2 lands, so both are forced reinvestment beats rather than a number quietly ticking up every half minute. Speed is held constant per archetype; the source table drifts it up a little per tier (swarm 1.5 to 1.7 tiles/s, runner 3.0 to 3.5) and that is deliberately not reproduced, because speed is not part of the growth rule and a per-tier speed column would be a schema change to buy a difference nobody can feel.",
+  "version": 11,
+  "_comment": "Version 10, ADR-0031: the roster is an explicit list, in ladder order. A creep's tier is its position in `creeps`; tier n unlocks at sendUnlockTicks + n x unlockEveryTicks. The growth rule (three archetypes x three tiers, x5 per tier, generated at load) is gone, because the user's four fixed creeps sit on no clean rule.",
+  "_ladderComment": "Creeps 1-4 are the user's (2026-09-16), in player gold: 5/1/1, 10/2/2, 22/4/4, 50/8/8 as cost/income/bounty. Creeps 5-14 continue them: cost x~2.2 a step, income x2, bounty = income, so income per gold falls from 20% to 6.6% -- cheap sends are economy, dear sends are pressure. The loader asserts it is non-increasing, not strictly falling, because creeps 1 and 2 tie at 20% as given. Names and design are ours and [proposed]; issue #51 carries the art.",
+  "_hpComment": "HP is equal threat per gold. The damage a creep takes crossing the maze goes as 1/speed, so HP = cost(gold) x 12 x 1.1^(n-1) x threat x (0.225 / speed), threat Horde 0.5 / Fast 0.8 / Armoured 1.2, rounded to 10 below 10,000 and to 1,000 above. Horde was 0.6 in review and moved to 0.5 the same day: at 0.6 the Scrapling has 40 HP, two hits from a level-1 mortar, and the bot's 3:1:1 maze of twenty leaked 4,824 of a 5,000-Scrapling flood where it leaks none at 30 HP -- the 'each creep has a maze that beats it' claim #12 measured and threat.test pins. Twenty mortars hold it at either HP. Armoured has the most HP per gold and Fast the least. Measured with lap-damage the same day: a saturated guard-tower board deals 66,771 / 31,671 / 98,145 per lap at 4.5 / 9 / 3 tiles/s, so the Storm Drake is a match-ender at 125,000 gold, and per thousand gold creep 14 costs about four times the lives creep 1 does. The 1.1^n is the first lever if late matches end too abruptly. Every number [proposed] [retune].",
+  "_shapeComment": "shape is horde (answered by the mortar), fast (the frost shrine) or armoured (the guard tower), cycling up the ladder. Speeds are the measured swarm/runner/tank speeds they replace: 0.225 / 0.45 / 0.15 tiles a tick.",
   "_atomComment": "ONE PURCHASE IS ONE CREEP. Swarm used to ship a pack of six, so a single click put six creeps in the lane and there was no way to send fewer -- the multiplication happened here, in the data, where no amount of work on the button could reach it. `count` is 1 for every archetype and a pack is something the player assembles by clicking, which is how the map this game descends from has always worked: a shrine click queues one unit and spamming is the intended way to mass-send. Splash still has swarms to answer, because five clicks still produce five creeps; they now cost five decisions instead of one.",
   "_speedComment": "Version 7: every speed multiplied by three, and nothing else touched (ADR-0025). Speed is in tiles per tick and a tile is what changed: the lane went from 8 x 24 to 16 x 213 with 2x2 towers, so a bare lap went from 29 tiles to 213 and a swarm took 142 seconds to walk it -- nine income payouts. The factor is the original's units, not a tuning: its creeps move at roughly 270-350 units per second on 64-unit creep tiles, 4.2-5.5 tiles/s against our 1.5-3.0, about three times. HP, cost, income and bounty did not move, so HP per gold and every other ratio the roster was tuned on is exactly what it was. Nothing in this file has been measured on the new board; the whole roster is [retune] until /balance has run on it. version bumped because versionsMatch gates peers.",
-  "_scaleComment": "Every gold figure is x10 the source table, so a pack price can be divided by its pack size without rounding away a tenth of the card, and so a bounty of half a gold can exist at all. Gold is hashed as a 32-bit integer (`hash.ts`), so sub-unit prices are not available at any scale -- the scale is the room to express them. Swarm's cost and income are the table's pack figures divided by five, 10/5 and 1/5, then x10.",
-  "unlockEveryTicks": 6000,
+  "_scaleComment": "Version 11, 2026-09-16: gold is stored as the player sees it. It was x10 the source table from step 8 so a swarm pack price could be divided by its pack size and a half-gold bounty could exist; packs are gone and the ladder (ADR-0031) has no sub-gold figure, while the client shows stored gold as it is, so at x10 a player read a 50-gold Scrapling where the user asked for 5. Every cost, income and bounty was divided by ten and nothing else moved. version bumped because versionsMatch gates peers.",
+  "_minuteComment": "unlockEveryTicks 6000 -> 1200 on 2026-09-16, the user's choice in the tower and creep rework: one new creep a minute, so the fourteen-creep ladder opens its last rung at 13:20, before sudden death at 15:00. At five minutes the last creep would have opened at 65:00, in a match that sudden death ends by about 23. The 2026-09-15 measurement that kept 6000 (3000 broke the ladder, #48) was taken on the three-tier roster with x5 steps, where every unlock was a cliff; on a ladder of fourteen x2.2 steps each unlock is a small step, so it is a reason to re-measure, not a result that carries over. [proposed] [retune].",
+  "unlockEveryTicks": 1200,
   "_sendUnlockComment": "The opening build phase, in ticks at 20Hz. Sending was legal from tick 0, which meant the first wave could be in your lane before you had placed a single tower -- there was no opening, just a scramble. 400 is 20 seconds: enough to spend the opening purse as a maze rather than a reflex, and far short of the 6000-tick tier-1 unlock so that unlock stays its own separate beat.",
   "sendUnlockTicks": 400,
-  "_suddenDeathComment": "Version 9, ADR-0026. From suddenDeathTick, the HP of every creep SPAWNED multiplies by suddenDeathGrowth per income period (INCOME_EVERY_TICKS, 300), compounding: at the tick itself x1.15, a period later x1.32, and so on. This is the match-ender the bounded ladder lost (issue #8): Tank III at 6,250 HP passes the 81,000 a 30-tower level-3 maze needs after 4.6 minutes of sudden death and the 415,000 a 120-tower one needs after 7.5, so no maze on this lane survives past about 23 minutes. 18000 is 15:00, one unlock interval after the last tier, so the tier beats stay their own beats. Both fields are optional: a replay or golden fixture recorded without them plays the match it recorded. Both are [proposed] and [retune] with the rest of section 11; if matches end too early or too late these two move first. Neither is a tuning of anything else -- HP per gold, income per gold and the bounty tax are untouched below the start tick.",
+  "_suddenDeathComment": "Version 9, ADR-0026. From suddenDeathTick, the HP of every creep SPAWNED multiplies by suddenDeathGrowth per income period (INCOME_EVERY_TICKS, 300), compounding: at the tick itself x1.15, a period later x1.32, and so on. This is the match-ender the bounded ladder lost (issue #8): Tank III at 6,250 HP passes the 81,000 a 30-tower level-3 maze needs after 4.6 minutes of sudden death and the 415,000 a 120-tower one needs after 7.5, so no maze on this lane survives past about 23 minutes. 18000 is 15:00, one unlock interval after the last tier, so the tier beats stay their own beats. Both fields are optional: a replay or golden fixture recorded without them plays the match it recorded. Both are [proposed] and [retune] with the rest of section 11; if matches end too early or too late these two move first. Neither is a tuning of anything else -- HP per gold, income per gold and the bounty tax are untouched below the start tick. Version 10: its HP cap is derived from the roster, floor((2^31 - 1) / max creep HP), because creep HP is an Int32 and the fixed x100,000 cap was sized for Tank III's 6,250 HP; for this ladder it is x1,036 (ADR-0031).",
   "suddenDeathTick": 18000,
   "suddenDeathGrowth": 1.15,
-  "maxTier": 2,
-  "growth": {
-    "_comment": "Per tier, and the shape changed with the ladder. hp used to sit ABOVE cost so HP per gold ROSE as you bought up, which was the mechanism that let a creep eventually beat any maze. That mechanism is gone: with three tiers there is no 'eventually' to reach, and nothing carries the guarantee in its place yet -- see _ladderComment. hp and cost now move together at x5, so HP per gold is FLAT and buying up concentrates threat rather than buying it more cheaply. income also x5, so income per gold stays constant within an archetype and the cheap-card-earns-more rule keeps holding at every tier. bounty grows slower than cost at x4, which is the tax falling from about 25% of a tier-1 card to about 15% of a tier-3 one: early sends are economy, late sends are pressure.",
-    "cost": 5,
-    "hp": 5,
-    "income": 5,
-    "bounty": 4
-  },
-  "archetypes": [
-    {
-      "key": "swarm",
-      "name": "Swarm",
-      "answers": "splash",
-      "cost": 20,
-      "count": 1,
-      "hp": 20,
-      "speed": 0.225,
-      "incomeBonus": 2,
-      "bounty": 5
-    },
-    {
-      "key": "runner",
-      "name": "Runner",
-      "answers": "slow",
-      "cost": 250,
-      "count": 1,
-      "hp": 40,
-      "speed": 0.45,
-      "incomeBonus": 20,
-      "bounty": 60
-    },
-    {
-      "key": "tank",
-      "name": "Tank",
-      "answers": "single-target",
-      "cost": 600,
-      "count": 1,
-      "hp": 250,
-      "speed": 0.15,
-      "incomeBonus": 40,
-      "bounty": 150
-    }
+  "creeps": [
+    { "key": "scrapling", "name": "Scrapling", "shape": "horde", "cost": 5, "count": 1, "hp": 30, "speed": 0.225, "incomeBonus": 1, "bounty": 1 },
+    { "key": "dasher_hound", "name": "Dasher Hound", "shape": "fast", "cost": 10, "count": 1, "hp": 50, "speed": 0.45, "incomeBonus": 2, "bounty": 2 },
+    { "key": "bog_brute", "name": "Bog Brute", "shape": "armoured", "cost": 22, "count": 1, "hp": 570, "speed": 0.15, "incomeBonus": 4, "bounty": 4 },
+    { "key": "ember_imp", "name": "Ember Imp", "shape": "horde", "cost": 50, "count": 1, "hp": 400, "speed": 0.225, "incomeBonus": 8, "bounty": 8 },
+    { "key": "wind_wolf", "name": "Wind Wolf", "shape": "fast", "cost": 110, "count": 1, "hp": 770, "speed": 0.45, "incomeBonus": 16, "bounty": 16 },
+    { "key": "stone_troll", "name": "Stone Troll", "shape": "armoured", "cost": 240, "count": 1, "hp": 8350, "speed": 0.15, "incomeBonus": 32, "bounty": 32 },
+    { "key": "hive_drone", "name": "Hive Drone", "shape": "horde", "cost": 520, "count": 1, "hp": 5530, "speed": 0.225, "incomeBonus": 64, "bounty": 64 },
+    { "key": "shadow_stalker", "name": "Shadow Stalker", "shape": "fast", "cost": 1150, "count": 1, "hp": 11000, "speed": 0.45, "incomeBonus": 128, "bounty": 128 },
+    { "key": "iron_golem", "name": "Iron Golem", "shape": "armoured", "cost": 2500, "count": 1, "hp": 116000, "speed": 0.15, "incomeBonus": 256, "bounty": 256 },
+    { "key": "wraith", "name": "Wraith", "shape": "horde", "cost": 5500, "count": 1, "hp": 78000, "speed": 0.225, "incomeBonus": 512, "bounty": 512 },
+    { "key": "nightmare_steed", "name": "Nightmare Steed", "shape": "fast", "cost": 12000, "count": 1, "hp": 149000, "speed": 0.45, "incomeBonus": 1024, "bounty": 1024 },
+    { "key": "siege_behemoth", "name": "Siege Behemoth", "shape": "armoured", "cost": 26000, "count": 1, "hp": 1602000, "speed": 0.15, "incomeBonus": 2048, "bounty": 2048 },
+    { "key": "doom_herald", "name": "Doom Herald", "shape": "horde", "cost": 57000, "count": 1, "hp": 1073000, "speed": 0.225, "incomeBonus": 4096, "bounty": 4096 },
+    { "key": "storm_drake", "name": "Storm Drake", "shape": "fast", "cost": 125000, "count": 1, "hp": 2071000, "speed": 0.45, "incomeBonus": 8192, "bounty": 8192 }
   ]
 }

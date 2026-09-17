@@ -364,11 +364,11 @@ function ogre(): Model {
 
 export function creepModel(kind: CreepArchetypeKind): Model {
   switch (kind) {
-    case CreepArchetypeKind.Swarm:
+    case CreepArchetypeKind.Horde:
       return beetle()
-    case CreepArchetypeKind.Runner:
+    case CreepArchetypeKind.Fast:
       return hound()
-    case CreepArchetypeKind.Tank:
+    case CreepArchetypeKind.Armoured:
       return ogre()
   }
 }
@@ -376,11 +376,11 @@ export function creepModel(kind: CreepArchetypeKind): Model {
 /** How tall a creep stands, for health bars and pips. Before tier scaling. */
 export function creepHeight(kind: CreepArchetypeKind): number {
   switch (kind) {
-    case CreepArchetypeKind.Swarm:
+    case CreepArchetypeKind.Horde:
       return 0.36
-    case CreepArchetypeKind.Runner:
+    case CreepArchetypeKind.Fast:
       return 0.55
-    case CreepArchetypeKind.Tank:
+    case CreepArchetypeKind.Armoured:
       return 1.05
   }
 }

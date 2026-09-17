@@ -26,11 +26,11 @@ import { hashState } from '../src/hash'
 import { TowerKind, levelOf, creepSpec } from '../src/data'
 import {
   build, upgrade, sell, send, run, runUntil, tick, advance, stepper, place, wall, seal, withGold,
-  R, SWARM, RUNNER, TANK, withoutBuildPhase,
+  R, SCRAPLING, DASHER_HOUND, BOG_BRUTE, withEveryCreepUnlocked,
 } from './helpers'
 
-// Not a test of the opening: see withoutBuildPhase.
-withoutBuildPhase()
+// Not a test of the opening or the unlock clock: see withEveryCreepUnlocked.
+withEveryCreepUnlocked()
 
 describe('step', () => {
   it('does not mutate the previous state', () => {
@@ -47,7 +47,7 @@ describe('step', () => {
   })
 
   it('is reproducible: same commands, same hash', () => {
-    const cmds = { 2: [build(4, R + 4)], 5: [send(RUNNER)], 9: [build(6, R + 8)] }
+    const cmds = { 2: [build(4, R + 4)], 5: [send(DASHER_HOUND)], 9: [build(6, R + 8)] }
     expect(hashState(run(60, cmds))).toBe(hashState(run(60, cmds)))
   })
 })
@@ -56,7 +56,7 @@ describe('sends and where creeps enter', () => {
   it('puts creeps in the opponent lane, never the sender own lane', () => {
     // A creep is owned by its sender for scoring but exists only in the
     // defender's lane. Player 1 sends, so lane 0 fills and lane 1 stays empty.
-    const s = run(30, { 0: [send(RUNNER, 1)] })
+    const s = run(30, { 0: [send(DASHER_HOUND, 1)] })
     expect(s.lanes[0]!.creeps.count).toBe(1)
     expect(s.lanes[1]!.creeps.count).toBe(0)
     expect(s.lanes[0]!.creeps.owner[0]).toBe(1)
@@ -66,7 +66,7 @@ describe('sends and where creeps enter', () => {
     // A release queue used to pace arrivals at one creep every four ticks,
     // which capped a lane at five a second however fast you clicked -- and
     // clicking fast is how you mass-send. Gold is the only limit now.
-    const wave = Array.from({ length: 6 }, () => send(SWARM))
+    const wave = Array.from({ length: 6 }, () => send(SCRAPLING))
     expect(run(1, { 0: wave }).lanes[0]!.creeps.count).toBe(6)
   })
 
@@ -134,7 +134,9 @@ describe('sends and where creeps enter', () => {
     // the same cells. If any two shared a point they would be welded forever.
     let s = createState()
     wall(s, 0, R + 2, [GRID_W - 2, GRID_W - 1])
-    const wave: Command[] = Array.from({ length: 40 }, () => send(SWARM))
+    const wave: Command[] = Array.from({ length: 40 }, () => send(SCRAPLING))
+    // Paid for: forty of the first rung is 2,000, twice the opening purse.
+    ;(s.players[1] as { gold: number }).gold = 40 * creepSpec(SCRAPLING).cost
     s = tick(s, wave)
     // The wall's towers shoot. This is a test of positions, not of damage,
     // so the creeps are made unkillable after they spawn.
@@ -144,7 +146,7 @@ describe('sends and where creeps enter', () => {
     // Sized from the exit, not the grid: a scattered spawn (ADR-0030) can start
     // a creep on the zone's last row, 100 rows from the exit, and the old
     // GRID_H-based walk of 102 tiles took that one round a lap.
-    s = advance(s, Math.floor((EXIT_ROW_MIN - SPAWN_ROWS - 1) / creepSpec(SWARM).speed))
+    s = advance(s, Math.floor((EXIT_ROW_MIN - SPAWN_ROWS - 1) / creepSpec(SCRAPLING).speed))
     const c = s.lanes[0]!.creeps
     expect(c.count).toBe(40)
     for (let i = 0; i < c.count; i++) expect(c.laps[i], `creep ${i} lapped`).toBe(0)
@@ -157,8 +159,8 @@ describe('sends and where creeps enter', () => {
 
   it('walks a creep toward the exit', () => {
     // The lane is vertical: the exit is at the bottom, so progress is +y.
-    const early = run(40, { 0: [send(RUNNER)] })
-    const late = run(120, { 0: [send(RUNNER)] })
+    const early = run(40, { 0: [send(DASHER_HOUND)] })
+    const late = run(120, { 0: [send(DASHER_HOUND)] })
     expect(late.lanes[0]!.creeps.y[0] as number).toBeGreaterThan(
       early.lanes[0]!.creeps.y[0] as number,
     )
@@ -221,7 +223,7 @@ describe('placement refusals, each in isolation, before any gold moves', () => {
 
   it('CreepOnFootprint when a creep stands on the footprint (ADR-0023)', () => {
     // Walk a runner into the buildable rows, then try to build on top of it.
-    const s = runUntil((x) => (x.lanes[0]!.creeps.y[0] as number) > R + 3, 2000, { 0: [send(RUNNER)] })
+    const s = runUntil((x) => (x.lanes[0]!.creeps.y[0] as number) > R + 3, 2000, { 0: [send(DASHER_HOUND)] })
     const cx = Math.floor(s.lanes[0]!.creeps.x[0] as number)
     const cy = Math.floor(s.lanes[0]!.creeps.y[0] as number)
     // Every anchor whose footprint covers the creep's tile is refused...
@@ -285,7 +287,7 @@ describe('the half-slot rule', () => {
     let release = 0
     while (Math.floor(spawnPointFor(release, f).x) !== GRID_W - 1) release += 1
     ;(s.lanes[0] as { released: number }).released = release
-    s = tick(s, [send(RUNNER)])
+    s = tick(s, [send(DASHER_HOUND)])
     expect(Math.floor(s.lanes[0]!.creeps.x[0] as number)).toBe(GRID_W - 1)
     // Unkillable: the wall's towers shoot, and this is a test of the route.
     s.lanes[0]!.creeps.hp[0] = 1e9
@@ -440,7 +442,7 @@ describe('leaking', () => {
   it('leaks on the tick the position enters the exit zone, not the next', () => {
     // A creep a hair above the seam with a partial step to make: the crossing
     // happens mid-step, and the leak must land on this tick.
-    const s = tick(createState(), [send(RUNNER)])
+    const s = tick(createState(), [send(DASHER_HOUND)])
     const c = s.lanes[0]!.creeps
     c.x[0] = 0.5
     c.y[0] = EXIT_ROW_MIN - 0.05
@@ -453,12 +455,12 @@ describe('leaking', () => {
     expect(out.lanes[0]!.creeps.laps[0]).toBe(1)
     // And it is back in the spawn zone, with its HP.
     expect(out.lanes[0]!.creeps.y[0] as number).toBeLessThan(SPAWN_ROWS)
-    expect(out.lanes[0]!.creeps.hp[0]).toBe(creepSpec(RUNNER).hp)
+    expect(out.lanes[0]!.creeps.hp[0]).toBe(creepSpec(DASHER_HOUND).hp)
   })
 
   it('leaks exactly once per lap', () => {
     // Watched tick by tick: leaks and laps move together, one at a time.
-    let s = tick(createState(), [send(RUNNER)])
+    let s = tick(createState(), [send(DASHER_HOUND)])
     let leaks = 0
     const next = stepper(s)
     for (let t = 0; t < 4000; t++) {
@@ -475,7 +477,7 @@ describe('leaking', () => {
   })
 
   it('never leaves a creep parked in the exit zone', () => {
-    const s = runUntil((x) => x.players[0]!.leaks >= 1, 4000, { 0: [send(RUNNER)] })
+    const s = runUntil((x) => x.players[0]!.leaks >= 1, 4000, { 0: [send(DASHER_HOUND)] })
     const c = s.lanes[0]!.creeps
     for (let i = 0; i < c.count; i++) expect(tileY(Math.floor(c.y[i] as number) * GRID_W)).toBeLessThan(EXIT_ROW_MIN)
   })
@@ -483,7 +485,7 @@ describe('leaking', () => {
 
 describe('stranded creeps', () => {
   it('returns a pathless creep to the spawn zone', () => {
-    let s = runUntil((x) => (x.lanes[0]!.creeps.y[0] as number) > R + 6, 2000, { 0: [send(TANK)] })
+    let s = runUntil((x) => (x.lanes[0]!.creeps.y[0] as number) > R + 6, 2000, { 0: [send(BOG_BRUTE)] })
     const walked = s.lanes[0]!.creeps.y[0] as number
     expect(walked).toBeGreaterThan(R + 6)
 

@@ -48,8 +48,12 @@ const cache = new Map<string, Promise<Record>>()
  * about 31,000 ticks at 8-9 s each: 100-130 s for the first test to await a
  * mode, against vitest's 120 s default. The number of matches is the
  * measurement and stays; the budget is what moves.
+ *
+ * 1,200 s since 2026-09-17: on the fourteen-creep ladder the GitHub runner
+ * timed out two table-reader tests at 604 s and 653 s against 600, while a
+ * laptop runs each mode in 230-480 s.
  */
-const ADAPTIVE_TEST_BUDGET_MS = 600_000
+const ADAPTIVE_TEST_BUDGET_MS = 1_200_000
 
 function versusTemplate(mode: AdaptiveMode, reader: Reader): Promise<Record> {
   const key = `${reader}:${mode}`
@@ -78,10 +82,23 @@ function versusTemplate(mode: AdaptiveMode, reader: Reader): Promise<Record> {
 }
 
 describe('adaptive play under the table reader', () => {
-  it('counter-picking what to send beats the fixed template, clearly', async () => {
+  it('counter-picking what to send beats the fixed template more often than not', async () => {
     // The whole reason the opponent's board is drawn on your screen.
+    //
+    // Restated 2026-09-17 by the user through /rule-change (#52). This pinned
+    // "clearly": more than twice as many wins as losses, measured on the
+    // three-by-three roster, where each tier offered all three shapes at one
+    // price. On the fourteen-creep ladder (ADR-0031) a price has one shape and
+    // the pick may drop only one rung, so choosing the shape is worth less, and
+    // the measurement is 8 wins to 4 across every variant tried: the
+    // shipped bot, EXPLOITS sending fast creeps against mortars, a rung band
+    // that must spend as much gold, and the hoarding fix. Wins come in
+    // seat-order pairs, so 8 is one ratio short of the old pin, not a coin flip.
+    //
+    // What stays pinned is the direction: counter-picking wins more than it
+    // loses. A reader that bought nothing would split evenly and fail here.
     const r = await versusTemplate('send', 'table')
-    expect(r.wins).toBeGreaterThan(r.losses * 2)
+    expect(r.wins).toBeGreaterThan(r.losses)
   }, ADAPTIVE_TEST_BUDGET_MS)
 
   it('reacting to the wave in your own lane never wins', async () => {

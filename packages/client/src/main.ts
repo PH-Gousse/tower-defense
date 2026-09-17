@@ -4,11 +4,11 @@ import { holdToRepeat } from './hold'
 import { createSender } from './send'
 import { STALL_TICKS } from '@ltw/sim'
 import {
-  TowerKind, levelOf, MAX_LEVEL, TICK_HZ, MatchResult, Refusal,
+  TowerKind, ARCHETYPES, type TowerArchetype, levelOf, MAX_LEVEL, TICK_HZ, MatchResult, Refusal,
   CREEPS, tierUnlockTick, SEND_UNLOCK_TICKS, INCOME_EVERY_TICKS,
   BOT_EASY, BOT_NORMAL, BOT_HARD, type BotConfig,
 } from '@ltw/sim'
-import { mmss, secondsUntil, ticksUntilIncome, ticksUntilNextTier, unlockedTier, ticksUntilSuddenDeath, suddenDeathLabel } from './clocks'
+import { mmss, secondsUntil, ticksUntilIncome, ticksUntilNextTier, unlockedTier, sendWindowStart, ticksUntilSuddenDeath, suddenDeathLabel } from './clocks'
 import { railWidth, safeEdges } from './chrome'
 import { bootAssets } from './assets/boot'
 
@@ -67,14 +67,13 @@ const sendLabel = el('sendLabel')
 // Build and Send stay separate palettes on purpose: they are opposite-facing
 // economies, and merging them makes a 140g send one misclick from a 110g tower.
 //
-// The palette is a WINDOW on the roster, not the whole roster. Step 8 replaced
-// the fixed six-creep list with a growth rule that keeps producing tiers for as
-// long as a match runs -- sixty-three of them -- because a ladder that stops
-// leaves a maze nothing can break and the match never ends. Sixty-three buttons
-// is not a palette, so this shows the tier you can buy now and the one arriving
-// next, and re-points the same six buttons as the ladder advances.
-const ARCHETYPE_COUNT = 3
-const WINDOW_TIERS = 2
+// The palette is a WINDOW on the roster, not the whole roster. The ladder has
+// fourteen rungs (ADR-0031) and fourteen buttons is not a palette, so six
+// buttons show six consecutive rungs ending on the next one to unlock, and are
+// re-pointed as the ladder climbs. See `sendWindowStart` in clocks.ts. It used
+// to be two tiers of three archetypes, which on a ladder of one creep per tier
+// would have skipped two rungs in three.
+const SEND_SLOTS = 6
 const SEND_KEYS = ['q', 'w', 'e', 'r', 't', 'y']
 
 const creepButtons: HTMLButtonElement[] = []
@@ -140,16 +139,15 @@ window.addEventListener('keydown', (ev) => {
 })
 
 if (sendRow) {
-  for (let slot = 0; slot < ARCHETYPE_COUNT * WINDOW_TIERS; slot++) {
+  for (let slot = 0; slot < SEND_SLOTS; slot++) {
     const b = document.createElement('button')
     b.className = 'creep'
-    b.dataset.creep = String(slot)
+    // No rung until the first paint points it at one, which also sets its icon.
+    // Not a number, so `send.ts` sends nothing from an unpainted card.
+    b.dataset.creep = 'none'
     b.innerHTML = '<span class="ico"></span><span class="n"></span><span class="c"></span><kbd class="key"></kbd>'
-    // The icon is the archetype's, rendered from the same model that walks
-    // the lane. Slots cycle through the archetypes in roster order.
-    const ico = b.querySelector<HTMLElement>('.ico')
-    const icon = scene.icons.creeps[slot % ARCHETYPE_COUNT]
-    if (ico && icon) ico.style.backgroundImage = `url(${icon})`
+    // The icon follows the rung the card points at, and is set when the
+    // palette is painted: the window moves as the ladder climbs.
     const key = b.querySelector('.key')
     if (key) key.textContent = (SEND_KEYS[slot] ?? '').toUpperCase()
     holdStops.push(holdToRepeat(b, () => sendN(slot, 1) > 0, window))
@@ -199,17 +197,16 @@ window.addEventListener('keydown', (ev) => {
 // --- build palette ---------------------------------------------------------
 
 /**
- * What a tower is called on screen.
+ * What a tower is called on screen: its archetype's `name` in towers.json.
  *
- * The sim names its archetypes by what they do -- single-target, splash, slow
- * -- which is right for a rule book and flat for a card. These are the names
- * the models were built to, and they are presentation only: nothing in the
- * sim, the protocol or the GDD reads them.
+ * This used to be a map here, because the data named archetypes by what they
+ * do (single-target, splash, slow) while the models were built as a guard
+ * tower, a mortar and a frost shrine. Two sources for one name drift on the
+ * first rename, so the data now carries the card names and this reads them.
+ * Presentation only: the sim and the protocol key towers by `TowerKind`.
  */
-const TOWER_NAME: Record<TowerKind, string> = {
-  [TowerKind.Single]: 'Guard tower',
-  [TowerKind.Splash]: 'Mortar',
-  [TowerKind.Slow]: 'Frost shrine',
+function towerName(kind: TowerKind): string {
+  return (ARCHETYPES[kind] as TowerArchetype).name
 }
 
 for (const kind of [TowerKind.Single, TowerKind.Splash, TowerKind.Slow]) {
@@ -251,7 +248,7 @@ scene.onSelect((sel: Selection | null) => {
   }
   panel.hidden = false
   const spec = levelOf(sel.tower, sel.level)
-  if (panelTitle) panelTitle.textContent = `${TOWER_NAME[sel.tower]} · Lv ${sel.level}`
+  if (panelTitle) panelTitle.textContent = `${towerName(sel.tower)} · Lv ${sel.level}`
   if (panelDamage) panelDamage.textContent = String(spec.damage)
   if (panelRange) panelRange.textContent = spec.range.toFixed(1)
   // Cooldown is in ticks; shots per second is what a player can reason about.
@@ -319,18 +316,24 @@ scene.onStats((s) => {
     sendLabel.classList.toggle('counting', left > 0)
   }
 
-  const tier = unlockedTier(s.tick)
+  const windowStart = sendWindowStart(unlockedTier(s.tick), CREEPS.length, creepButtons.length)
   for (let slot = 0; slot < creepButtons.length; slot++) {
     const b = creepButtons[slot]!
-    const slotTier = tier + Math.floor(slot / ARCHETYPE_COUNT)
-    const index = slotTier * ARCHETYPE_COUNT + (slot % ARCHETYPE_COUNT)
+    const index = windowStart + slot
     const spec = CREEPS[index]
     if (!spec) {
       b.hidden = true
       continue
     }
     b.hidden = false
-    b.dataset.creep = String(index)
+    if (b.dataset.creep !== String(index)) {
+      b.dataset.creep = String(index)
+      // The icon is the rung's shape, rendered from the same model that walks
+      // the lane. Repainted only when the card changes rung.
+      const ico = b.querySelector<HTMLElement>('.ico')
+      const icon = scene.icons.creeps[spec.archetype]
+      if (ico && icon) ico.style.backgroundImage = `url(${icon})`
+    }
     const name = b.querySelector('.n')
     if (name) name.textContent = spec.name
     const c = b.querySelector('.c')

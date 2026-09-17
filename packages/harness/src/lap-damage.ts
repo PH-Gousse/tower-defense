@@ -1,6 +1,6 @@
 import {
   createState, step, buildField, insertTower, footprintOverlapsTower, templateAt, mazeLength,
-  CREEPS, TowerKind, Kind,
+  CREEPS, TowerKind, Kind, installBalanceData, liveBalanceData,
   type GameState, type Command, type CreepSpec,
 } from '@ltw/sim'
 
@@ -47,6 +47,16 @@ export interface LapDamage {
 const PROBE_HP = 1_000_000_000
 
 export function measureLapDamage(towers: number, level: number, speed: number): LapDamage {
+  // Sudden death off for the measurement. The probe is sent at tick 100,000
+  // (below) to clear the build phase, which is deep inside sudden death, and
+  // its billion HP times the sudden-death factor wrapped the Int32 it is stored
+  // in: every cell of the table read about 723 million until 2026-09-16, and
+  // nothing failed. What a maze deals per lap has nothing to do with the clock.
+  const restoreData = installBalanceData({
+    ...liveBalanceData(),
+    suddenDeathTick: undefined,
+    suddenDeathGrowth: undefined,
+  })
   // Patch creep 0 into an indestructible probe, then put it back.
   const row = CREEPS[0] as { hp: number; speed: number; count: number; cost: number }
   const saved = { hp: row.hp, speed: row.speed, count: row.count, cost: row.cost }
@@ -96,6 +106,7 @@ export function measureLapDamage(towers: number, level: number, speed: number): 
     throw new Error('probe never completed a lap')
   } finally {
     Object.assign(row, saved)
+    installBalanceData(restoreData)
   }
 }
 

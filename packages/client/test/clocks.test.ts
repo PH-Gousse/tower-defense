@@ -3,7 +3,7 @@ import {
   TICK_HZ, INCOME_EVERY_TICKS, SEND_UNLOCK_TICKS, tierUnlockTick, MAX_TIER,
 } from '@ltw/sim'
 import {
-  secondsUntil, mmss, ticksUntilIncome, unlockedTier, ticksUntilNextTier,
+  secondsUntil, mmss, ticksUntilIncome, unlockedTier, ticksUntilNextTier, sendWindowStart,
 } from '../src/clocks'
 
 /**
@@ -116,6 +116,25 @@ describe('ticksUntilIncome', () => {
       const isPayday = sinceOpen > 0 && sinceOpen % INCOME_EVERY_TICKS === 0
       if (isPayday) expect(ticksUntilIncome(t)).toBe(INCOME_EVERY_TICKS)
     }
+  })
+})
+
+describe('sendWindowStart', () => {
+  it('starts at the bottom of the ladder while the first rungs are all that is open', () => {
+    expect(sendWindowStart(0, 14, 6)).toBe(0)
+    expect(sendWindowStart(4, 14, 6)).toBe(0)
+  })
+
+  it('keeps the next rung to unlock as the last card', () => {
+    for (let tier = 4; tier < 13; tier++) {
+      const start = sendWindowStart(tier, 14, 6)
+      expect(start + 5, `tier ${tier}`).toBe(tier + 1)
+    }
+  })
+
+  it('stops at the top of the ladder instead of showing empty cards', () => {
+    expect(sendWindowStart(13, 14, 6)).toBe(8)
+    expect(sendWindowStart(99, 14, 6)).toBe(8)
   })
 })
 

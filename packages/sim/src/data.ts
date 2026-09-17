@@ -142,15 +142,22 @@ export function investedIn(kind: TowerKind, level: number): number {
 /**
  * Which of the three shapes a creep is, as an index rather than a name.
  *
- * The bot needs to reason about what is coming at it -- a wave of swarm wants a
- * different answer than one tank -- and parsing that out of a key like
- * "swarm3" would be a string comparison in the hot path and a silent breakage
- * the first time something is renamed.
+ * The bot needs to reason about what is coming at it -- a horde wants a
+ * different answer than one armoured creep -- and parsing that out of a key
+ * like "stone_troll" would be a string comparison in the hot path and a silent
+ * breakage the first time something is renamed.
+ *
+ * Renamed from Swarm / Runner / Tank with the fourteen-creep ladder (ADR-0031).
+ * The integers did not move, so a replay frozen with the old roster still
+ * reads its creeps' shapes correctly.
  */
 export enum CreepArchetypeKind {
-  Swarm = 0,
-  Runner = 1,
-  Tank = 2,
+  /** Cheapest soak per gold, the thing players mass-send. The mortar answers it. */
+  Horde = 0,
+  /** Twice a horde's speed, the least HP per gold. The frost shrine answers it. */
+  Fast = 1,
+  /** Two thirds of a horde's speed, the most HP per gold. The guard tower answers it. */
+  Armoured = 2,
 }
 
 export interface CreepSpec {
@@ -158,7 +165,10 @@ export interface CreepSpec {
   readonly name: string
   /** Which shape this is, for counter-picking on both sides of the board. */
   readonly archetype: CreepArchetypeKind
-  /** Tier 0 opens when sending does; tier N, UNLOCK_EVERY_TICKS later each. */
+  /**
+   * The creep's rung on the ladder, which is its position in the roster.
+   * Tier 0 opens when sending does; tier N, UNLOCK_EVERY_TICKS later each.
+   */
   readonly tier: number
   readonly cost: number
   /** How many creeps one purchase releases into the target lane. */
@@ -171,22 +181,17 @@ export interface CreepSpec {
   readonly bounty: number
 }
 
-/** The tier-0 stats of one archetype. Every higher tier is derived from these. */
-export interface CreepArchetype {
+/** One rung of the ladder as `creeps.json` writes it. `tier` is its list position. */
+export interface CreepEntry {
   readonly key: string
   readonly name: string
+  /** "horde", "fast" or "armoured". */
+  readonly shape: string
   readonly cost: number
   readonly count: number
   readonly hp: number
   readonly speed: number
   readonly incomeBonus: number
-  readonly bounty: number
-}
-
-export interface CreepGrowth {
-  readonly cost: number
-  readonly hp: number
-  readonly income: number
   readonly bounty: number
 }
 
@@ -198,71 +203,49 @@ export interface CreepsFile {
   /** Sudden death, ADR-0026. Absent means never. See SUDDEN_DEATH_TICK. */
   readonly suddenDeathTick?: number
   readonly suddenDeathGrowth?: number
-  readonly maxTier: number
-  readonly growth: CreepGrowth
-  readonly archetypes: readonly CreepArchetype[]
+  /** The ladder, cheapest first (ADR-0031). */
+  readonly creeps: readonly CreepEntry[]
 }
 
 const creepFile = creepsJson as unknown as CreepsFile
 
-/** File order is the archetype order, and the loader asserts it below. */
-const CREEP_ARCHETYPE_KEYS = ['swarm', 'runner', 'tank']
+/** A shape's key in the file, indexed by CreepArchetypeKind. */
+const SHAPE_KEYS = ['horde', 'fast', 'armoured']
 
-function archetypeOf(key: string): CreepArchetypeKind {
-  const i = CREEP_ARCHETYPE_KEYS.indexOf(key)
-  if (i === -1) throw new Error(`creeps.json: unknown archetype "${key}"`)
+function shapeOf(key: string, creep: string): CreepArchetypeKind {
+  const i = SHAPE_KEYS.indexOf(key)
+  if (i === -1) throw new Error(`creeps.json: "${creep}" has unknown shape "${key}"`)
   return i as CreepArchetypeKind
 }
 
-/** Tier suffixes. Past this the tier number is spelled out. */
-const TIER_SUFFIX = ['', ' II', ' III', ' IV', ' V', ' VI', ' VII', ' VIII', ' IX', ' X']
-
 /**
- * Expand the growth rule into a roster.
+ * Read the ladder into specs.
  *
- * Done once at load, so the hot path still reads a plain array and nothing
- * downstream has to know the roster is generated. Growth is applied by repeated
- * multiplication rather than by `Math.pow`, which is banned: pow is a libm call
- * and libm differs between engines in the last bits, while a loop of `*` is
- * exact IEEE everywhere. That is not pedantry — these numbers reach the
- * simulation, and two players whose creeps have different HP have desynced.
+ * The roster used to be generated here from three archetypes and a growth rule
+ * (`base x growth^tier`). ADR-0031 replaced it with a list, because the user's
+ * four fixed creeps sit on no clean rule and a rule with per-creep overrides is
+ * a list with extra steps. What survives from the old loader is the promise it
+ * made: this runs once at load, so the hot path reads a plain array.
  */
-export function expandCreeps(f: CreepsFile): CreepSpec[] {
-  const out: CreepSpec[] = []
-  for (let tier = 0; tier <= f.maxTier; tier++) {
-    for (const a of f.archetypes) {
-      let cost = a.cost
-      let hp = a.hp
-      let income = a.incomeBonus
-      let bounty = a.bounty
-      for (let t = 0; t < tier; t++) {
-        cost = cost * f.growth.cost
-        hp = hp * f.growth.hp
-        income = income * f.growth.income
-        bounty = bounty * f.growth.bounty
-      }
-      const suffix = TIER_SUFFIX[tier] ?? ` T${tier + 1}`
-      out.push({
-        key: tier === 0 ? a.key : `${a.key}${tier + 1}`,
-        name: `${a.name}${suffix}`,
-        archetype: archetypeOf(a.key),
-        tier,
-        cost: Math.round(cost),
-        count: a.count,
-        hp: Math.round(hp),
-        speed: a.speed,
-        incomeBonus: Math.max(1, Math.round(income)),
-        bounty: Math.max(1, Math.round(bounty)),
-      })
-    }
-  }
-  return out
+export function creepsFromFile(f: CreepsFile): CreepSpec[] {
+  return f.creeps.map((c, tier) => ({
+    key: c.key,
+    name: c.name,
+    archetype: shapeOf(c.shape, c.key),
+    tier,
+    cost: c.cost,
+    count: c.count,
+    hp: c.hp,
+    speed: c.speed,
+    incomeBonus: c.incomeBonus,
+    bounty: c.bounty,
+  }))
 }
 
-export let CREEPS: readonly CreepSpec[] = expandCreeps(creepFile)
+export let CREEPS: readonly CreepSpec[] = creepsFromFile(creepFile)
 
 /**
- * The loaded creep file, so a tuning tool can vary the growth rule in memory
+ * The loaded creep file, so a tuning tool can vary the ladder in memory
  * rather than by rewriting JSON and reloading the module. Tuning is a search,
  * and a search that costs a process restart per sample is a search nobody runs.
  */
@@ -315,19 +298,39 @@ export const CREEP_DATA_VERSION = creepFile.version
  *
  * The factors are a table built by repeated multiplication rather than a
  * `pow`, which is banned in this package (docs/invariants.md), and the table
- * is capped: creep HP is an Int32, and 6,250 x 1.15^100 would overflow it.
- * At the cap a creep already has a hundred thousand times its HP, which no
- * maze this lane can hold survives, so the cap is never the thing that ends
- * a match. NEVER (-1) means the rule is off, which is what a fixture recorded
+ * is capped so the heaviest creep's HP still fits the Int32 it is stored in.
+ *
+ * The cap is derived from the roster (ADR-0031). It was a fixed x100,000,
+ * sized for a 6,250-HP Tank III; the ladder's Storm Drake has 2,071,000 HP,
+ * and x100,000 of that wraps negative -- which is exactly what the harness
+ * `lap` tool had been measuring since it set the tick past sudden death. The
+ * derived cap is x1,036 for this ladder, reached 12.25 minutes into sudden
+ * death, by which time no maze on this lane is standing. A roster whose cap
+ * falls under SUDDEN_DEATH_MIN_CAP fails at load rather than quietly
+ * flattening sudden death. NEVER (-1) means the rule is off, which is what a fixture recorded
  * before the rule existed carries.
  */
 export const SUDDEN_DEATH_NEVER = -1
 export let SUDDEN_DEATH_TICK = assertSuddenDeathTick(creepFile.suddenDeathTick)
 export let SUDDEN_DEATH_GROWTH = assertSuddenDeathGrowth(creepFile.suddenDeathGrowth)
-const SUDDEN_DEATH_MAX_FACTOR = 100_000
+/** Largest value an Int32Array slot holds. Creep HP lives in one. */
+const INT32_MAX = 2147483647
+/** Below this the cap would stop sudden death ending matches, so the roster is refused. */
+export const SUDDEN_DEATH_MIN_CAP = 100
 const SUDDEN_DEATH_PERIODS = 512
 const suddenDeathTable = new Float64Array(SUDDEN_DEATH_PERIODS)
+/** The HP multiplier sudden death never exceeds, for the roster currently installed. */
+export let SUDDEN_DEATH_MAX_FACTOR = 1
 function rebuildSuddenDeath(): void {
+  let maxHp = 1
+  for (const c of CREEPS) if (c.hp > maxHp) maxHp = c.hp
+  SUDDEN_DEATH_MAX_FACTOR = Math.floor(INT32_MAX / maxHp)
+  if (SUDDEN_DEATH_MAX_FACTOR < SUDDEN_DEATH_MIN_CAP) {
+    throw new Error(
+      `creeps.json: the heaviest creep (${maxHp} HP) leaves sudden death a cap of ` +
+        `x${SUDDEN_DEATH_MAX_FACTOR}, under the x${SUDDEN_DEATH_MIN_CAP} it needs to end a match`,
+    )
+  }
   let f = 1
   for (let i = 0; i < SUDDEN_DEATH_PERIODS; i++) {
     f = f * SUDDEN_DEATH_GROWTH
@@ -364,8 +367,12 @@ function assertSuddenDeathGrowth(v: number | undefined): number {
   }
   return v
 }
-/** Highest tier the roster reaches. Tier N unlocks N minutes in. */
-export const MAX_TIER = creepFile.maxTier
+/**
+ * Highest tier the roster reaches: the last rung of the ladder. Follows the
+ * installed roster, so a replay frozen with the three-tier roster climbs only
+ * the tiers it had.
+ */
+export let MAX_TIER = CREEPS.length - 1
 
 /**
  * The opening purse and the income it starts on.
@@ -388,10 +395,24 @@ export const MAX_TIER = creepFile.maxTier
  * send-unlock (ADR-0009), so a longer opening buys no gold, and every number
  * in the batch shifted by exactly the extra ticks. Fifteen towers is a wall
  * and its plug with change for the second.
+ *
+ * 100 since 2026-09-16, the user's number: a match starts with 100 gold, and
+ * with every level-1 tower at 10 gold that is ten towers. (Gold was stored x10
+ * until the same day, when the scale went: the figures above are x10 ones.)
+ * The fifteen-tower finding above was measured against 600-gold towers and the
+ * old creep roster, so it is a warning to re-measure, not a rule this breaks:
+ * if the opening double-knockout returns, `/balance` says so.
  */
-export let STARTING_GOLD = 9000
-/** Paid into gold every INCOME_EVERY_TICKS. Sending is the only way it grows. */
-export let STARTING_INCOME = 250
+export let STARTING_GOLD = 100
+/**
+ * Paid into gold every INCOME_EVERY_TICKS. Sending is the only way it grows.
+ *
+ * 10 gold a period since 2026-09-16, chosen by the user in review: one
+ * level-1 tower every fifteen seconds before a single send. Was 250 against a
+ * 9,000 purse at the old x10 scale; the new creeps pay 20% of their price as income where the old
+ * swarm paid 10%, so sending takes over the economy sooner.
+ */
+export let STARTING_INCOME = 10
 
 const DEFAULT_STARTING_GOLD = STARTING_GOLD
 const DEFAULT_STARTING_INCOME = STARTING_INCOME
@@ -453,6 +474,9 @@ export function installBalanceData(next: BalanceData): BalanceData {
   // recorded a match that had no horizon, and replays the one it recorded.
   SUDDEN_DEATH_TICK = assertSuddenDeathTick(next.suddenDeathTick)
   SUDDEN_DEATH_GROWTH = assertSuddenDeathGrowth(next.suddenDeathGrowth)
+  // The roster first: the sudden-death cap is derived from its heaviest creep.
+  CREEPS = next.creeps
+  MAX_TIER = CREEPS.length - 1
   rebuildSuddenDeath()
   // Missing means today's value, NOT zero: a fixture frozen before these were
   // freezable recorded a match played on the purse of its day, and the numbers
@@ -460,7 +484,6 @@ export function installBalanceData(next: BalanceData): BalanceData {
   // Defaulting to zero would replay it with no gold and no income at all.
   STARTING_GOLD = next.startingGold ?? DEFAULT_STARTING_GOLD
   STARTING_INCOME = next.startingIncome ?? DEFAULT_STARTING_INCOME
-  CREEPS = next.creeps
   return previous
 }
 
@@ -493,47 +516,26 @@ const MAX_WAVE_BOUNTY_SHARE = 0.35
 function assertCreepData(): void {
   if (CREEPS.length === 0) throw new Error('creeps.json: no creeps')
 
-  // Archetype order is load-bearing: the counter-pick tables in bot.ts index by
-  // it, so a reordered file would silently make the bot answer swarms with the
-  // anti-tank tower and lose matches for a reason nobody would think to look for.
-  for (let i = 0; i < CREEP_ARCHETYPE_KEYS.length; i++) {
-    const a = creepFile.archetypes[i]
-    if (!a || a.key !== CREEP_ARCHETYPE_KEYS[i]) {
-      throw new Error(
-        `creeps.json: archetype ${i} must be "${CREEP_ARCHETYPE_KEYS[i]}", got "${a?.key}"`,
-      )
-    }
-  }
-
-  // Tiers must be non-descending so the roster reads in unlock order, and so a
-  // UI listing them in file order never shows a locked creep above an open one.
+  // The ladder's central economic claim (ADR-0031): each rung costs more than
+  // the one below and pays no more income per gold. Buying up is a threat
+  // decision and buying down is an economy decision, and this is one character
+  // away from being false in a JSON file that gets edited hundreds of times
+  // during tuning -- where it would read as badly balanced rather than as buggy.
+  // Non-increasing rather than falling: the user's first two creeps tie at 20%.
+  // Compared by cross-multiplication, integers only, so no float decides it.
   for (let i = 1; i < CREEPS.length; i++) {
-    if ((CREEPS[i] as CreepSpec).tier < (CREEPS[i - 1] as CreepSpec).tier) {
-      throw new Error('creeps.json: creeps must be ordered by non-descending tier')
+    const below = CREEPS[i - 1] as CreepSpec
+    const above = CREEPS[i] as CreepSpec
+    if (above.tier !== i) {
+      throw new Error(`creeps.json: "${above.key}" is tier ${above.tier} at ladder position ${i}`)
     }
-  }
-
-  // The design's central economic claim: cheaper creeps give more income per
-  // gold, so buying up is a threat decision and buying down is an economy
-  // decision. This is one character away from being false in a JSON file that
-  // gets edited hundreds of times during tuning, and if it broke the game would
-  // read as badly balanced rather than as buggy.
-  const byTier = new Map<number, CreepSpec[]>()
-  for (const c of CREEPS) {
-    const list = byTier.get(c.tier) ?? []
-    list.push(c)
-    byTier.set(c.tier, list)
-  }
-  for (const [tier, list] of byTier) {
-    const sorted = list.slice().sort((a, b) => a.cost - b.cost)
-    for (let i = 1; i < sorted.length; i++) {
-      const cheap = sorted[i - 1] as CreepSpec
-      const dear = sorted[i] as CreepSpec
-      if (cheap.incomeBonus / cheap.cost <= dear.incomeBonus / dear.cost) {
-        throw new Error(
-          `creeps.json: tier ${tier}: "${cheap.key}" is cheaper than "${dear.key}" but does not give more income per gold`,
-        )
-      }
+    if (above.cost <= below.cost) {
+      throw new Error(`creeps.json: "${above.key}" must cost more than "${below.key}", the rung below it`)
+    }
+    if (above.incomeBonus * below.cost > below.incomeBonus * above.cost) {
+      throw new Error(
+        `creeps.json: "${above.key}" pays more income per gold than "${below.key}", the cheaper rung below it`,
+      )
     }
   }
 

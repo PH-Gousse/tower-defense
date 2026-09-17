@@ -74,6 +74,22 @@ export function ticksUntilIncome(tick: number): number {
   return INCOME_EVERY_TICKS - ((tick - SEND_UNLOCK_TICKS) % INCOME_EVERY_TICKS)
 }
 
+/**
+ * The first ladder rung the send palette shows, given the highest unlocked tier.
+ *
+ * The palette is a window of `slots` consecutive rungs (ADR-0031). It ends on
+ * the next rung to unlock, so its countdown is always on screen, and it fills
+ * backwards with the rungs below. Until the ladder has climbed far enough to
+ * need a window it simply starts at the bottom; at the top it stops at the
+ * last rung rather than showing empty cards.
+ */
+export function sendWindowStart(tier: number, rosterLength: number, slots: number): number {
+  const lastRung = rosterLength - 1
+  const end = tier + 1 < lastRung ? tier + 1 : lastRung
+  const start = end - (slots - 1)
+  return start > 0 ? start : 0
+}
+
 /** Highest tier buyable at this tick. */
 export function unlockedTier(tick: number): number {
   let tier = 0

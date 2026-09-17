@@ -72,7 +72,7 @@ import { createAudio, type Audio } from './audio/audio'
 import { AssetLayer } from './assets/layer'
 import type { AssetRegistry } from './assets/registry'
 import type { SfxPlayer } from './assets/sfx'
-import { CREEP_FILE } from '@ltw/sim'
+import { artBand, creepScale, CREEP_ART_NAMES, MAX_ART_BAND } from './render/creepBand'
 
 /**
  * Wire-level refusals, in the player's language.
@@ -136,12 +136,8 @@ const REFUSAL_TEXT: Record<Refusal, string> = {
 
 const TILE = 1
 const KINDS = [TowerKind.Single, TowerKind.Splash, TowerKind.Slow] as const
-const CREEP_KINDS = [CreepArchetypeKind.Swarm, CreepArchetypeKind.Runner, CreepArchetypeKind.Tank] as const
+const CREEP_KINDS = [CreepArchetypeKind.Horde, CreepArchetypeKind.Fast, CreepArchetypeKind.Armoured] as const
 
-/** A heavier tier is a bigger creature. */
-function tierScale(tier: number): number {
-  return 1 + 0.22 * tier
-}
 
 export interface Stats {
   readonly towers: number
@@ -1287,7 +1283,7 @@ const scratchV = new THREE.Vector3()
             dx[c] = sx
             dz[c] = sz
             const rspec = CREEPS[curr.spec[c] as number]
-            assets?.creepSpawned(lane, cid, rspec ? rspec.archetype : 0, rspec ? rspec.tier : 0, sx, sz, true)
+            assets?.creepSpawned(lane, cid, rspec ? rspec.archetype : 0, artBand(rspec ? rspec.tier : 0), sx, sz, true)
           }
           p++
           c++
@@ -1296,8 +1292,8 @@ const scratchV = new THREE.Vector3()
         if (pid < cid) {
           // Gone from the field: a death.
           const spec = CREEPS[prev.spec[p] as number]
-          const kind = spec ? spec.archetype : CreepArchetypeKind.Swarm
-          const scale = tierScale(spec ? spec.tier : 0)
+          const kind = spec ? spec.archetype : CreepArchetypeKind.Horde
+          const scale = creepScale(spec ? spec.tier : 0)
           const set = creepSets[kind] as CreepSet
           const x = dx[p] as number
           const z = dz[p] as number
@@ -1306,7 +1302,7 @@ const scratchV = new THREE.Vector3()
             audio.death(kind, x, z)
           }
           dust.spawn(x, 0.15 * scale, z, 0.3 * scale, 0.9 * scale, 0x5a4a38, 450, now, 0.3)
-          if (kind === CreepArchetypeKind.Tank) {
+          if (kind === CreepArchetypeKind.Armoured) {
             rings.spawn(x, 0.035, z, 0.3, 1.5 * scale, 0xc8b898, 350, now)
           }
           p++
@@ -1315,7 +1311,7 @@ const scratchV = new THREE.Vector3()
         // An id in curr but not prev: a spawn. Nothing to shift.
         if (assets) {
           const sspec = CREEPS[curr.spec[c] as number]
-          assets.creepSpawned(lane, cid, sspec ? sspec.archetype : 0, sspec ? sspec.tier : 0, ox + (curr.x[c] as number), curr.y[c] as number, false)
+          assets.creepSpawned(lane, cid, sspec ? sspec.archetype : 0, artBand(sspec ? sspec.tier : 0), ox + (curr.x[c] as number), curr.y[c] as number, false)
         }
         c++
       }
@@ -1396,9 +1392,10 @@ const scratchV = new THREE.Vector3()
         }
 
         const spec = CREEPS[curr.spec[i] as number]
-        const kind = spec ? spec.archetype : CreepArchetypeKind.Swarm
-        const tier = spec ? spec.tier : 0
-        const scale = tierScale(tier)
+        const kind = spec ? spec.archetype : CreepArchetypeKind.Horde
+        // The model band, not the ladder tier: see render/creepBand.ts.
+        const tier = artBand(spec ? spec.tier : 0)
+        const scale = creepScale(spec ? spec.tier : 0)
         const set = creepSets[kind] as CreepSet
         const gait = GAIT[kind]
         const slowed = tick < (curr.slowUntil[i] as number)
@@ -1658,10 +1655,10 @@ const scratchV = new THREE.Vector3()
     attachAssets: (registry, sfx, dev) => {
       const layer = new AssetLayer(scene, registry, sfx, {
         dev,
-        creepNames: CREEP_FILE.archetypes.map((a) => a.key),
+        creepNames: CREEP_ART_NAMES,
         towerNames: ARCHETYPES.map((a) => a.key),
       })
-      const missing = layer.missingFor(CREEP_FILE.archetypes.length, 3, ARCHETYPES.length, 3)
+      const missing = layer.missingFor(CREEP_ART_NAMES.length, MAX_ART_BAND + 1, ARCHETYPES.length, 3)
       if (missing.length && dev) console.warn(`[assets] catalogue lacks ${missing.length} of the match's assets (${missing.join(', ')}); those draw procedurally`)
       assets = layer
       fileSfx = sfx

@@ -5,9 +5,9 @@ import { step, checkBuild, Kind, Refusal, TICK_MS, type Command } from '../src/s
 import { templateAt } from '../src/maze'
 import { TowerKind } from '../src/data'
 import { GRID_W, TOWER_SIZE, BUILD_ROW_MAX } from '../src/grid'
-import { place, R, SWARM, RUNNER, TANK, withoutBuildPhase } from './helpers'
+import { place, R, SCRAPLING, DASHER_HOUND, BOG_BRUTE, withEveryCreepUnlocked } from './helpers'
 
-withoutBuildPhase()
+withEveryCreepUnlocked()
 
 /**
  * The tick budget at the new scale.
@@ -62,7 +62,7 @@ describe('tick budget', () => {
     ;(s.players[0] as { lives: number }).lives = 1e6
     const wave: Command[] = []
     for (let i = 0; i < 500; i++) {
-      wave.push({ tick: 0, player: 1, kind: Kind.Send, creep: [SWARM, RUNNER, TANK][i % 3] as number })
+      wave.push({ tick: 0, player: 1, kind: Kind.Send, creep: [SCRAPLING, DASHER_HOUND, BOG_BRUTE][i % 3] as number })
     }
     let into = createState()
     let out = step(s, wave, into)

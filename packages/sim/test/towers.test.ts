@@ -16,16 +16,16 @@ import {
 } from '../src/grid'
 import { insertTower, footprintOverlapsTower } from '../src/state'
 import { step } from '../src/step'
-import { build, send, run, runUntil, stepper, R, SWARM, RUNNER, TANK, withoutBuildPhase } from './helpers'
+import { build, send, run, runUntil, stepper, R, SCRAPLING, DASHER_HOUND, BOG_BRUTE, withEveryCreepUnlocked } from './helpers'
 
-// Not a test of the opening: see withoutBuildPhase.
-withoutBuildPhase()
+// Not a test of the opening or the unlock clock: see withEveryCreepUnlocked.
+withEveryCreepUnlocked()
 
 describe('spatial hash', () => {
   it('buckets creeps by cell, ascending within a bucket', () => {
     // Stability is the targeting tiebreak: within a bucket, ascending
     // creep-array index means ascending id.
-    const wave = Array.from({ length: 30 }, () => send(SWARM, 1))
+    const wave = Array.from({ length: 30 }, () => send(SCRAPLING, 1))
     const s = run(60, { 0: wave })
     const hash = createSpatialHash(2048)
     rebuildHash(s.lanes[0]!, hash)
@@ -146,7 +146,7 @@ describe('towers', () => {
     const s = runUntil((x) => x.players[0]!.kills > 0, 4000, {
       0: [build(0, R + 4, TowerKind.Single, 0)],
       1: [build(0, R + 6, TowerKind.Single, 0)],
-      2: [send(RUNNER, 1)],
+      2: [send(DASHER_HOUND, 1)],
     })
     expect(s.players[0]!.kills).toBeGreaterThan(0)
   })
@@ -155,25 +155,25 @@ describe('towers', () => {
     // A tank against a single tower: damaged, but it completes a lap.
     // Asserted against the lap rather than against a tick budget, because
     // "alive after N ticks" is a statement about the roster, not about towers.
-    const lapTicks = Math.ceil(GRID_H / creepSpec(TANK).speed)
+    const lapTicks = Math.ceil(GRID_H / creepSpec(BOG_BRUTE).speed)
     const s = runUntil(
       (x) => x.players[0]!.leaks > 0,
       lapTicks * 2,
-      { 0: [build(0, R + 4, TowerKind.Single, 0)], 1: [send(TANK, 1)] },
+      { 0: [build(0, R + 4, TowerKind.Single, 0)], 1: [send(BOG_BRUTE, 1)] },
     )
     expect(s.players[0]!.leaks).toBeGreaterThan(0)
     expect(s.players[0]!.kills).toBe(0)
     expect(s.lanes[0]!.creeps.count).toBe(1)
     // Damaged on the way round, read from the roster rather than a literal.
-    expect(s.lanes[0]!.creeps.hp[0] as number).toBeLessThan(creepSpec(TANK).hp)
+    expect(s.lanes[0]!.creeps.hp[0] as number).toBeLessThan(creepSpec(BOG_BRUTE).hp)
   })
 
   it('respects cooldown rather than firing every tick', () => {
     const cd = levelOf(TowerKind.Single, 1).cooldownTicks
     const dmg = levelOf(TowerKind.Single, 1).damage
     const ticks = 600
-    const s = run(ticks, { 0: [build(0, R + 2, TowerKind.Single, 0)], 1: [send(TANK, 1)] })
-    const dealt = creepSpec(TANK).hp - (s.lanes[0]!.creeps.hp[0] as number)
+    const s = run(ticks, { 0: [build(0, R + 2, TowerKind.Single, 0)], 1: [send(BOG_BRUTE, 1)] })
+    const dealt = creepSpec(BOG_BRUTE).hp - (s.lanes[0]!.creeps.hp[0] as number)
     expect(dealt).toBeGreaterThan(0)
     expect(dealt).toBeLessThanOrEqual((ticks / cd + 2) * dmg)
   })
@@ -182,21 +182,27 @@ describe('towers', () => {
     const s = runUntil(
       (x) => (x.lanes[0]!.creeps.slowPercent[0] as number) > 0,
       1500,
-      { 0: [build(0, R, TowerKind.Slow, 0)], 1: [send(TANK, 1)] },
+      { 0: [build(0, R, TowerKind.Slow, 0)], 1: [send(BOG_BRUTE, 1)] },
     )
     expect(s.lanes[0]!.creeps.slowPercent[0] as number).toBeGreaterThan(0)
   })
 
   it('lets the slow expire once the creep is out of range', () => {
     // Well past the tower: a tank walks about 60 rows in 1200 ticks.
-    const s = run(1200, { 0: [build(0, R, TowerKind.Slow, 0)], 1: [send(TANK, 1)] })
+    const s = run(1200, { 0: [build(0, R, TowerKind.Slow, 0)], 1: [send(BOG_BRUTE, 1)] })
     expect(s.lanes[0]!.creeps.y[0] as number).toBeGreaterThan(R + 20)
     expect(s.lanes[0]!.creeps.slowPercent[0] as number).toBe(0)
   })
 
   it('leaves a slowed creep behind an unslowed one', () => {
-    const slowed = run(600, { 0: [build(0, R, TowerKind.Slow, 0)], 1: [send(TANK, 1)] })
-    const free = run(600, { 1: [send(TANK, 1)] })
+    // Build beside the column the tank actually walks. Spawns are scattered
+    // (ADR-0030), and a shrine at x = 0 only reached this tank while ranges were
+    // 6.75 tiles; at the 2026-09-16 rework's 5.47 it never slowed it, and both
+    // creeps finished on the identical y -- a test of the spawn table, not the slow.
+    const column = Math.floor(run(1, { 0: [send(BOG_BRUTE, 1)] }).lanes[0]!.creeps.x[0] as number)
+    const anchor = Math.min(Math.max(column + 1, 0), GRID_W - TOWER_SIZE)
+    const slowed = run(600, { 0: [build(anchor, R, TowerKind.Slow, 0)], 1: [send(BOG_BRUTE, 1)] })
+    const free = run(600, { 1: [send(BOG_BRUTE, 1)] })
     // Down the lane is +y, so "behind" is a smaller y.
     expect(slowed.lanes[0]!.creeps.y[0] as number).toBeLessThan(
       free.lanes[0]!.creeps.y[0] as number,
@@ -223,14 +229,14 @@ describe('towers', () => {
       c.id[i] = i + 1
       c.x[i] = cx + (at[i]![0] as number)
       c.y[i] = cy + (at[i]![1] as number)
-      c.hp[i] = creepSpec(SWARM).hp * 10
+      c.hp[i] = creepSpec(SCRAPLING).hp * 10
       c.speed[i] = 0
-      c.spec[i] = SWARM
+      c.spec[i] = SCRAPLING
     }
     // Already locked on: the acquisition delay is its own test below.
     lane.towers.acquire[0] = 0
     const after = step(s, [], createState())
-    const full = creepSpec(SWARM).hp * 10
+    const full = creepSpec(SCRAPLING).hp * 10
     const dmg = levelOf(TowerKind.Splash, 1).damage
     for (let i = 0; i < at.length; i++) expect(after.lanes[0]!.creeps.hp[i], `creep ${i}`).toBe(full - dmg)
   })
@@ -239,10 +245,10 @@ describe('towers', () => {
     // A tower in lane 0 must never shoot a creep in lane 1.
     const s = run(600, {
       0: [build(0, R + 4, TowerKind.Single, 0)],
-      1: [send(RUNNER, 0)], // player 0 sends -> creeps land in lane 1
+      1: [send(DASHER_HOUND, 0)], // player 0 sends -> creeps land in lane 1
     })
     expect(s.lanes[1]!.creeps.count).toBe(1)
-    expect(s.lanes[1]!.creeps.hp[0] as number).toBe(creepSpec(RUNNER).hp)
+    expect(s.lanes[1]!.creeps.hp[0] as number).toBe(creepSpec(DASHER_HOUND).hp)
     expect(s.players[1]!.kills).toBe(0)
   })
 
@@ -264,7 +270,7 @@ describe('towers', () => {
     lane.creeps.y[0] = footprintCentreY(R + 4)
     lane.creeps.hp[0] = 1
     lane.creeps.speed[0] = 0
-    lane.creeps.spec[0] = SWARM
+    lane.creeps.spec[0] = SCRAPLING
     const hash = createSpatialHash(1)
     rebuildHash(lane, hash)
     expect(findTarget(lane, hash, 0, 3)).toBe(0)
@@ -293,7 +299,7 @@ describe('acquisition delay (ADR-0028)', () => {
     c.y[0] = footprintCentreY(R + 4)
     c.hp[0] = 1e6
     c.speed[0] = 0
-    c.spec[0] = TANK
+    c.spec[0] = BOG_BRUTE
     return { s, hp: 1e6 }
   }
 
@@ -378,15 +384,54 @@ describe('data integrity', () => {
   })
 })
 
+describe('the tower rework (user, 2026-09-16)', () => {
+  // Gold is stored as the player sees it (towers.json v8).
+  const GOLD = 1
+  // The original's units: 64 to a creep tile (ADR-0025).
+  const UNITS_PER_TILE = 64
+  // Sixty shots a minute at 20 Hz.
+  const ONE_SHOT_A_SECOND = 20
+
+  it('prices every level-1 tower at 10 gold and fires it once a second', () => {
+    for (const kind of [TowerKind.Single, TowerKind.Splash, TowerKind.Slow]) {
+      expect(levelOf(kind, 1).cost, ARCHETYPES[kind]!.name).toBe(10 * GOLD)
+      expect(levelOf(kind, 1).cooldownTicks, ARCHETYPES[kind]!.name).toBe(ONE_SHOT_A_SECOND)
+    }
+  })
+
+  it('gives the guard tower 10 damage at range 500', () => {
+    expect(levelOf(TowerKind.Single, 1).damage).toBe(10)
+    expect(levelOf(TowerKind.Single, 1).range * UNITS_PER_TILE).toBe(500)
+  })
+
+  it('gives the mortar 20 damage at range 150: twice the guard, for the same price', () => {
+    expect(levelOf(TowerKind.Splash, 1).damage).toBe(20)
+    expect(levelOf(TowerKind.Splash, 1).range * UNITS_PER_TILE).toBe(150)
+  })
+
+  it('names the towers as the player sees them', () => {
+    expect(ARCHETYPES.map((a) => a.name)).toEqual(['Guard tower', 'Mortar', 'Frost shrine'])
+  })
+
+  it('lets a mortar reach the corridor beside its wall and nothing past it', () => {
+    // 150 units is 2.34 tiles from the footprint centre: one tile of footprint,
+    // then 1.34 tiles of reach. The user kept it knowing that; this pins the
+    // consequence so a range change cannot quietly widen it.
+    const reach = levelOf(TowerKind.Splash, 1).range - TOWER_SIZE / 2
+    expect(reach).toBeGreaterThan(1)
+    expect(reach).toBeLessThan(2)
+  })
+})
+
 describe('determinism with towers and sends', () => {
   it('produces the same hash for the same commands', () => {
     const cmds = {
       2: [build(0, R + 4, TowerKind.Single, 0)],
       6: [build(2, R + 8, TowerKind.Splash, 0)],
       9: [build(4, R + 12, TowerKind.Slow, 0)],
-      20: [send(SWARM, 1)],
-      60: [send(RUNNER, 1)],
-      90: [send(SWARM, 0)],
+      20: [send(SCRAPLING, 1)],
+      60: [send(DASHER_HOUND, 1)],
+      90: [send(SCRAPLING, 0)],
     }
     expect(hashState(run(900, cmds))).toBe(hashState(run(900, cmds)))
   })

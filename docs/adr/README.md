@@ -24,7 +24,7 @@ Write one through `/decide`. A decision that changes a **game rule** also needs
 | [0010](0010-seeds-are-reserved-not-consumed.md) | Seeds are reserved, not consumed | Accepted — provisional |
 | [0011](0011-dump-ts-is-a-declared-boundary.md) | `dump.ts` is a declared serialisation boundary | Accepted |
 | [0012](0012-blocking-refusal-checks-spawn-not-creeps.md) | Sealing is checked against the spawn, not creep positions | Accepted; its teleport-instead-of-refuse half superseded by ADR-0023 |
-| [0013](0013-three-tower-archetypes-no-tech-tree.md) | Three tower archetypes, three levels, no tech tree | Accepted |
+| [0013](0013-three-tower-archetypes-no-tech-tree.md) | Three tower archetypes, three levels, no tech tree | Accepted; its creep roster superseded by ADR-0031 |
 | [0014](0014-warcraft3-style-camera.md) | Warcraft 3-style camera: fixed yaw, zoom and pan only | Accepted; "fits the whole board" superseded by ADR-0024 |
 | [0015](0015-procedural-look-inferred-from-two-ticks.md) | The look is procedural, and every effect is inferred from two ticks | Accepted — "no binaries" consequence superseded by ADR-0018 |
 | [0016](0016-bot-reads-the-board-with-a-flood-model.md) | The bot reads the board with a flood model, and only for defence | Accepted |
@@ -42,6 +42,7 @@ Write one through `/decide`. A decision that changes a **game rule** also needs
 | [0028](0028-towers-take-time-to-acquire.md) | A tower takes time to acquire before its first shot | Accepted — implemented 2026-09-15; 10 ticks `[proposed]` `[retune]` |
 | [0029](0029-no-minimap.md) | There is no minimap | Accepted — implemented 2026-09-15; supersedes the minimap half of ADR-0024 |
 | [0030](0030-spawn-cells-are-scrambled.md) | Spawn cells are handed out in a fixed scrambled order | Accepted — implemented 2026-09-15; supersedes the cell order of ADR-0022 |
+| [0031](0031-a-fourteen-creep-ladder-replaces-the-three-by-three-roster.md) | A fourteen-creep ladder replaces the three-by-three roster | Accepted — implemented 2026-09-16; supersedes the creep half of ADR-0013 |
 
 ## Status vocabulary
 

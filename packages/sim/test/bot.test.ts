@@ -1,16 +1,40 @@
 import { describe, it, expect } from 'vitest'
-import { createState, type GameState } from '../src/state'
+import { createState, MatchResult, type GameState } from '../src/state'
 import { botCommand, BOT_NORMAL, BOT_HARD } from '../src/bot'
-import { tierUnlockTick, creepSpec } from '../src/data'
+import { tierUnlockTick, creepSpec, TowerKind, MAX_LEVEL } from '../src/data'
 import { MAZE_TEMPLATES, templateAt } from '../src/maze'
 import { step, Kind, Refusal, checkBuild, checkUpgrade, checkSend, type Command } from '../src/step'
 import { hashState } from '../src/hash'
 import { GRID_W, GRID_H, TOWER_SIZE, FOOTPRINT_CELLS, BUILD_ROW_MIN, BUILD_ROW_MAX, footprintCells, SPAWN_INDICES } from '../src/grid'
 import { buildField, spawnsReachable } from '../src/field'
-import { send, run, TANK, withoutBuildPhase } from './helpers'
+import { send, run, place, SCRAPLING, BOG_BRUTE, withoutBuildPhase } from './helpers'
 
 // Not a test of the opening: see withoutBuildPhase.
 withoutBuildPhase()
+
+/**
+ * Step with no commands until the tick is a bot decision tick.
+ *
+ * Bounded, and it asserts the match is still on. A finished match stops
+ * advancing the tick, so the obvious `while (tick % reactionTicks)` never
+ * exits once a leak ends the game inside the alignment window -- which is
+ * what the 2026-09-16 tower rework did to a test that sets a player to one
+ * life: the suite hung instead of failing, and a hang names no rule.
+ */
+function alignToDecision(
+  s: GameState,
+  into: GameState,
+  advance: (s: GameState, into: GameState) => GameState,
+): [GameState, GameState] {
+  for (let i = 0; i < BOT_NORMAL.reactionTicks && s.tick % BOT_NORMAL.reactionTicks !== 0; i++) {
+    const out = advance(s, into)
+    into = s
+    s = out
+  }
+  expect(s.result, 'the match ended while aligning to a decision tick').toBe(MatchResult.Playing)
+  expect(s.tick % BOT_NORMAL.reactionTicks).toBe(0)
+  return [s, into]
+}
 
 const cells = new Int32Array(FOOTPRINT_CELLS)
 function occupy(blocked: Uint8Array, ax: number, ay: number): void {
@@ -126,7 +150,9 @@ describe('bot', () => {
   it('reinforces the route when a creep is looping in its lane', () => {
     // The emergency state: a creep that has already leaked is the thing to
     // answer, ahead of whatever the template wanted next.
-    let s = run(40, { 0: [send(TANK, 1)] })
+    // The first rung: the only creep open at tick 0 on the ladder (ADR-0031),
+    // and any creep that laps an empty lane is the emergency this pins.
+    let s = run(40, { 0: [send(SCRAPLING, 1)] })
     // Rotating a pair rather than calling the `tick` helper, which allocates a
     // whole state per call: this marches up to 3000 ticks, and a state is
     // megabytes once MAX_CREEPS is sized past what gold can buy.
@@ -136,14 +162,14 @@ describe('bot', () => {
       into = from
       return out
     }
-    // March the tank round until it leaks at least once. The horizon is a
-    // lap and a half at the tank's speed, not a literal from the old board.
-    const horizon = Math.ceil((1.5 * GRID_H) / creepSpec(TANK).speed)
+    // March the creep round until it leaks at least once. The horizon is a
+    // lap and a half at its speed, not a literal from the old board.
+    const horizon = Math.ceil((1.5 * GRID_H) / creepSpec(SCRAPLING).speed)
     for (let t = 0; t < horizon && s.lanes[0]!.creeps.laps[0]! < 1; t++) s = advance(s)
     expect(s.lanes[0]!.creeps.laps[0] as number).toBeGreaterThanOrEqual(1)
 
     // Align to a decision tick, then the bot must act on its own lane.
-    while (s.tick % BOT_NORMAL.reactionTicks !== 0) s = advance(s)
+    ;[s] = alignToDecision(s, s, (st) => advance(st))
     const cmds = botCommand(s, 0, BOT_NORMAL)
     // An emergency yields one tile, not a burst: a maze is placed a tile at a
     // time and the next one depends on where the last went.
@@ -167,13 +193,20 @@ describe('bot', () => {
     // was 1600 ticks, which was the old 600-tick unlock plus room; the ladder
     // now opens tier 1 five minutes in, and a hardcoded horizon turns "the bot
     // never escalated" into a test about how long the loop happened to run.
-    const horizon = tierUnlockTick(1) + 1000
+    //
+    // To tier 2, not tier 1, since the ladder (ADR-0031): the counter-pick may
+    // take a creep one rung down (SHAPE_BAND), so while only rungs 0 and 1 are
+    // open the flood model may rightly keep choosing rung 0. Escalation is
+    // guaranteed once rung 0 falls out of the band, which is when rung 2 opens.
+    const horizon = tierUnlockTick(2) + 1000
     for (let t = 0; t < horizon; t++) {
       const cmds = botCommand(s, 0, BOT_HARD)
       for (const c of cmds) {
         if (c.kind !== Kind.Send) continue
-        if (c.creep <= 2) sawTier0 = true
-        if (c.creep >= 3) sawTier1 = true
+        // By tier, not by index: on the three-by-three roster indices 0-2 were
+        // tier 0; on the ladder every index is its own tier.
+        if (creepSpec(c.creep).tier === 0) sawTier0 = true
+        if (creepSpec(c.creep).tier >= 1) sawTier1 = true
       }
       const out = step(s, cmds, into)
       into = s
@@ -235,11 +268,7 @@ describe('bot', () => {
     }
     ;(s.players[1] as { lives: number }).lives = 1
     ;(s.players[0] as { gold: number }).gold = 20_000
-    while (s.tick % BOT_NORMAL.reactionTicks !== 0) {
-      const out = step(s, [], into)
-      into = s
-      s = out
-    }
+    ;[s, into] = alignToDecision(s, into, (st, buf) => step(st, [], buf))
     const cmds = botCommand(s, 0, BOT_NORMAL)
     expect(cmds.length).toBeGreaterThan(0)
     expect(cmds.every((c) => c.kind === Kind.Send)).toBe(true)
@@ -261,7 +290,11 @@ describe('bot', () => {
     // lethal branch fires first, and rightly.
     let s: GameState = createState()
     let into: GameState = createState()
-    for (let t = 0; t < 400; t++) {
+    // Warm up until the flood's creep is open: on the ladder (ADR-0031) the
+    // armoured probe is rung 2, and a flood sent at tick 400 was refused as
+    // TierLocked, so the lane held nothing for the model to see.
+    const warmUp = Math.max(400, tierUnlockTick(creepSpec(BOG_BRUTE).tier))
+    for (let t = 0; t < warmUp; t++) {
       const cmds = [...botCommand(s, 0, BOT_NORMAL), ...botCommand(s, 1, BOT_NORMAL)]
       const out = step(s, cmds, into)
       into = s
@@ -269,15 +302,11 @@ describe('bot', () => {
     }
     ;(s.players[1] as { gold: number }).gold = 1_000_000
     const flood: Command[] = []
-    for (let i = 0; i < 60; i++) flood.push({ tick: s.tick, player: 1, kind: Kind.Send, creep: TANK })
+    for (let i = 0; i < 60; i++) flood.push({ tick: s.tick, player: 1, kind: Kind.Send, creep: BOG_BRUTE })
     let out = step(s, flood, into)
     into = s
     s = out
-    while (s.tick % BOT_NORMAL.reactionTicks !== 0) {
-      out = step(s, [], into)
-      into = s
-      s = out
-    }
+    ;[s, into] = alignToDecision(s, into, (st, buf) => step(st, [], buf))
     ;(s.players[0] as { gold: number }).gold = 5_000
     // The opponent is out of reach of any wave this purse buys (see the
     // lethal-wave test above for why twenty lives is not), so the decision is
@@ -295,6 +324,45 @@ describe('bot', () => {
     // Turned off, the same board gets the ordinary decision.
     const off = botCommand(s, 0, { ...BOT_NORMAL, adaptive: 'send' })
     expect(off.length).toBeGreaterThan(0)
+  })
+
+  it('keeps sending while a creep laps a maze it can no longer reinforce', () => {
+    // The emergency branch falls through "rather than idling: sending back is
+    // still better than doing nothing" -- and until 2026-09-17 both readers then
+    // refused to send while the emergency stood, so a full, fully upgraded maze
+    // froze the bot for the rest of the match. Measured at ratio 0.25 (#52): it
+    // led on income and lives, then banked 14,583 gold while losing its last six.
+    for (const reader of ['table', 'estimate'] as const) {
+      let s: GameState = createState()
+      ;(s as { tick: number }).tick = tierUnlockTick(2) + 1000
+      const lane = s.lanes[0]!
+      // Every legal anchor, row-major, at the top level: nothing left to
+      // build and nothing left to upgrade.
+      ;(s.players[0] as { gold: number }).gold = 1_000_000
+      for (let ay = BUILD_ROW_MIN; ay <= BUILD_ROW_MAX; ay++) {
+        for (let ax = 0; ax + TOWER_SIZE <= GRID_W; ax++) {
+          if (checkBuild(s, 0, ax, ay, TowerKind.Single).refusal !== Refusal.None) continue
+          place(s, 0, ax, ay, TowerKind.Single, MAX_LEVEL)
+        }
+      }
+      // An unkillable creep that has already lapped: the emergency.
+      ;(s.players[1] as { gold: number }).gold = creepSpec(SCRAPLING).cost
+      let into: GameState = createState()
+      let out = step(s, [{ tick: s.tick, player: 1, kind: Kind.Send, creep: SCRAPLING }], into)
+      into = s
+      s = out
+      expect(s.lanes[0]!.creeps.count).toBe(1)
+      s.lanes[0]!.creeps.hp[0] = 1_000_000_000
+      s.lanes[0]!.creeps.laps[0] = 1
+      ;(s.players[0] as { lives: number }).lives = 1000
+      ;(s.players[0] as { gold: number }).gold = 1_000_000
+      ;[s, into] = alignToDecision(s, into, (st, buf) => step(st, [], buf))
+      expect(lane.towers.count, 'the maze was filled').toBeGreaterThan(0)
+
+      const cmds = botCommand(s, 0, { ...BOT_NORMAL, reader })
+      expect(cmds.length, `${reader}: the bot did something`).toBeGreaterThan(0)
+      expect(cmds.every((c) => c.kind === Kind.Send), `${reader}: and it was a send`).toBe(true)
+    }
   })
 
   it('always builds the opening before it sends anything', () => {

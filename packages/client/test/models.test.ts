@@ -34,7 +34,7 @@ function eachPart(m: Model, fn: (g: THREE.BufferGeometry) => void): void {
 }
 
 const KINDS = [TowerKind.Single, TowerKind.Splash, TowerKind.Slow]
-const CREEPS = [CreepArchetypeKind.Swarm, CreepArchetypeKind.Runner, CreepArchetypeKind.Tank]
+const CREEPS = [CreepArchetypeKind.Horde, CreepArchetypeKind.Fast, CreepArchetypeKind.Armoured]
 
 describe('tower models', () => {
   it('carry a vertex colour and no uv, on every part', () => {

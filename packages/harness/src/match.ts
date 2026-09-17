@@ -5,6 +5,7 @@ import {
   hashHex,
   MatchResult,
   Kind,
+  creepSpec,
   BOT_NORMAL,
   type BotConfig,
   type Command,
@@ -41,6 +42,15 @@ export interface MatchResultSummary {
   }[]
   readonly peakCreeps: number
   readonly sends: readonly number[]
+  /**
+   * Gold each player spent on sends, counted the same way as `sends`: per send
+   * command, at the creep's price.
+   *
+   * A count of sends stopped meaning "how much this player attacked" once one
+   * purchase could be a 5-gold Scrapling or a 125,000-gold Storm Drake
+   * (ADR-0031). Gold is the measure that survives a roster change.
+   */
+  readonly goldSent: readonly number[]
   /**
    * The tick after which the eventual loser was never again level with the
    * winner on lives.
@@ -79,6 +89,7 @@ export function runMatch(options: MatchOptions = {}): MatchResultSummary {
 
   let peakCreeps = 0
   const sends = [0, 0]
+  const goldSent = [0, 0]
   const livesOverTime: number[][] = []
   // Tracks the last tick at which the two players were level or the eventual
   // loser was ahead. Resolved into decidedAtTick once we know who lost.
@@ -92,7 +103,10 @@ export function runMatch(options: MatchOptions = {}): MatchResultSummary {
         commands.push(cmd)
         // Counted per command, which is per creep now that a purchase is one
         // creep. A decision that buys a wave is several sends, not one.
-        if (cmd.kind === Kind.Send) sends[p] = (sends[p] as number) + 1
+        if (cmd.kind === Kind.Send) {
+          sends[p] = (sends[p] as number) + 1
+          goldSent[p] = (goldSent[p] as number) + creepSpec(cmd.creep).cost
+        }
       }
     }
 
@@ -142,6 +156,7 @@ export function runMatch(options: MatchOptions = {}): MatchResultSummary {
     })),
     peakCreeps,
     sends,
+    goldSent,
     decidedAtTick,
     decidedFraction: ticks > 0 ? decidedAtTick / ticks : 0,
     livesOverTime,
