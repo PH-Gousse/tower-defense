@@ -19,7 +19,7 @@ Write one through `/decide`. A decision that changes a **game rule** also needs
 | [0005](0005-ai-opponent-is-a-command-source.md) | The AI opponent is a command source | Accepted |
 | [0006](0006-no-send-queue.md) | No send queue, no in-flight cap | Accepted |
 | [0007](0007-creeps-loop-until-killed.md) | Creeps loop until towers kill them | Accepted |
-| [0008](0008-leak-credits-the-sender.md) | A leak credits the sender a life | Accepted — conversion applied 2026-09-13; every §11 constant `[retune]` until `/balance` |
+| [0008](0008-leak-credits-the-sender.md) | A leak credits the sender a life | Accepted; its open questions settled and implemented by ADR-0032 |
 | [0009](0009-income-clock-anchored-to-send-unlock.md) | The income clock starts when sending opens | Accepted — pending confirmation |
 | [0010](0010-seeds-are-reserved-not-consumed.md) | Seeds are reserved, not consumed | Accepted — provisional |
 | [0011](0011-dump-ts-is-a-declared-boundary.md) | `dump.ts` is a declared serialisation boundary | Accepted |
@@ -43,6 +43,7 @@ Write one through `/decide`. A decision that changes a **game rule** also needs
 | [0029](0029-no-minimap.md) | There is no minimap | Accepted — implemented 2026-09-15; supersedes the minimap half of ADR-0024 |
 | [0030](0030-spawn-cells-are-scrambled.md) | Spawn cells are handed out in a fixed scrambled order | Accepted — implemented 2026-09-15; supersedes the cell order of ADR-0022 |
 | [0031](0031-a-fourteen-creep-ladder-replaces-the-three-by-three-roster.md) | A fourteen-creep ladder replaces the three-by-three roster | Accepted — implemented 2026-09-16; supersedes the creep half of ADR-0013 |
+| [0032](0032-a-leak-steals-a-life-losses-settle-before-gains.md) | A leak steals a life, and a tick settles losses before gains | Accepted — implemented 2026-09-17; settles ADR-0008 (#7) |
 
 ## Status vocabulary
 

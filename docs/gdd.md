@@ -245,15 +245,18 @@ Every creep has one of three shapes, cycling up the ladder:
 ## 8. Leaks and looping
 
 - When a creep's position enters an exit-zone cell — that tick, not the next:
-  1. **The defender loses one life.** `[confirmed]`
-  2. ⚠️ **The sender gains one life.** `[confirmed]` — **NOT IMPLEMENTED.** `step.ts`
-     `moveCreeps` currently credits nobody, with a deliberate rationale in the code:
-     *"The sender gains nothing. Lives only ever go down, for everyone. Crediting the sender
-     would make each leak a 2-point swing, so a leader would compound in lives and income at
-     once with nothing pushing back."* The confirmed rule overrides that. This is a real
-     open bug — see [ADR-0008](adr/0008-leak-credits-the-sender.md) and [issue #7](https://github.com/PH-Gousse/tower-defense/issues/7).
-     Landing it needs: the sim change, a lives *cap* decision (may lives exceed the
-     starting figure?), the `hashState` consequences, and regenerated golden fixtures.
+  1. **The leak steals a life: the defender loses one and the sender gains it.**
+     `[confirmed]` 2026-09-10 and 2026-09-17 (user: *"when a creep leaks it steals a life
+     from the opponent"*). A transfer, so a match's 40 lives are conserved. **No cap:** a
+     player may hold more than the starting 20. **An empty purse has nothing to steal.**
+     Every leak still counts in the defender's leak total.
+     ([ADR-0008](adr/0008-leak-credits-the-sender.md), [ADR-0032](adr/0032-a-leak-steals-a-life-losses-settle-before-gains.md), `settleLives` in `step.ts`)
+  2. **Lives settle once per tick, after every lane has moved, losses first.**
+     `[confirmed]` 2026-09-17 (user). First, every defender loses a life per leak, floored
+     at zero. Second, anyone at zero has lost, and both at zero is a draw. Third, while the
+     match is still on, each sender is credited what was stolen. Reaching zero is final
+     even if your own creep leaks on the same tick, and no lane or creep order inside the
+     tick can change the result.
   3. The creep is placed **back in the spawn zone of the same lane** (same spread rule as
      a fresh spawn) with its **current HP**, its **lap counter increments**, and it runs
      again. `[confirmed]`
@@ -444,7 +447,7 @@ Speeds are the measured swarm / runner / tank speeds the shapes replace, ×3 fro
 
 Nine things need your word before they harden. Listed again in the Phase 8 report.
 
-1. **Sender gains a life on a leak** — confirmed, unimplemented. Needs a lives-cap decision.
+1. ~~Sender gains a life on a leak~~ — implemented 2026-09-17 as a steal with no cap, settled losses first (ADR-0032, #7).
 2. **Swarm pack size** — one per purchase (code), or many per purchase (stated)?
 3. **Sell refund** — 0.60 (code) or 0.75 (stated)?
 4. **Build phase** — is the 20 s opening a confirmed rule?
