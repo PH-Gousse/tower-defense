@@ -48,8 +48,12 @@ const cache = new Map<string, Promise<Record>>()
  * about 31,000 ticks at 8-9 s each: 100-130 s for the first test to await a
  * mode, against vitest's 120 s default. The number of matches is the
  * measurement and stays; the budget is what moves.
+ *
+ * 1,200 s since 2026-09-17: on the fourteen-creep ladder the GitHub runner
+ * timed out two table-reader tests at 604 s and 653 s against 600, while a
+ * laptop runs each mode in 230-480 s.
  */
-const ADAPTIVE_TEST_BUDGET_MS = 600_000
+const ADAPTIVE_TEST_BUDGET_MS = 1_200_000
 
 function versusTemplate(mode: AdaptiveMode, reader: Reader): Promise<Record> {
   const key = `${reader}:${mode}`
