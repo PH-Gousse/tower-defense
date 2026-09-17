@@ -1,0 +1,33 @@
+# Doom Herald (ladder tier 13, Horde). A great horned beetle crowned with a glowing crystal cluster: the end of a horde, heralding worse.
+# One design per creep (#51): its own archetype at tier 1, judged against the horde silhouette rule
+# (swarm in style-sheet section 4).
+id: creep_doomherald_t1
+class: creep
+archetype: doomherald
+tier: 1
+body_plan: insect
+params:
+  height: 0.6
+  body_length: 0.8
+  legs: 8
+  shell_ratio: 0.9
+  mandibles: true
+  parts:
+    - { part: horns, at: head }
+    - { part: crystal_cluster, at: back }
+palette:
+  primary: stone_dark
+  secondary: iron
+  accent: violet
+  glow: violet
+  team_mask: [torso_stripe, head_crest]
+rig: insect
+animations:
+  Idle: { gen: idle_breathe, amplitude: 0.01, duration: 1.0 }
+  Walk: { gen: scuttle, stride: 0.4, cadence: 7.0, sway: 0.08 }
+  Death: { gen: collapse_forward, duration: 0.6, impact: 0.5, drop: 0.5, roll: 1.4 }
+  Spawn: { gen: rise_from_ground, duration: 0.4, land: 0.7 }
+audio:
+  spawn: sfx_spawn_small_1
+  death: sfx_death_small_1
+source: { kind: generated, licence: own, author: asset-factory }

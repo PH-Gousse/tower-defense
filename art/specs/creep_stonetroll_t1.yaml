@@ -1,0 +1,34 @@
+# Stone Troll (ladder tier 6, Armoured). A troll of living rock: boulder plates down its back and stone spikes over its shoulders.
+# One design per creep (#51): its own archetype at tier 1, judged against the armoured silhouette rule
+# (tank in style-sheet section 4).
+id: creep_stonetroll_t1
+class: creep
+archetype: stonetroll
+tier: 1
+body_plan: biped_heavy
+params:
+  height: 1.1
+  shoulder_width: 0.58
+  hip_width: 0.34
+  arm_thickness: 0.14
+  leg_length: 0.3
+  head: brute
+  parts:
+    - back_plates
+    - shoulder_spikes
+palette:
+  primary: stone
+  secondary: stone_dark
+  accent: violet
+  glow: violet
+  team_mask: [torso_stripe, head_crest, cloth]
+rig: biped_large
+animations:
+  Idle: { gen: idle_breathe, amplitude: 0.025, duration: 2.2 }
+  Walk: { gen: walk_biped, stride: 0.8, cadence: 1.7, bob: 0.04, swing: 0.5, arm_swing: 0.3 }
+  Death: { gen: collapse_forward, duration: 1.0, impact: 0.6, roll: 0.7 }
+  Spawn: { gen: rise_from_ground, duration: 0.7, land: 0.7 }
+audio:
+  spawn: sfx_spawn_large_1
+  death: sfx_death_large_1
+source: { kind: generated, licence: own, author: asset-factory }

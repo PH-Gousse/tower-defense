@@ -1,5 +1,481 @@
 {
   "assets": {
+    "creep_bogbrute_t1": {
+      "archetype": "bogbrute",
+      "audio": {
+        "death": "sfx_death_large_1",
+        "spawn": "sfx_spawn_large_1"
+      },
+      "bones": 16,
+      "bytes": 185952,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.6
+          },
+          "seconds": 1
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 2.2083
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.7083
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 0.5833,
+          "stride": 0.8
+        }
+      },
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_bogbrute_t1.glb",
+      "footprint": 0.8413,
+      "gated_by": "asset-gate",
+      "generator_version": "0.2.0",
+      "hash": "3d49cb67cb1d1c2c",
+      "height": 0.9963,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "e7cdada8c327ee79",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 1,
+      "triangles": 896,
+      "version": 1,
+      "vertices": 1387
+    },
+    "creep_dasherhound_t1": {
+      "archetype": "dasherhound",
+      "audio": {
+        "death": "sfx_death_medium_1",
+        "spawn": "sfx_spawn_medium_1"
+      },
+      "bones": 16,
+      "bytes": 184772,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.55
+          },
+          "seconds": 0.7083
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 1.4167
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.5
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 0.2917,
+          "stride": 0.9
+        }
+      },
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_dasherhound_t1.glb",
+      "footprint": 1.2009,
+      "gated_by": "asset-gate",
+      "generator_version": "0.2.0",
+      "hash": "a43d1895341d3c17",
+      "height": 0.649,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "fb6547a49cc3d567",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 1,
+      "triangles": 1242,
+      "version": 2,
+      "vertices": 2016
+    },
+    "creep_doomherald_t1": {
+      "archetype": "doomherald",
+      "audio": {
+        "death": "sfx_death_small_1",
+        "spawn": "sfx_spawn_small_1"
+      },
+      "bones": 12,
+      "bytes": 155328,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.5
+          },
+          "seconds": 0.5833
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 1
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.4167
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 0.125,
+          "stride": 0.4
+        }
+      },
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_doomherald_t1.glb",
+      "footprint": 1.1863,
+      "gated_by": "asset-gate",
+      "generator_version": "0.2.0",
+      "hash": "afecf796038c3135",
+      "height": 0.8472,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "d420ed746762c4c6",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 1,
+      "triangles": 796,
+      "version": 1,
+      "vertices": 1082
+    },
+    "creep_emberimp_t1": {
+      "archetype": "emberimp",
+      "audio": {
+        "death": "sfx_death_small_1",
+        "spawn": "sfx_spawn_small_1"
+      },
+      "bones": 5,
+      "bytes": 97292,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.5
+          },
+          "seconds": 0.5833
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 1.2083
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.5
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 0.5833,
+          "stride": 0.5
+        }
+      },
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_emberimp_t1.glb",
+      "footprint": 0.706,
+      "gated_by": "asset-gate",
+      "generator_version": "0.2.0",
+      "hash": "360b4e4082be44e0",
+      "height": 0.3834,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "9a62cfff0b98ab01",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 1,
+      "triangles": 712,
+      "version": 2,
+      "vertices": 724
+    },
+    "creep_hivedrone_t1": {
+      "archetype": "hivedrone",
+      "audio": {
+        "death": "sfx_death_small_1",
+        "spawn": "sfx_spawn_small_1"
+      },
+      "bones": 12,
+      "bytes": 139908,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.5
+          },
+          "seconds": 0.5833
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 1
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.4167
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 0.125,
+          "stride": 0.4
+        }
+      },
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_hivedrone_t1.glb",
+      "footprint": 0.7414,
+      "gated_by": "asset-gate",
+      "generator_version": "0.2.0",
+      "hash": "fad45638bcd87e82",
+      "height": 0.4617,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "fd0b10e1ce848bcd",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 1,
+      "triangles": 780,
+      "version": 1,
+      "vertices": 1022
+    },
+    "creep_irongolem_t1": {
+      "archetype": "irongolem",
+      "audio": {
+        "death": "sfx_death_large_1",
+        "spawn": "sfx_spawn_large_1"
+      },
+      "bones": 16,
+      "bytes": 197328,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.6
+          },
+          "seconds": 1
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 2.2083
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.7083
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 0.5833,
+          "stride": 0.8
+        }
+      },
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_irongolem_t1.glb",
+      "footprint": 0.7667,
+      "gated_by": "asset-gate",
+      "generator_version": "0.2.0",
+      "hash": "604447543a9b8d20",
+      "height": 1.0171,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "59fa6dfc6c01766e",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 1,
+      "triangles": 992,
+      "version": 3,
+      "vertices": 1586
+    },
+    "creep_nightmaresteed_t1": {
+      "archetype": "nightmaresteed",
+      "audio": {
+        "death": "sfx_death_medium_1",
+        "spawn": "sfx_spawn_medium_1"
+      },
+      "bones": 16,
+      "bytes": 176740,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.55
+          },
+          "seconds": 0.7083
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 1.4167
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.5
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 0.2917,
+          "stride": 0.9
+        }
+      },
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_nightmaresteed_t1.glb",
+      "footprint": 1.1665,
+      "gated_by": "asset-gate",
+      "generator_version": "0.2.0",
+      "hash": "235d9d6e93761d85",
+      "height": 0.9507,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "0101bdb4e198bd32",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 1,
+      "triangles": 1128,
+      "version": 3,
+      "vertices": 1870
+    },
     "creep_runner_t1": {
       "archetype": "runner",
       "audio": {
@@ -205,6 +681,346 @@
       "triangles": 1250,
       "version": 5,
       "vertices": 2182
+    },
+    "creep_scrapling_t1": {
+      "archetype": "scrapling",
+      "audio": {
+        "death": "sfx_death_small_1",
+        "spawn": "sfx_spawn_small_1"
+      },
+      "bones": 12,
+      "bytes": 136156,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.5
+          },
+          "seconds": 0.5833
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 1
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.4167
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 0.125,
+          "stride": 0.4
+        }
+      },
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_scrapling_t1.glb",
+      "footprint": 0.5635,
+      "gated_by": "asset-gate",
+      "generator_version": "0.2.0",
+      "hash": "efc2591d30e23fa4",
+      "height": 0.3003,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "d3a55448a7d74efd",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 1,
+      "triangles": 692,
+      "version": 1,
+      "vertices": 832
+    },
+    "creep_shadowstalker_t1": {
+      "archetype": "shadowstalker",
+      "audio": {
+        "death": "sfx_death_medium_1",
+        "spawn": "sfx_spawn_medium_1"
+      },
+      "bones": 16,
+      "bytes": 176580,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.55
+          },
+          "seconds": 0.7083
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 1.4167
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.5
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 0.2917,
+          "stride": 0.9
+        }
+      },
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_shadowstalker_t1.glb",
+      "footprint": 1.1354,
+      "gated_by": "asset-gate",
+      "generator_version": "0.2.0",
+      "hash": "ded3c834000e34b1",
+      "height": 0.519,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "a5c00564e6f3a5e1",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 1,
+      "triangles": 1174,
+      "version": 2,
+      "vertices": 1962
+    },
+    "creep_siegebehemoth_t1": {
+      "archetype": "siegebehemoth",
+      "audio": {
+        "death": "sfx_death_large_1",
+        "spawn": "sfx_spawn_large_1"
+      },
+      "bones": 16,
+      "bytes": 198532,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.6
+          },
+          "seconds": 1
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 2.2083
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.7083
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 0.5833,
+          "stride": 0.8
+        }
+      },
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_siegebehemoth_t1.glb",
+      "footprint": 0.8194,
+      "gated_by": "asset-gate",
+      "generator_version": "0.2.0",
+      "hash": "77036b81162d1aa5",
+      "height": 1.3188,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "55eefb5ab14210cd",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 1,
+      "triangles": 1000,
+      "version": 1,
+      "vertices": 1639
+    },
+    "creep_stonetroll_t1": {
+      "archetype": "stonetroll",
+      "audio": {
+        "death": "sfx_death_large_1",
+        "spawn": "sfx_spawn_large_1"
+      },
+      "bones": 16,
+      "bytes": 207664,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.6
+          },
+          "seconds": 1
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 2.2083
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.7083
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 0.5833,
+          "stride": 0.8
+        }
+      },
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_stonetroll_t1.glb",
+      "footprint": 0.8339,
+      "gated_by": "asset-gate",
+      "generator_version": "0.2.0",
+      "hash": "017ee46d6522f4ec",
+      "height": 0.955,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "749f58de2fe16d7c",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 1,
+      "triangles": 936,
+      "version": 2,
+      "vertices": 1516
+    },
+    "creep_stormdrake_t1": {
+      "archetype": "stormdrake",
+      "audio": {
+        "death": "sfx_death_medium_1",
+        "spawn": "sfx_spawn_medium_1"
+      },
+      "bones": 16,
+      "bytes": 171308,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.55
+          },
+          "seconds": 0.7083
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 1.2083
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.5
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 0.3333,
+          "stride": 1.2
+        }
+      },
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_stormdrake_t1.glb",
+      "footprint": 1.1559,
+      "gated_by": "asset-gate",
+      "generator_version": "0.2.0",
+      "hash": "2556af58f287b806",
+      "height": 1.0515,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "067e1acbdaa73afb",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 1,
+      "triangles": 926,
+      "version": 1,
+      "vertices": 1510
     },
     "creep_swarm_t1": {
       "archetype": "swarm",
@@ -617,6 +1433,142 @@
       "triangles": 1056,
       "version": 2,
       "vertices": 1745
+    },
+    "creep_windwolf_t1": {
+      "archetype": "windwolf",
+      "audio": {
+        "death": "sfx_death_medium_1",
+        "spawn": "sfx_spawn_medium_1"
+      },
+      "bones": 16,
+      "bytes": 179380,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.55
+          },
+          "seconds": 0.7083
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 1.4167
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.5
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 0.2917,
+          "stride": 0.9
+        }
+      },
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_windwolf_t1.glb",
+      "footprint": 1.0662,
+      "gated_by": "asset-gate",
+      "generator_version": "0.2.0",
+      "hash": "b9276ff2113ea063",
+      "height": 0.6147,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "8b8d66f340606123",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 1,
+      "triangles": 1112,
+      "version": 2,
+      "vertices": 1830
+    },
+    "creep_wraith_t1": {
+      "archetype": "wraith",
+      "audio": {
+        "death": "sfx_death_small_1",
+        "spawn": "sfx_spawn_small_1"
+      },
+      "bones": 4,
+      "bytes": 126572,
+      "class": "creep",
+      "clips": {
+        "Death": {
+          "loop": false,
+          "markers": {
+            "impact": 0.5
+          },
+          "seconds": 0.7083
+        },
+        "Idle": {
+          "loop": true,
+          "markers": {},
+          "seconds": 2
+        },
+        "Spawn": {
+          "loop": false,
+          "markers": {
+            "land": 0.7
+          },
+          "seconds": 0.5
+        },
+        "Walk": {
+          "loop": true,
+          "markers": {},
+          "seconds": 1.2083,
+          "stride": 1
+        }
+      },
+      "extensions": [
+        "EXT_meshopt_compression",
+        "KHR_mesh_quantization",
+        "KHR_texture_basisu"
+      ],
+      "file": "build/creep_wraith_t1.glb",
+      "footprint": 0.44,
+      "gated_by": "asset-gate",
+      "generator_version": "0.2.0",
+      "hash": "2a6070dc025040ae",
+      "height": 0.6384,
+      "source": {
+        "approved_by": "",
+        "attribution": "",
+        "author": "asset-factory",
+        "kind": "generated",
+        "licence": "own",
+        "service": "",
+        "url": ""
+      },
+      "spec_hash": "e394d1c56ecfdaa2",
+      "textures": [
+        {
+          "format": "image/ktx2",
+          "size": 512
+        }
+      ],
+      "tier": 1,
+      "triangles": 532,
+      "version": 2,
+      "vertices": 764
     },
     "fx_hit_single": {
       "archetype": "hit_single",

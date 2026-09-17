@@ -1,0 +1,35 @@
+# Shadow Stalker (ladder tier 8, Fast). A low dark lizard-headed stalker, belly close to the ground, with a violet crest.
+# One design per creep (#51): its own archetype at tier 1, judged against the fast silhouette rule
+# (runner in style-sheet section 4).
+id: creep_shadowstalker_t1
+class: creep
+archetype: shadowstalker
+tier: 1
+body_plan: quadruped
+params:
+  height: 0.42
+  body_length: 0.6
+  leg_length: 0.1
+  body_radius: 0.1
+  head: lizard
+  head_size: 1.0
+  tail: down
+  parts:
+    - { part: head_crest, at: head }
+    - { part: spike_row, at: back }
+palette:
+  primary: iron
+  secondary: stone_dark
+  accent: violet
+  glow: violet
+  team_mask: [torso_stripe, head_crest]
+rig: quadruped
+animations:
+  Idle: { gen: idle_breathe, amplitude: 0.02, duration: 1.4 }
+  Walk: { gen: walk_quadruped, stride: 0.9, cadence: 3.6, gait: trot }
+  Death: { gen: collapse_forward, duration: 0.7, impact: 0.55 }
+  Spawn: { gen: rise_from_ground, duration: 0.5, land: 0.7 }
+audio:
+  spawn: sfx_spawn_medium_1
+  death: sfx_death_medium_1
+source: { kind: generated, licence: own, author: asset-factory }
