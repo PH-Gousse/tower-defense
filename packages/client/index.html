@@ -279,7 +279,10 @@
        it counts. */
     #sendLabel { display: inline-block; min-width: 6.2em; }
     #sendLabel.counting { color: var(--gold); font-variant-numeric: tabular-nums; }
-    #sendRow { display: flex; gap: 6px; }
+    #sendRow { display: flex; gap: 6px; overflow-x: auto; }
+    /* Every tier is on the panel (user, 2026-09-17). The tier tag leads the
+       name so the list reads as the ladder it is. */
+    .creep .tier { font: 11px/1 var(--sans); color: var(--muted); font-variant-numeric: tabular-nums; }
     .creep { min-width: 116px; }
     kbd { border: 1px solid #5a4527; border-radius: 2px; padding: 0 4px; font: inherit; font-size: 10px; background: #14100a; }
 
@@ -349,7 +352,10 @@
       width: var(--rail); flex-direction: column; align-items: stretch;
       border-top: 0; border-left: 2px solid var(--brass-dark); gap: 6px;
     }
-    body[data-layout="rails"] #sendRow { flex-direction: column; gap: 6px; }
+    /* Fourteen cards do not fit a short screen, so the list scrolls inside the
+       rail. The rail's width is unchanged, so the camera does not re-frame, and
+       `min-height: 0` is what lets a flex child shrink below its content. */
+    body[data-layout="rails"] #sendRow { flex-direction: column; gap: 6px; flex: 0 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; }
     body[data-layout="rails"] #palette .sep {
       width: auto; height: 2px; align-self: stretch; margin: 4px 0;
       background: linear-gradient(90deg, transparent, var(--brass-dark) 25%, var(--brass-dark) 75%, transparent);
@@ -412,7 +418,7 @@
     <span class="label" id="sendLabel">Send &rarr;</span>
     <span id="sendRow"></span>
     <span id="sound"><button id="audioBtn" type="button" aria-label="Mute">🔊</button><input id="audioVol" type="range" min="0" max="100" value="80" aria-label="Volume" /></span>
-    <span class="hint"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> towers &middot; <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd> send &middot; <kbd>R</kbd><kbd>T</kbd><kbd>Y</kbd> next tier &middot; hold to send more &middot; drag, arrows, edge or <kbd>Shift</kbd>+wheel to scroll &middot; <kbd>Home</kbd> spawn <kbd>End</kbd> exit <kbd>Tab</kbd> other lane <kbd>Space</kbd> deepest creep &middot; click a tower to upgrade or sell &middot; <kbd>M</kbd> mute &middot; <kbd>D</kbd> dump</span>
+    <span class="hint"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> towers &middot; <kbd>Q</kbd>&ndash;<kbd>Y</kbd> send the six newest tiers &middot; hold to send more &middot; drag, arrows, edge or <kbd>Shift</kbd>+wheel to scroll &middot; <kbd>Home</kbd> spawn <kbd>End</kbd> exit <kbd>Tab</kbd> other lane <kbd>Space</kbd> deepest creep &middot; click a tower to upgrade or sell &middot; <kbd>M</kbd> mute &middot; <kbd>D</kbd> dump</span>
   </div>
 
   <!-- Navigation over the canvas: arrows for what happened off-screen, and

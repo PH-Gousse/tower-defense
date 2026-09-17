@@ -8,7 +8,7 @@ import {
   CREEPS, tierUnlockTick, SEND_UNLOCK_TICKS, INCOME_EVERY_TICKS,
   BOT_EASY, BOT_NORMAL, BOT_HARD, type BotConfig,
 } from '@ltw/sim'
-import { mmss, secondsUntil, ticksUntilIncome, ticksUntilNextTier, unlockedTier, sendWindowStart, ticksUntilSuddenDeath, suddenDeathLabel } from './clocks'
+import { mmss, secondsUntil, ticksUntilIncome, ticksUntilNextTier, unlockedTier, hotkeyStart, ticksUntilSuddenDeath, suddenDeathLabel } from './clocks'
 import { railWidth, safeEdges } from './chrome'
 import { bootAssets } from './assets/boot'
 
@@ -67,16 +67,22 @@ const sendLabel = el('sendLabel')
 // Build and Send stay separate palettes on purpose: they are opposite-facing
 // economies, and merging them makes a 140g send one misclick from a 110g tower.
 //
-// The palette is a WINDOW on the roster, not the whole roster. The ladder has
-// fourteen rungs (ADR-0031) and fourteen buttons is not a palette, so six
-// buttons show six consecutive rungs ending on the next one to unlock, and are
-// re-pointed as the ladder climbs. See `sendWindowStart` in clocks.ts. It used
-// to be two tiers of three archetypes, which on a ladder of one creep per tier
-// would have skipped two rungs in three.
-const SEND_SLOTS = 6
+// Every creep, every tier, on the panel at all times (user, 2026-09-17): one
+// card per rung of the ladder, in tier order, so you can always see what is
+// coming and what it costs. Unlocking is unchanged -- a card whose tier has not
+// opened is shown locked with its countdown, and a send from it is refused.
+// Card `i` is creep `i`, so a card never changes what it sends.
+//
+// This replaced a window of six cards re-pointed as the ladder climbed, which
+// hid the rest of the ladder. The six hotkeys stay, and follow the six newest
+// unlocked tiers; see `hotkeyStart` in clocks.ts.
 const SEND_KEYS = ['q', 'w', 'e', 'r', 't', 'y']
 
 const creepButtons: HTMLButtonElement[] = []
+/** Highest unlocked tier at the last paint, which is what the hotkeys follow. */
+let hotkeyTier = 0
+/** The tier the list last scrolled to, so it scrolls once per unlock, not per tick. */
+let lastScrolledTier = -1
 const holdStops: Array<() => void> = []
 
 // Every way to send goes through here: click, key, hold, and the ×N buttons
@@ -139,17 +145,20 @@ window.addEventListener('keydown', (ev) => {
 })
 
 if (sendRow) {
-  for (let slot = 0; slot < SEND_SLOTS; slot++) {
+  for (let slot = 0; slot < CREEPS.length; slot++) {
+    const spec = CREEPS[slot]!
     const b = document.createElement('button')
     b.className = 'creep'
-    // No rung until the first paint points it at one, which also sets its icon.
-    // Not a number, so `send.ts` sends nothing from an unpainted card.
-    b.dataset.creep = 'none'
-    b.innerHTML = '<span class="ico"></span><span class="n"></span><span class="c"></span><kbd class="key"></kbd>'
-    // The icon follows the rung the card points at, and is set when the
-    // palette is painted: the window moves as the ladder climbs.
-    const key = b.querySelector('.key')
-    if (key) key.textContent = (SEND_KEYS[slot] ?? '').toUpperCase()
+    b.dataset.creep = String(slot)
+    b.innerHTML = '<span class="ico"></span><span class="n"></span><span class="c"></span><kbd class="key" hidden></kbd>'
+    const name = b.querySelector('.n')
+    if (name) name.innerHTML = `<span class="tier">T${spec.tier + 1}</span> `
+    name?.append(spec.name)
+    // The icon is the creep's shape, rendered from the same model that walks
+    // the lane (placeholder bands until #51).
+    const ico = b.querySelector<HTMLElement>('.ico')
+    const icon = scene.icons.creeps[spec.archetype]
+    if (ico && icon) ico.style.backgroundImage = `url(${icon})`
     holdStops.push(holdToRepeat(b, () => sendN(slot, 1) > 0, window))
     sendRow.appendChild(b)
     creepButtons.push(b)
@@ -189,9 +198,9 @@ window.addEventListener('keydown', (ev) => {
   // came off. A held key sends once. Holding the BUTTON is the deliberate
   // repeat, at HOLD_EVERY_MS, and it stops when a send is refused.
   if (ev.repeat) return
-  const slot = SEND_KEYS.indexOf(ev.key.toLowerCase())
-  if (slot === -1) return
-  sendN(slot, 1)
+  const key = SEND_KEYS.indexOf(ev.key.toLowerCase())
+  if (key === -1) return
+  sendN(hotkeyStart(hotkeyTier, SEND_KEYS.length) + key, 1)
 })
 
 // --- build palette ---------------------------------------------------------
@@ -316,26 +325,25 @@ scene.onStats((s) => {
     sendLabel.classList.toggle('counting', left > 0)
   }
 
-  const windowStart = sendWindowStart(unlockedTier(s.tick), CREEPS.length, creepButtons.length)
+  const openTier = unlockedTier(s.tick)
+  hotkeyTier = openTier
+  const firstKeyed = hotkeyStart(openTier, SEND_KEYS.length)
+  // Keep the newest unlocked tier in sight when it opens: on a short screen
+  // the list scrolls, and a tier that unlocks below the fold is one nobody sees.
+  if (openTier !== lastScrolledTier) {
+    lastScrolledTier = openTier
+    creepButtons[openTier]?.scrollIntoView({ block: 'nearest' })
+  }
   for (let slot = 0; slot < creepButtons.length; slot++) {
     const b = creepButtons[slot]!
-    const index = windowStart + slot
-    const spec = CREEPS[index]
-    if (!spec) {
-      b.hidden = true
-      continue
+    const spec = CREEPS[slot]!
+    const kbd = b.querySelector<HTMLElement>('.key')
+    if (kbd) {
+      const k = slot - firstKeyed
+      const label = k >= 0 && k < SEND_KEYS.length ? (SEND_KEYS[k] as string).toUpperCase() : ''
+      kbd.hidden = label === ''
+      setText(kbd, label)
     }
-    b.hidden = false
-    if (b.dataset.creep !== String(index)) {
-      b.dataset.creep = String(index)
-      // The icon is the rung's shape, rendered from the same model that walks
-      // the lane. Repainted only when the card changes rung.
-      const ico = b.querySelector<HTMLElement>('.ico')
-      const icon = scene.icons.creeps[spec.archetype]
-      if (ico && icon) ico.style.backgroundImage = `url(${icon})`
-    }
-    const name = b.querySelector('.n')
-    if (name) name.textContent = spec.name
     const c = b.querySelector('.c')
     // Two reasons a card can be locked, and only one of them belongs on the
     // card. A tier lock is about THIS card, so it says so. The build phase is

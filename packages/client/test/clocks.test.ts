@@ -3,7 +3,7 @@ import {
   TICK_HZ, INCOME_EVERY_TICKS, SEND_UNLOCK_TICKS, tierUnlockTick, MAX_TIER,
 } from '@ltw/sim'
 import {
-  secondsUntil, mmss, ticksUntilIncome, unlockedTier, ticksUntilNextTier, sendWindowStart,
+  secondsUntil, mmss, ticksUntilIncome, unlockedTier, ticksUntilNextTier, hotkeyStart,
 } from '../src/clocks'
 
 /**
@@ -119,22 +119,16 @@ describe('ticksUntilIncome', () => {
   })
 })
 
-describe('sendWindowStart', () => {
-  it('starts at the bottom of the ladder while the first rungs are all that is open', () => {
-    expect(sendWindowStart(0, 14, 6)).toBe(0)
-    expect(sendWindowStart(4, 14, 6)).toBe(0)
+describe('hotkeyStart', () => {
+  it('starts the keys at the bottom of the ladder while few tiers are open', () => {
+    expect(hotkeyStart(0, 6)).toBe(0)
+    expect(hotkeyStart(5, 6)).toBe(0)
   })
 
-  it('keeps the next rung to unlock as the last card', () => {
-    for (let tier = 4; tier < 13; tier++) {
-      const start = sendWindowStart(tier, 14, 6)
-      expect(start + 5, `tier ${tier}`).toBe(tier + 1)
+  it('keeps the newest unlocked tier on the last key once six are open', () => {
+    for (let tier = 5; tier <= 13; tier++) {
+      expect(hotkeyStart(tier, 6) + 5, `tier ${tier}`).toBe(tier)
     }
-  })
-
-  it('stops at the top of the ladder instead of showing empty cards', () => {
-    expect(sendWindowStart(13, 14, 6)).toBe(8)
-    expect(sendWindowStart(99, 14, 6)).toBe(8)
   })
 })
 

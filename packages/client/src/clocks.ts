@@ -75,18 +75,16 @@ export function ticksUntilIncome(tick: number): number {
 }
 
 /**
- * The first ladder rung the send palette shows, given the highest unlocked tier.
+ * The first tier the send hotkeys point at, given the highest unlocked tier.
  *
- * The palette is a window of `slots` consecutive rungs (ADR-0031). It ends on
- * the next rung to unlock, so its countdown is always on screen, and it fills
- * backwards with the rungs below. Until the ladder has climbed far enough to
- * need a window it simply starts at the bottom; at the top it stops at the
- * last rung rather than showing empty cards.
+ * Every creep is on the send panel at all times (user, 2026-09-17), but there
+ * are six keys and fourteen tiers, so the keys follow the six newest unlocked
+ * tiers: Q is the oldest of them and Y the newest. Until six tiers are open the
+ * keys start at the bottom of the ladder, and the ones past the newest unlocked
+ * tier point at locked cards, which refuse the send exactly as a click does.
  */
-export function sendWindowStart(tier: number, rosterLength: number, slots: number): number {
-  const lastRung = rosterLength - 1
-  const end = tier + 1 < lastRung ? tier + 1 : lastRung
-  const start = end - (slots - 1)
+export function hotkeyStart(tier: number, keys: number): number {
+  const start = tier - (keys - 1)
   return start > 0 ? start : 0
 }
 
