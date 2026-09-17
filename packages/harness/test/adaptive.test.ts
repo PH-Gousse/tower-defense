@@ -82,10 +82,23 @@ function versusTemplate(mode: AdaptiveMode, reader: Reader): Promise<Record> {
 }
 
 describe('adaptive play under the table reader', () => {
-  it('counter-picking what to send beats the fixed template, clearly', async () => {
+  it('counter-picking what to send beats the fixed template more often than not', async () => {
     // The whole reason the opponent's board is drawn on your screen.
+    //
+    // Restated 2026-09-17 by the user through /rule-change (#52). This pinned
+    // "clearly": more than twice as many wins as losses, measured on the
+    // three-by-three roster, where each tier offered all three shapes at one
+    // price. On the fourteen-creep ladder (ADR-0031) a price has one shape and
+    // the pick may drop only one rung, so choosing the shape is worth less, and
+    // the measurement is 8 wins to 4 across every variant tried: the
+    // shipped bot, EXPLOITS sending fast creeps against mortars, a rung band
+    // that must spend as much gold, and the hoarding fix. Wins come in
+    // seat-order pairs, so 8 is one ratio short of the old pin, not a coin flip.
+    //
+    // What stays pinned is the direction: counter-picking wins more than it
+    // loses. A reader that bought nothing would split evenly and fail here.
     const r = await versusTemplate('send', 'table')
-    expect(r.wins).toBeGreaterThan(r.losses * 2)
+    expect(r.wins).toBeGreaterThan(r.losses)
   }, ADAPTIVE_TEST_BUDGET_MS)
 
   it('reacting to the wave in your own lane never wins', async () => {

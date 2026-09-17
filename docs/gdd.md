@@ -171,6 +171,11 @@ Every creep has one of three shapes, cycling up the ladder:
   `creeps.json`; the loader asserts each rung costs more than the one below and pays no
   more income per gold. `[confirmed]` 2026-09-16 (ADR-0031; `creepsFromFile`,
   `packages/sim/src/data.ts`)
+- **Counter-picking the shape pays, but it is not decisive.** `[confirmed]` 2026-09-17
+  (user, #52). Against the fixed-template bot, the table reader's counter-pick wins 8 of
+  12 and loses 4 on this ladder. On the three-by-three roster it won more than two to
+  one, because each tier offered all three shapes at one price; on the ladder a price
+  has one shape. `adaptive.test.ts` pins that it wins more than it loses.
 - **Sudden death's HP cap is derived from the roster**: `floor((2³¹ − 1) / heaviest HP)`,
   refused at load under ×100, because creep HP is an Int32. ×1 036 for this ladder.
   `[proposed]` (ADR-0031)
