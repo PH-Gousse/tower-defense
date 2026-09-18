@@ -499,7 +499,8 @@ describe('rows in frame', () => {
     expect(DEFAULT_MAX_DISTANCE).toBeGreaterThan(110)
     expect(DEFAULT_MAX_DISTANCE).toBeLessThan(125)
     expect(MAX_ROWS_IN_VIEW).toBe(40)
-    expect(DEFAULT_ROWS_IN_VIEW).toBe(30)
+    // A match opens as far out as the camera goes (user, 2026-09-18).
+    expect(DEFAULT_ROWS_IN_VIEW).toBe(MAX_ROWS_IN_VIEW)
   })
 
   it('is linear in rows, so half the rows is half the distance', () => {
@@ -521,7 +522,8 @@ describe('rows in frame', () => {
       const f = frameAs(w, h, DEFAULT_ROWS_IN_VIEW, GRID_W / 2)
       expect(f.bound, name).toBe('rows')
       expect(f.rows, name).toBeCloseTo(DEFAULT_ROWS_IN_VIEW, 6)
-      expect(f.distance, name).toBeLessThan(DEFAULT_MAX_DISTANCE)
+      // At or inside the cap: a match opens AT it since 2026-09-18.
+      expect(f.distance, name).toBeLessThanOrEqual(DEFAULT_MAX_DISTANCE + 1e-9)
     }
   })
 
@@ -539,7 +541,7 @@ describe('rows in frame', () => {
   })
 
   it('backs off in portrait only where the lane does not fit, and stays inside the zoom cap', () => {
-    // 30 rows on a phone shows about thirteen tiles of a seventeen-wide lane,
+    // A phone shows about thirteen tiles of a seventeen-wide lane,
     // so the framing backs off until the lane fits, and a 390-wide phone runs
     // into the 40-row cap with the lane in frame and its margin not. An
     // 820x1180 tablet already holds the lane at 30 rows and opens on them; at
@@ -550,11 +552,20 @@ describe('rows in frame', () => {
       const atCap = f.distance >= DEFAULT_MAX_DISTANCE - 1e-9
       expect(f.tilesAcross, name).toBeGreaterThanOrEqual((atCap ? GRID_W : GRID_W + 2) - 0.01)
       expect(f.rows, name).toBeLessThanOrEqual(MAX_ROWS_IN_VIEW)
-      if (f.bound === 'width') expect(f.rows, name).toBeGreaterThan(DEFAULT_ROWS_IN_VIEW)
+      // At the cap the framing cannot back off any further, so it shows fewer
+      // rows than the opening; otherwise width-bound means more rows, and
+      // rows-bound means exactly the opening.
+      if (atCap) expect(f.rows, name).toBeLessThanOrEqual(DEFAULT_ROWS_IN_VIEW)
+      else if (f.bound === 'width') expect(f.rows, name).toBeGreaterThan(DEFAULT_ROWS_IN_VIEW)
       else expect(f.rows, name).toBeCloseTo(DEFAULT_ROWS_IN_VIEW, 6)
     }
-    expect(frameAs(390, 844, DEFAULT_ROWS_IN_VIEW, GRID_W / 2).bound).toBe('width')
-    expect(frameAs(820, 1180, DEFAULT_ROWS_IN_VIEW, GRID_W / 2).bound).toBe('rows')
+    // Both portrait viewports run into the cap now that the opening IS the cap,
+    // so both show fewer rows than a landscape screen does, with the lane across.
+    for (const [w, h] of [[390, 844], [820, 1180]] as const) {
+      const f = frameAs(w, h, DEFAULT_ROWS_IN_VIEW, GRID_W / 2)
+      expect(f.rows).toBeLessThan(DEFAULT_ROWS_IN_VIEW)
+      expect(f.tilesAcross).toBeGreaterThanOrEqual(GRID_W - 0.01)
+    }
   })
 
   it('shows at least one lane at the zoom cap on a phone', () => {

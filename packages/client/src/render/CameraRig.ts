@@ -167,14 +167,21 @@ export const DEFAULT_PITCH_DEG = 70
  * The default was 20, reasoned from the rig's factors when the lane was 213
  * rows. Played on the 100-row lane it opened far too close -- a tower filled
  * 108px and the maze around it was off-screen -- so it moved to 30, halfway to
- * the cap, which leaves the player room to zoom out further.
+ * the cap.
+ *
+ * 40 since 2026-09-18, the user's ask ("when the game starts dezoom and
+ * centre"): a match opens at the furthest out the camera goes, which on a wide
+ * screen is also where it centres on both lanes rather than on yours alone.
+ * The player zooms IN from there rather than out. It is a client constant and
+ * touches no rule, and it is what MIN_VIEW_ASPECT is derived from, so the
+ * chrome rails re-derive their width cap from the opening view.
  *
  * Portrait is width-bound: 30 rows on a 390x844 phone shows about thirteen
  * tiles of a seventeen-wide lane, so `frameRows` backs off until the lane fits
  * across. A taller tablet already holds the lane at 30 rows and is not.
  */
 export const MAX_ROWS_IN_VIEW = 40
-export const DEFAULT_ROWS_IN_VIEW = 30
+export const DEFAULT_ROWS_IN_VIEW = MAX_ROWS_IN_VIEW
 
 function factors(pitchRad: number, fovRad: number) {
   const t = Math.tan(fovRad / 2)
