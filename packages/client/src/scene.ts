@@ -73,6 +73,7 @@ import { AssetLayer } from './assets/layer'
 import type { AssetRegistry } from './assets/registry'
 import type { SfxPlayer } from './assets/sfx'
 import { artBand, creepScale, creepArtName } from './render/creepBand'
+import { TOWER_VIEW_SCALE } from './render/viewScale'
 
 /**
  * Wire-level refusals, in the player's language.
@@ -431,7 +432,7 @@ export function createScene(
    * none of this; it is what the procedural fallback draws.
    */
   const TOWER_HEIGHT_SCALE = 1.5
-  const TOWER_SCALE = new THREE.Vector3(TOWER_SIZE, TOWER_HEIGHT_SCALE, TOWER_SIZE)
+  const TOWER_SCALE = new THREE.Vector3(TOWER_SIZE, TOWER_HEIGHT_SCALE, TOWER_SIZE).multiplyScalar(TOWER_VIEW_SCALE)
   const IDENTITY_Q = new THREE.Quaternion()
   const towerSets: TowerSet[][] = towerModels.map((levels) =>
     levels.map((model) => {
