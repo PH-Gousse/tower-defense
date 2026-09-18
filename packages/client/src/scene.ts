@@ -67,7 +67,7 @@ import {
 import { glowTexture, ringTexture, puffTexture, chevronTexture } from './render/textures'
 import { SpritePool, ProjectilePool, CorpsePool } from './render/effects'
 import { HealthBars } from './render/bars'
-import { renderIcon } from './render/icons'
+import { renderIcon, renderObjectIcon } from './render/icons'
 import { createAudio, type Audio } from './audio/audio'
 import { AssetLayer } from './assets/layer'
 import type { AssetRegistry } from './assets/registry'
@@ -182,7 +182,12 @@ export interface HoverInfo {
 export interface Icons {
   /** One data URL per tower kind, at level 1. */
   readonly towers: readonly string[]
-  /** One data URL per creep archetype. */
+  /**
+   * One data URL per LADDER CREEP, not per shape: every creep has its own
+   * model (#51), and a picture per shape showed the same beetle on five horde
+   * cards. Filled from the procedural shapes at start-up and replaced with the
+   * creep's own model once the catalogue loads; `onIcons` fires then.
+   */
   readonly creeps: readonly string[]
 }
 
@@ -216,6 +221,11 @@ export interface Scene {
   readonly driver: Driver
   /** Pictures of the things the palette sells, rendered from the same models. */
   readonly icons: Icons
+  /**
+   * Run `fn` once `icons.creeps` holds each creep's own picture rather than
+   * its shape's. The send cards repaint themselves from it (#51).
+   */
+  readonly onIconsReady: (fn: () => void) => void
   /** Every sound, synthesised. `main.ts` owns its controls; the scene feeds it events. */
   readonly audio: Audio
   /**
@@ -690,10 +700,14 @@ const WAIT_COLOUR = 0xf3c650
 
   // ---- icons -------------------------------------------------------------
 
+  const shapeIcons = creepModels.map((m) => renderIcon(renderer, m, { yaw: 1.0, pitch: 0.45, zoom: 1.0 }))
+  const creepIcons: string[] = CREEPS.map((c) => shapeIcons[c.archetype] ?? '')
   const icons: Icons = {
     towers: KINDS.map((k) => renderIcon(renderer, (towerModels[k] as Model[])[0] as Model, { yaw: 0.8, pitch: 0.5 })),
-    creeps: creepModels.map((m) => renderIcon(renderer, m, { yaw: 1.0, pitch: 0.45, zoom: 1.0 })),
+    creeps: creepIcons,
   }
+  /** Called once the catalogue has replaced the shape icons with per-creep ones. */
+  let onIcons: (() => void) | null = null
 
   // ---- scratch -----------------------------------------------------------
 
@@ -1644,6 +1658,9 @@ const scratchV = new THREE.Vector3()
     dump: (trigger) => driver.dump(trigger, BUILD),
     driver,
     icons,
+    onIconsReady(fn: () => void) {
+      onIcons = fn
+    },
     audio,
     renderer,
     upgradeSelected: () => {
@@ -1661,6 +1678,19 @@ const scratchV = new THREE.Vector3()
         creepNames: CREEPS.map((c) => creepArtName(c.key)),
         towerNames: ARCHETYPES.map((a) => a.key),
       })
+      // Repaint the send cards from the creeps' own models. Until this runs
+      // every card of a shape shows that shape's procedural picture.
+      for (let i = 0; i < CREEPS.length; i++) {
+        const id = layer.creepAsset(i, 0)
+        if (!id) continue
+        try {
+          creepIcons[i] = renderObjectIcon(renderer, registry.instantiate(id), { yaw: 1.0, pitch: 0.45, zoom: 1.0 })
+        } catch {
+          // A model that will not instantiate keeps its procedural icon; the
+          // lane falls back the same way.
+        }
+      }
+      onIcons?.()
       const missing = layer.missingFor(CREEPS.length, 1, ARCHETYPES.length, 3)
       if (missing.length && dev) console.warn(`[assets] catalogue lacks ${missing.length} of the match's assets (${missing.join(', ')}); those draw procedurally`)
       assets = layer

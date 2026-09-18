@@ -79,6 +79,25 @@ const sendLabel = el('sendLabel')
 const SEND_KEYS = ['q', 'w', 'e', 'r', 't', 'y']
 
 const creepButtons: HTMLButtonElement[] = []
+
+/**
+ * Put the creep's own picture on its card.
+ *
+ * Called when the card is built and again when the asset catalogue lands: at
+ * start-up `icons.creeps` holds one picture per SHAPE, so five horde cards
+ * would otherwise keep the same beetle for the whole match (#51).
+ */
+function paintCreepIcon(b: HTMLButtonElement, index: number): void {
+  const ico = b.querySelector<HTMLElement>('.ico')
+  const icon = scene.icons.creeps[index]
+  if (ico && icon) ico.style.backgroundImage = `url(${icon})`
+}
+
+// The catalogue replaces the per-shape icons with each creep's own model a
+// moment after start-up; repaint the cards when it does.
+scene.onIconsReady(() => {
+  creepButtons.forEach((b, i) => paintCreepIcon(b, i))
+})
 /** Highest unlocked tier at the last paint, which is what the hotkeys follow. */
 let hotkeyTier = 0
 /** The tier the list last scrolled to, so it scrolls once per unlock, not per tick. */
@@ -154,11 +173,7 @@ if (sendRow) {
     const name = b.querySelector('.n')
     if (name) name.innerHTML = `<span class="tier">T${spec.tier + 1}</span> `
     name?.append(spec.name)
-    // The icon is the creep's shape, rendered from the same model that walks
-    // the lane (placeholder bands until #51).
-    const ico = b.querySelector<HTMLElement>('.ico')
-    const icon = scene.icons.creeps[spec.archetype]
-    if (ico && icon) ico.style.backgroundImage = `url(${icon})`
+    paintCreepIcon(b, slot)
     holdStops.push(holdToRepeat(b, () => sendN(slot, 1) > 0, window))
     sendRow.appendChild(b)
     creepButtons.push(b)
@@ -214,6 +229,13 @@ window.addEventListener('keydown', (ev) => {
  * first rename, so the data now carries the card names and this reads them.
  * Presentation only: the sim and the protocol key towers by `TowerKind`.
  */
+/** What each tower is for, in the words the shapes are named after (ADR-0031). */
+const ANSWERS: Readonly<Record<TowerKind, string>> = {
+  [TowerKind.Single]: 'armoured creeps',
+  [TowerKind.Splash]: 'hordes',
+  [TowerKind.Slow]: 'fast creeps',
+}
+
 function towerName(kind: TowerKind): string {
   return (ARCHETYPES[kind] as TowerArchetype).name
 }
@@ -221,6 +243,15 @@ function towerName(kind: TowerKind): string {
 for (const kind of [TowerKind.Single, TowerKind.Splash, TowerKind.Slow]) {
   const costEl = el(`cost${kind}`)
   if (costEl) costEl.textContent = String(levelOf(kind, 1).cost)
+  // Icon-only cards (user, 2026-09-18): what a tower is and what it costs
+  // moves into the button's hover text and accessible name.
+  const tool = document.querySelector<HTMLElement>(`.tool[data-tower="${kind}"]`)
+  const lv1 = levelOf(kind, 1)
+  if (tool) {
+    const caption = `${towerName(kind)} · ${lv1.cost}g · ${lv1.damage} dmg · answers ${ANSWERS[kind]}`
+    tool.title = caption
+    tool.setAttribute('aria-label', caption)
+  }
   const ico = document.querySelector<HTMLElement>(`.tool[data-tower="${kind}"] .ico`)
   const icon = scene.icons.towers[kind]
   if (ico && icon) ico.style.backgroundImage = `url(${icon})`
@@ -364,13 +395,20 @@ scene.onStats((s) => {
     // still carries the field and the sim still honours it, so a pack card can
     // come back without touching this line -- which is why it stays a condition
     // rather than being deleted along with the six-swarm pack.
-    if (c) {
-      c.textContent =
-        tierLocked && !opening
-          ? `${spec.cost}g · unlocks in ${secondsUntil(tierUnlockTick(spec.tier), s.tick)}s`
-          : `${spec.cost}g` +
-            (spec.count > 1 ? ` ×${spec.count}` : '') +
-            ` · +${spec.incomeBonus} inc`
+    // The words live in the card's `title` since the palette went icon-only
+    // (user, 2026-09-18): the name, the price, the income it buys you, and the
+    // unlock countdown while the tier is shut. `title` is also the button's
+    // accessible name, so a screen reader still reads the card.
+    const caption =
+      tierLocked && !opening
+        ? `T${spec.tier + 1} ${spec.name} · ${spec.cost}g · unlocks in ${secondsUntil(tierUnlockTick(spec.tier), s.tick)}s`
+        : `T${spec.tier + 1} ${spec.name} · ${spec.cost}g` +
+          (spec.count > 1 ? ` ×${spec.count}` : '') +
+          ` · +${spec.incomeBonus} inc`
+    if (c) c.textContent = caption
+    if (b.title !== caption) {
+      b.title = caption
+      b.setAttribute('aria-label', caption)
     }
     if (!opening && !tierLocked && s.gold < spec.cost) b.setAttribute('data-broke', 'true')
     else b.removeAttribute('data-broke')

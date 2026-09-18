@@ -22,12 +22,6 @@ export function renderIcon(
   model: Model,
   view: { yaw?: number; pitch?: number; zoom?: number } = {},
 ): string {
-  const scene = new THREE.Scene()
-  scene.add(new THREE.HemisphereLight(0xe0ecff, 0x3d4a2e, 1.1))
-  const sun = new THREE.DirectionalLight(0xfff1d8, 1.9)
-  sun.position.set(2, 3.5, 2.5)
-  scene.add(sun)
-
   const group = new THREE.Group()
   const disposables: THREE.Material[] = []
   if (model.lit) {
@@ -40,6 +34,32 @@ export function renderIcon(
     disposables.push(m)
     group.add(new THREE.Mesh(model.glow, m))
   }
+  return renderObjectIcon(renderer, group, view, disposables)
+}
+
+/**
+ * The same picture, from a built asset rather than a procedural model.
+ *
+ * The send cards need one icon per creep now that every creep on the ladder
+ * has its own model (#51); drawing them from the procedural shapes gave one
+ * picture per SHAPE, so five horde cards showed the same beetle. The object is
+ * an instance from the registry, with its own materials, so nothing here
+ * rebuilds them and `dispose` only takes what this function made.
+ */
+export function renderObjectIcon(
+  renderer: THREE.WebGLRenderer,
+  object: THREE.Object3D,
+  view: { yaw?: number; pitch?: number; zoom?: number } = {},
+  disposables: THREE.Material[] = [],
+): string {
+  const scene = new THREE.Scene()
+  scene.add(new THREE.HemisphereLight(0xe0ecff, 0x3d4a2e, 1.1))
+  const sun = new THREE.DirectionalLight(0xfff1d8, 1.9)
+  sun.position.set(2, 3.5, 2.5)
+  scene.add(sun)
+
+  const group = new THREE.Group()
+  group.add(object)
   scene.add(group)
 
   const box = new THREE.Box3().setFromObject(group)

@@ -1,3 +1,4 @@
+import { CREEP_VIEW_SCALE } from '../render/creepBand'
 import * as THREE from 'three'
 import { AnimatedModel, type ClipName } from './animated'
 import { CREEP_BINDINGS, TOWER_BINDINGS, CORPSE_MS, fillSfx, type Binding } from './bindings'
@@ -104,6 +105,8 @@ export class AssetLayer {
     root.name = `${asset}#${id}`
     const body = applyTeamMaterials(root, loaded.albedo, loaded.glowColour, (1 - lane) as 0 | 1)
     const archetype = this.opts.creepNames[kind] ?? 'runner'
+    // Drawn larger than the model is built: see CREEP_VIEW_SCALE.
+    root.scale.setScalar(CREEP_VIEW_SCALE)
     const creep: Creep = { lane, id, asset, archetype, body, seen: this.frame, dying: 0, spawning: false, model: null as unknown as AnimatedModel }
     creep.model = new AnimatedModel({
       root,

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { CREEPS, CreepArchetypeKind, MAX_TIER } from '@ltw/sim'
-import { artBand, creepScale, creepArtName, MAX_ART_BAND, MAX_CREEP_SCALE } from '../src/render/creepBand'
+import { artBand, creepScale, creepArtName, CREEP_VIEW_SCALE, MAX_ART_BAND, MAX_CREEP_SCALE } from '../src/render/creepBand'
 
 /**
  * Placeholder look for the fourteen-rung ladder (ADR-0031) until issue #51
@@ -19,8 +19,12 @@ describe('creep band placeholder', () => {
   })
 
   it('never draws a creep past the scale cap, where sizing by tier drew the top rung at 3.86x', () => {
-    for (let tier = 0; tier <= 1000; tier++) expect(creepScale(tier)).toBeLessThanOrEqual(MAX_CREEP_SCALE)
-    expect(creepScale(0)).toBe(1)
+    // The cap is on the band, which the view scale then multiplies (#51, and
+    // the user's "make the units much bigger" on 2026-09-18).
+    for (let tier = 0; tier <= 1000; tier++) {
+      expect(creepScale(tier)).toBeLessThanOrEqual(MAX_CREEP_SCALE * CREEP_VIEW_SCALE)
+    }
+    expect(creepScale(0)).toBe(CREEP_VIEW_SCALE)
     expect(creepScale(MAX_TIER)).toBeGreaterThan(creepScale(0))
   })
 

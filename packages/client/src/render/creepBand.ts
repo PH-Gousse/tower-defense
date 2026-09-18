@@ -31,10 +31,23 @@ export function artBand(tier: number): number {
   return band > MAX_ART_BAND ? MAX_ART_BAND : band < 0 ? 0 : band
 }
 
+/**
+ * How much bigger than life a creep is drawn (user, 2026-09-18: "make the
+ * units much bigger").
+ *
+ * The models themselves cannot grow: a creep has to pass a one-tile corridor,
+ * and `asset-gate` enforces 0.88 tiles across the walk and 1.2 along it. This
+ * is a render-side multiplier on top of that, so a Scrapling reads as a
+ * creature at the opening framing instead of a dot. It applies to the built
+ * models and the procedural fallback alike, and to nothing the simulation
+ * sees: hit testing, spacing and the lane are all still in tiles.
+ */
+export const CREEP_VIEW_SCALE = 1.8
+
 /** A heavier band is a bigger creature, never past MAX_CREEP_SCALE. */
 export function creepScale(tier: number): number {
   const scale = 1 + 0.22 * artBand(tier)
-  return scale > MAX_CREEP_SCALE ? MAX_CREEP_SCALE : scale
+  return (scale > MAX_CREEP_SCALE ? MAX_CREEP_SCALE : scale) * CREEP_VIEW_SCALE
 }
 
 /**
