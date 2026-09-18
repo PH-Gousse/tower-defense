@@ -1,4 +1,4 @@
-import { CREEP_VIEW_SCALE } from '../render/creepBand'
+import { CREEP_VIEW_SCALE, TOWER_VIEW_SCALE } from '../render/viewScale'
 import * as THREE from 'three'
 import { AnimatedModel, type ClipName } from './animated'
 import { CREEP_BINDINGS, TOWER_BINDINGS, CORPSE_MS, fillSfx, type Binding } from './bindings'
@@ -246,6 +246,8 @@ export class AssetLayer {
     // The catalogue's towers are built at the 2 x 2 footprint (style sheet §8),
     // with the origin on the grid vertex at its centre; the caller passes that.
     root.position.set(x, 0, z)
+    // Drawn larger than built, to the edge of the footprint: see TOWER_VIEW_SCALE.
+    root.scale.setScalar(TOWER_VIEW_SCALE)
     const t: Tower = { lane, tile, asset, archetype: this.opts.towerNames[kind] ?? 'single', level, removeAt: 0, model: null as unknown as AnimatedModel }
     t.model = new AnimatedModel({
       root,
