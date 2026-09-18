@@ -49,7 +49,14 @@ export const TOWER_BINDINGS: Readonly<Record<TowerEvent, Binding>> = {
 }
 
 /** Which size class a creep archetype's spawn and death sounds use. */
-export const SIZE_OF: Readonly<Record<string, 'small' | 'medium' | 'large'>> = { swarm: 'small', runner: 'medium', tank: 'large' }
+export const SIZE_OF: Readonly<Record<string, 'small' | 'medium' | 'large'>> = {
+  swarm: 'small', runner: 'medium', tank: 'large',
+  // The fourteen ladder creeps, one design each (#51), sized by shape:
+  // horde small, fast medium, armoured large.
+  scrapling: 'small', emberimp: 'small', hivedrone: 'small', wraith: 'small', doomherald: 'small',
+  dasherhound: 'medium', windwolf: 'medium', shadowstalker: 'medium', nightmaresteed: 'medium', stormdrake: 'medium',
+  bogbrute: 'large', stonetroll: 'large', irongolem: 'large', siegebehemoth: 'large',
+}
 
 /** How long a corpse is held before removal, matching the effects pool. */
 export const CORPSE_MS = 1400

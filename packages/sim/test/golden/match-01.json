@@ -8,7 +8,8 @@
     "ce02e89d - step 9, the lane turned vertical and shrank to 8 x 24 (a real geometry change: every route, every tower range overlap and every leak timing moved). The command log was remapped onto the new board; the schedule and the balance data in \"data\" are untouched.",
     "bd025b5c - the spawn queue was removed. A send used to enqueue its creeps and the lane released one every four ticks; it now spawns them on the tick the command applies, because gold is meant to be the only thing rationing a send. Separation between simultaneous arrivals moved from the queue's timing to spawnPointFor's along-path offset, so every creep in this replay enters at a different position than it used to and the whole match diverges from tick one. A real behaviour change; the command log and the balance data in \"data\" are untouched.",
     "6231cf95 - re-recorded for the 16x213 lane and 2x2 towers (ADR-0019), with the derived flow field dropped from hashState; every earlier hash was the 8x24 board",
-    "4f0bb681 - spawn cells are scrambled (ADR-0030). spawnPointFor used to fill the spawn zone row by row; it now hands cells out in a fixed scrambled order, so every creep in this replay enters at a different cell and the match diverges from the first send. Confirmed by reverting only state.ts: the old hash came back. A real behaviour change; the command log and the balance data in \"data\" are untouched."
+    "4f0bb681 - spawn cells are scrambled (ADR-0030). spawnPointFor used to fill the spawn zone row by row; it now hands cells out in a fixed scrambled order, so every creep in this replay enters at a different cell and the match diverges from the first send. Confirmed by reverting only state.ts: the old hash came back. A real behaviour change; the command log and the balance data in \"data\" are untouched.",
+    "61b66088 - a leak steals a life, settled once per tick with losses first (ADR-0032, #7). This match has 8 leaks (2 into lane 0, 6 into lane 1), so lives now end 24/16 where the old rule, which credited the sender nothing, ended them 18/14. Confirmed as the cause: the only stored replays whose hashes moved are the two containing leaks, and the three with none are unchanged. A real behaviour change; the command log and the balance data in \"data\" are untouched."
   ],
   "_coverage": "2600 ticks: p0 kills 2 and leaks 2, p1 leaks 6, both lanes live, match still playing",
   "ticks": 2600,
@@ -131,7 +132,7 @@
       "y": 17
     }
   ],
-  "expectedHash": "6559e38c",
+  "expectedHash": "61b66088",
   "data": {
     "sellRefund": 0.6,
     "acquireTicks": 10,

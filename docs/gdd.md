@@ -176,20 +176,10 @@ Every creep has one of three shapes, cycling up the ladder:
   12 and loses 4 on this ladder. On the three-by-three roster it won more than two to
   one, because each tier offered all three shapes at one price; on the ladder a price
   has one shape. `adaptive.test.ts` pins that it wins more than it loses.
-- **Sudden death's HP cap is derived from the roster**: `floor((2³¹ − 1) / heaviest HP)`,
-  refused at load under ×100, because creep HP is an Int32. ×1 036 for this ladder.
-  `[proposed]` (ADR-0031)
-- **Sudden death guarantees the match ends.** From `suddenDeathTick` the HP of every creep
-  *spawned* is multiplied by `suddenDeathGrowth` once per income period, compounding — the
-  guarantee the twenty-tier ladder gave and the three-tier one lost. Sized `[proposed]`
-  `[retune]` at 15:00 and ×1.15 per 15 s: Tank III (6 250 HP) passes the 81 000 a
-  30-tower level-3 maze needs 4.6 minutes in and the 415 000 a 120-tower one needs 7.5
-  minutes in, so no maze on this lane survives past about 23 minutes. Creeps already on
-  the board keep the HP they spawned with. [ADR-0026](adr/0026-sudden-death-on-the-clock-ends-every-match.md),
-  closes [issue #8](https://github.com/PH-Gousse/tower-defense/issues/8).
-
-## 6. Sending
-
+- **No sudden death.** `[confirmed]` 2026-09-17 (user): a match ends only when a player
+  reaches zero lives. Sudden death (ADR-0026), which grew the HP of every creep sent from
+  15:00, is removed by [ADR-0033](adr/0033-sudden-death-is-removed.md). The sim keeps the
+  mechanism, off in the shipped data, so replays recorded with it still replay.
 - **Buying a creep spawns it immediately** in the spawn zone of the **opponent's** lane.
   `[confirmed]` (`spawnSend` runs inside `applyCommands`, same tick.)
 - **No send queue and no pacing.** `[confirmed]` (The release queue that paced one creep
@@ -229,10 +219,7 @@ Every creep has one of three shapes, cycling up the ladder:
 - **Every income tick the income figure is paid into the player's gold.** `[confirmed]`
   Interval is a constant, default **15 s = 300 ticks at 20 Hz** (`INCOME_EVERY_TICKS`).
   `[confirmed]` at 15 s.
-- **Sudden death runs on the income clock.** From `suddenDeathTick` every creep spawned
-  carries `suddenDeathGrowth` more HP per income period elapsed, compounding (§5,
-  ADR-0026). The HUD counts down to it beside the tier clock and then shows the factor a
-  send would carry. `[proposed]` sizing, `[retune]`.
+- **No sudden death** (§5, ADR-0033).
 - ⚠️ **The income clock starts when sending opens, not at tick 0.** `[proposed]` — not in
   the confirmed rules. The code anchors the schedule to `SEND_UNLOCK_TICKS` because a
   payout landing before anyone may send is a period the attacker can never have
@@ -245,15 +232,18 @@ Every creep has one of three shapes, cycling up the ladder:
 ## 8. Leaks and looping
 
 - When a creep's position enters an exit-zone cell — that tick, not the next:
-  1. **The defender loses one life.** `[confirmed]`
-  2. ⚠️ **The sender gains one life.** `[confirmed]` — **NOT IMPLEMENTED.** `step.ts`
-     `moveCreeps` currently credits nobody, with a deliberate rationale in the code:
-     *"The sender gains nothing. Lives only ever go down, for everyone. Crediting the sender
-     would make each leak a 2-point swing, so a leader would compound in lives and income at
-     once with nothing pushing back."* The confirmed rule overrides that. This is a real
-     open bug — see [ADR-0008](adr/0008-leak-credits-the-sender.md) and [issue #7](https://github.com/PH-Gousse/tower-defense/issues/7).
-     Landing it needs: the sim change, a lives *cap* decision (may lives exceed the
-     starting figure?), the `hashState` consequences, and regenerated golden fixtures.
+  1. **The leak steals a life: the defender loses one and the sender gains it.**
+     `[confirmed]` 2026-09-10 and 2026-09-17 (user: *"when a creep leaks it steals a life
+     from the opponent"*). A transfer, so a match's 40 lives are conserved. **No cap:** a
+     player may hold more than the starting 20. **An empty purse has nothing to steal.**
+     Every leak still counts in the defender's leak total.
+     ([ADR-0008](adr/0008-leak-credits-the-sender.md), [ADR-0032](adr/0032-a-leak-steals-a-life-losses-settle-before-gains.md), `settleLives` in `step.ts`)
+  2. **Lives settle once per tick, after every lane has moved, losses first.**
+     `[confirmed]` 2026-09-17 (user). First, every defender loses a life per leak, floored
+     at zero. Second, anyone at zero has lost, and both at zero is a draw. Third, while the
+     match is still on, each sender is credited what was stolen. Reaching zero is final
+     even if your own creep leaks on the same tick, and no lane or creep order inside the
+     tick can change the result.
   3. The creep is placed **back in the spawn zone of the same lane** (same spread rule as
      a fresh spawn) with its **current HP**, its **lap counter increments**, and it runs
      again. `[confirmed]`
@@ -351,8 +341,6 @@ Source of truth: `packages/sim/data/towers.json`, `packages/sim/data/creeps.json
 | Income interval | 300 ticks (15 s) | `state.ts` `INCOME_EVERY_TICKS` | interval `[confirmed]` on the old board, now `[retune]`: 3 to 5 payouts per bare lap instead of 1 or 2; anchor `[proposed]` |
 | Build phase | 400 ticks (20 s) | `creeps.json` `sendUnlockTicks` | `[retune]` — a 16-wide opening maze costs more than an 8-wide one |
 | Tier unlock spacing | 1 200 ticks (1 min) | `creeps.json` `unlockEveryTicks` | `[proposed]` 2026-09-16, chosen by the user in review: one new creep a minute, the fourteenth at 13:20, before sudden death. Was 6 000, measured 2026-09-15 on the three-tier roster against 4 500 and 3 000 under sudden death and kept: 6 000 gives the shortest matches (median 22 156 ticks), the lowest peak (943 creeps) and the only monotone ladder of the three; 3 000 breaks the ladder (#48) |
-| Sudden death start | 18 000 ticks (15:00) | `creeps.json` `suddenDeathTick` | ADR-0026; one unlock interval after the last tier · `[retune]` |
-| Sudden death growth | ×1.15 per income period | `creeps.json` `suddenDeathGrowth` | compounding, applied to HP at spawn · `[retune]` |
 | Ladder length | 14 (tiers 0–13) | `creeps.json` `creeps` | the list's length; ADR-0031 |
 | Sell refund | 0.60 | `towers.json` `sellRefund` | ⚠️ stated default is 0.75 |
 | Tower acquisition | 10 ticks (0.5 s) | `towers.json` `acquireTicks` | ADR-0028, 2026-09-15; the wait before a tower's first shot at a newly seen creep · `[retune]` |
@@ -444,12 +432,12 @@ Speeds are the measured swarm / runner / tank speeds the shapes replace, ×3 fro
 
 Nine things need your word before they harden. Listed again in the Phase 8 report.
 
-1. **Sender gains a life on a leak** — confirmed, unimplemented. Needs a lives-cap decision.
+1. ~~Sender gains a life on a leak~~ — implemented 2026-09-17 as a steal with no cap, settled losses first (ADR-0032, #7).
 2. **Swarm pack size** — one per purchase (code), or many per purchase (stated)?
 3. **Sell refund** — 0.60 (code) or 0.75 (stated)?
 4. **Build phase** — is the 20 s opening a confirmed rule?
 5. **Income clock anchor** — tied to send-unlock (code) or to tick 0?
 6. ~~Blocking refusal~~ — resolved by ADR-0023: refuse on a creep-occupied footprint.
 7. **Draws** — is a same-tick double-zero a draw, or does someone win?
-8. ~~Match-ender~~ — resolved by ADR-0026: sudden death on the clock. Its sizing (15:00, ×1.15 per period) is `[proposed]`.
+8. ~~Match-ender~~ — ADR-0026 added sudden death; the user removed it on 2026-09-17 (ADR-0033). A match ends only at zero lives.
 9. **Every number in §11.**

@@ -72,7 +72,7 @@ import { createAudio, type Audio } from './audio/audio'
 import { AssetLayer } from './assets/layer'
 import type { AssetRegistry } from './assets/registry'
 import type { SfxPlayer } from './assets/sfx'
-import { artBand, creepScale, CREEP_ART_NAMES, MAX_ART_BAND } from './render/creepBand'
+import { artBand, creepScale, creepArtName } from './render/creepBand'
 
 /**
  * Wire-level refusals, in the player's language.
@@ -153,6 +153,8 @@ export interface Stats {
   readonly result: MatchResult
   readonly winner: number
   readonly oppLives: number
+  /** The opponent's income per period. Public: both lanes are on screen anyway. */
+  readonly oppIncome: number
   readonly oppCreeps: number
   /** Non-null once a peer's hashes disagreed with ours. The sim is frozen. */
   readonly desync: Divergence | null
@@ -1283,7 +1285,7 @@ const scratchV = new THREE.Vector3()
             dx[c] = sx
             dz[c] = sz
             const rspec = CREEPS[curr.spec[c] as number]
-            assets?.creepSpawned(lane, cid, rspec ? rspec.archetype : 0, artBand(rspec ? rspec.tier : 0), sx, sz, true)
+            if (rspec) assets?.creepSpawned(lane, cid, curr.spec[c] as number, 0, sx, sz, true)
           }
           p++
           c++
@@ -1311,7 +1313,7 @@ const scratchV = new THREE.Vector3()
         // An id in curr but not prev: a spawn. Nothing to shift.
         if (assets) {
           const sspec = CREEPS[curr.spec[c] as number]
-          assets.creepSpawned(lane, cid, sspec ? sspec.archetype : 0, artBand(sspec ? sspec.tier : 0), ox + (curr.x[c] as number), curr.y[c] as number, false)
+          if (sspec) assets.creepSpawned(lane, cid, curr.spec[c] as number, 0, ox + (curr.x[c] as number), curr.y[c] as number, false)
         }
         c++
       }
@@ -1424,7 +1426,8 @@ const scratchV = new THREE.Vector3()
         creepOffset(id, offset)
         const wx = ox + x + offset.x
         const wz = y + offset.z
-        if (assets && assets.placeCreep(lane, id, kind, tier, wx, wz, heading, moving, (Math.abs(mdx) + Math.abs(mdy)) * 20, slowed)) {
+        // One model per creep (#51): the asset is looked up by the creep's own index.
+        if (assets && spec && assets.placeCreep(lane, id, curr.spec[i] as number, 0, wx, wz, heading, moving, (Math.abs(mdx) + Math.abs(mdy)) * 20, slowed)) {
           dxs[i] = wx
           dys[i] = 0.35 * scale
           dzs[i] = wz
@@ -1655,10 +1658,10 @@ const scratchV = new THREE.Vector3()
     attachAssets: (registry, sfx, dev) => {
       const layer = new AssetLayer(scene, registry, sfx, {
         dev,
-        creepNames: CREEP_ART_NAMES,
+        creepNames: CREEPS.map((c) => creepArtName(c.key)),
         towerNames: ARCHETYPES.map((a) => a.key),
       })
-      const missing = layer.missingFor(CREEP_ART_NAMES.length, MAX_ART_BAND + 1, ARCHETYPES.length, 3)
+      const missing = layer.missingFor(CREEPS.length, 1, ARCHETYPES.length, 3)
       if (missing.length && dev) console.warn(`[assets] catalogue lacks ${missing.length} of the match's assets (${missing.join(', ')}); those draw procedurally`)
       assets = layer
       fileSfx = sfx
@@ -1733,6 +1736,7 @@ const scratchV = new THREE.Vector3()
           result: state.result,
           winner: state.winner,
           oppLives: state.players[1 - me()]!.lives,
+          oppIncome: state.players[1 - me()]!.income,
           oppCreeps: (state.lanes[1 - me()] as Lane).creeps.count,
           desync: driver.desync,
           peerLag: driver.lockstep ? driver.peerLag(me()) : 0,

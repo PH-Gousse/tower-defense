@@ -1,0 +1,31 @@
+# Wraith (ladder tier 10, Horde). A low hovering shade: a wide ghostly bell trailing eight tendrils just above the ground.
+# One design per creep (#51): its own archetype at tier 1, judged against the horde silhouette rule
+# (swarm in style-sheet section 4).
+id: creep_wraith_t1
+class: creep
+archetype: wraith
+tier: 1
+body_plan: hover
+params:
+  height: 0.5
+  hover_height: 0.08
+  bell_radius: 0.22
+  tendrils: 10
+  parts:
+    - { part: crystal_cluster, at: top }
+palette:
+  primary: stone_blue
+  secondary: iron
+  accent: violet
+  glow: violet
+  team_mask: [torso_stripe]
+rig: hover
+animations:
+  Idle: { gen: hover_bob, amplitude: 0.05, duration: 2.0 }
+  Walk: { gen: hover_bob, amplitude: 0.04, duration: 1.2, tilt: 0.15, stride: 1.0 }
+  Death: { gen: crumble, duration: 0.7 }
+  Spawn: { gen: rise_from_ground, duration: 0.5, land: 0.7 }
+audio:
+  spawn: sfx_spawn_small_1
+  death: sfx_death_small_1
+source: { kind: generated, licence: own, author: asset-factory }

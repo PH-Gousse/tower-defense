@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { CREEPS, CreepArchetypeKind, MAX_TIER } from '@ltw/sim'
-import { artBand, creepScale, CREEP_ART_NAMES, MAX_ART_BAND, MAX_CREEP_SCALE } from '../src/render/creepBand'
+import { artBand, creepScale, creepArtName, MAX_ART_BAND, MAX_CREEP_SCALE } from '../src/render/creepBand'
 
 /**
  * Placeholder look for the fourteen-rung ladder (ADR-0031) until issue #51
@@ -24,9 +24,10 @@ describe('creep band placeholder', () => {
     expect(creepScale(MAX_TIER)).toBeGreaterThan(creepScale(0))
   })
 
-  it('names the catalogue models by shape, in CreepArchetypeKind order', () => {
-    expect(CREEP_ART_NAMES[CreepArchetypeKind.Horde]).toBe('swarm')
-    expect(CREEP_ART_NAMES[CreepArchetypeKind.Fast]).toBe('runner')
-    expect(CREEP_ART_NAMES[CreepArchetypeKind.Armoured]).toBe('tank')
+  it('gives every ladder creep its own catalogue name, one design each (#51)', () => {
+    const names = CREEPS.map((c) => creepArtName(c.key))
+    expect(new Set(names).size).toBe(CREEPS.length)
+    for (const n of names) expect(n).toMatch(/^[a-z0-9]+$/)
+    expect(creepArtName('storm_drake')).toBe('stormdrake')
   })
 })

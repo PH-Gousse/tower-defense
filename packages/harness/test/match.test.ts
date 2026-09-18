@@ -35,7 +35,29 @@ function robin(): Promise<Map<string, MatchResultSummary>> {
   return roundRobin
 }
 
-describe('bot-vs-bot matches', () => {
+/**
+ * The matchups where lives actually move.
+ *
+ * Under "a leak steals a life" (ADR-0032) two identical bots leak into each
+ * other in perfect step, so every life stolen is stolen straight back: the easy
+ * mirror holds 20/20 through 61,873 leaks a side and ends only when one tick
+ * leaks twenty creeps into each lane at once, a draw at 39.6 minutes with 22,562
+ * creeps on the board (measured 2026-09-17). That is the rule working, not the
+ * bot stalling. So the checks about how long a match takes and how many creeps
+ * it piles up are asked of the uneven pairings, which is what the user chose
+ * (#7); the mirrors keep the checks that are about mirrors.
+ */
+const UNEVEN = LADDER.flatMap(([an], i) => LADDER.filter((_, j) => j !== i).map(([bn]) => `${an} vs ${bn}`))
+
+/**
+ * Wall-clock budget for anything awaiting the round robin, not a game pin.
+ * The three mirrors run to their draws at 32-40 game minutes with up to 22,562
+ * creeps, 86-199 s each on a laptop; the whole robin is about 350 s there and
+ * roughly twice that on the CI runner.
+ */
+const ROBIN_BUDGET_MS = 1_500_000
+
+describe('bot-vs-bot matches', { timeout: ROBIN_BUDGET_MS }, () => {
   it('resolves rather than stalling', async () => {
     // An earlier bot hoarded gold "for emergencies" and produced matches that
     // ran forever, both sides parked on 3 lives. A bot that cannot finish is
@@ -131,8 +153,13 @@ describe('bot-vs-bot matches', () => {
     // the number the renderer was measured against; a rising peak past it is
     // the balance problem in issue #8 getting worse, and the place to fix it
     // is the ladder, not this number.
+    //
+    // Uneven pairings only, since ADR-0032: a mirror trades every stolen life
+    // back and piles up creeps until one tick leaks twenty a lane (15,302-22,562
+    // at their draws). Measured 2026-09-17, the uneven pairings peak at 63-230.
     const results = await robin()
-    for (const [key, m] of results) {
+    for (const key of UNEVEN) {
+      const m = results.get(key)!
       expect(m.peakCreeps, `${key} peak creeps`).toBeLessThan(3000)
     }
   })
@@ -162,7 +189,7 @@ describe('bot-vs-bot matches', () => {
   })
 })
 
-describe('the match is a contest, not a wait', () => {
+describe('the match is a contest, not a wait', { timeout: ROBIN_BUDGET_MS }, () => {
   /**
    * The shape regression, pinned.
    *
@@ -197,12 +224,16 @@ describe('the match is a contest, not a wait', () => {
     // bot to a worse maze to hide a balance problem. So this pins the two
     // things that separate that stall from the old one: the match ends, and
     // both sides were sending the whole time.
+    //
+    // Asked of the uneven pairings since ADR-0032 (see UNEVEN): a mirror trades
+    // every stolen life back and draws only at 32-40 minutes. Measured
+    // 2026-09-17, the uneven pairings end at 17.2-17.9 minutes.
     const results = await robin()
-    for (const [name] of LADDER) {
-      const m = results.get(`${name} vs ${name}`)!
+    for (const name of UNEVEN) {
+      const m = results.get(name)!
       const minutes = m.ticks / 1200
-      expect(minutes, `${name} mirror length`).toBeLessThan(25)
-      expect(minutes, `${name} mirror length`).toBeGreaterThan(2)
+      expect(minutes, `${name} length`).toBeLessThan(25)
+      expect(minutes, `${name} length`).toBeGreaterThan(2)
       for (let p = 0; p < 2; p++) {
         // Gold, not creeps, and a rate, not a total.
         //
@@ -220,13 +251,15 @@ describe('the match is a contest, not a wait', () => {
         //
         // Five times starting income a minute: a bot that never sends sends 0,
         // and one that only ever spent its base income on creeps could send
-        // 1x. Measured mirrors send 25-37x. Derived from the data so an economy
+        // 1x. Measured mirrors sent 25-37x under the old leak rule. On the
+        // uneven pairings under ADR-0032 the thinnest margin is the losing easy
+        // bot against hard, at 232 gold a minute against a floor of 200. Derived from the data so an economy
         // change moves it with the purse rather than silently turning it green
         // or red.
         const incomePerMinute = (STARTING_INCOME * 1200) / INCOME_EVERY_TICKS
         expect(
           (m.goldSent[p] as number) / minutes,
-          `${name} mirror: player ${p} gold sent per minute`,
+          `${name}: player ${p} gold sent per minute`,
         ).toBeGreaterThan(5 * incomePerMinute)
       }
     }

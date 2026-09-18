@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
-  railWidth, usesRails, safeEdges, maxRail, RAIL_MAX, RAIL_MIN, MIN_VIEW_ASPECT, MIN_VIEW_TILES,
+  railWidth, usesRails, safeEdges, maxRail, RAIL_MAX, RAIL_MIN, MIN_VIEW_ASPECT, MIN_VIEW_TILES, PLAY_ROWS_IN_VIEW,
 } from '../src/chrome'
-import { DEFAULT_ROWS_IN_VIEW } from '../src/render/CameraRig'
 import { LANE_WIDTH, LANE_GAP } from '@ltw/sim'
 
 /**
@@ -11,7 +10,7 @@ import { LANE_WIDTH, LANE_GAP } from '@ltw/sim'
  * Two properties matter and neither is obvious from the code alone:
  *
  *   1. A rail must never take width the default framing needs. The camera
- *      frames DEFAULT_ROWS_IN_VIEW rows (ADR-0024); across those rows the
+ *      frames PLAY_ROWS_IN_VIEW rows (ADR-0024); across those rows the
  *      usable view has to show your lane, the gap and a strip of the
  *      opponent's. Past that the rail is costing the view, not using slack.
  *
@@ -32,7 +31,7 @@ const LANDSCAPE = [
 describe('the view the rails must leave', () => {
   it('is derived from the lane, not tuned', () => {
     expect(MIN_VIEW_TILES).toBe(LANE_WIDTH + LANE_GAP + 4)
-    expect(MIN_VIEW_ASPECT).toBeCloseTo(MIN_VIEW_TILES / DEFAULT_ROWS_IN_VIEW, 12)
+    expect(MIN_VIEW_ASPECT).toBeCloseTo(MIN_VIEW_TILES / PLAY_ROWS_IN_VIEW, 12)
   })
 
   it('leaves the usable area at least that wide for its height', () => {

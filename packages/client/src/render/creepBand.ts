@@ -38,8 +38,13 @@ export function creepScale(tier: number): number {
 }
 
 /**
- * The catalogue's creep names, indexed by CreepArchetypeKind (horde, fast,
- * armoured). They are the old archetype keys because the built assets are
- * named after them; the sim's shapes are called something else now.
+ * A creep's name in the art catalogue: its ladder key without underscores.
+ *
+ * One design per creep (#51): each ladder creep is its own archetype at tier
+ * 1, `creep_<name>_t1`, because asset ids allow no underscore inside the name.
+ * The bands above are only the procedural fallback now, for a creep whose
+ * asset is missing.
  */
-export const CREEP_ART_NAMES: readonly string[] = ['swarm', 'runner', 'tank']
+export function creepArtName(key: string): string {
+  return key.replace(/_/g, '')
+}

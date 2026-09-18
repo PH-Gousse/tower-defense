@@ -331,6 +331,7 @@ export function step(prev: GameState, commands: readonly Command[], into: GameSt
     }
   }
 
+  leaksThisTick.fill(0)
   for (let l = 0; l < s.lanes.length; l++) {
     const lane = s.lanes[l] as Lane
     rebuildHash(lane, hash)
@@ -338,6 +339,7 @@ export function step(prev: GameState, commands: readonly Command[], into: GameSt
     removeDead(s, l)
     moveCreeps(s, l)
   }
+  settleLives(s)
 
   return s
 }
@@ -488,33 +490,78 @@ function removeDead(s: GameState, laneIndex: number): void {
 }
 
 /**
- * A leak does two things, and deliberately not a third:
- *   1. the lane owner loses a life
- *   2. the creep returns to the spawn zone and runs the maze again, keeping
- *      its damage and lap count
- * The sender gains nothing. Lives only ever go down, for everyone.
- * Crediting the sender would make each leak a 2-point swing, so a
- * leader would compound in lives and income at once with nothing
- * pushing back. (Issue #7 / ADR-0008 hold the confirmed rule that
- * overrides this; unchanged by the geometry.)
+ * Leaks counted per lane this tick, settled into lives by `settleLives` once
+ * every lane has moved. Scratch, not state: zeroed at the start of every
+ * tick's lane loop and fully consumed before `step` returns, so nothing
+ * carries between ticks and nothing needs hashing.
+ */
+const leaksThisTick = new Int32Array(PLAYER_COUNT)
+
+/**
+ * A leak steals a life (ADR-0032), and the creep runs the maze again.
+ *
+ * Here: the lane owner's leak count rises, and the creep returns to the
+ * spawn zone keeping its damage and lap count. The life itself moves in
+ * `settleLives`, after every lane, because settling it here -- as this did
+ * until 2026-09-17 -- ended the match mid-tick in lane order, and with a
+ * sender's gain in the rule, lane 0 resolving first would hand a same-tick
+ * exchange to one seat.
  *
  * No lap cap, no decay, no timeout: tower damage is the only thing that
  * removes a creep, and that is the intended pressure.
  */
-function leak(s: GameState, lane: Lane, defender: Player, i: number): void {
+function leak(lane: Lane, laneIndex: number, defender: Player, i: number): void {
   const c = lane.creeps
-  defender.lives -= 1
   defender.leaks += 1
+  leaksThisTick[laneIndex] = (leaksThisTick[laneIndex] as number) + 1
   c.laps[i] = (c.laps[i] as number) + 1
   lane.released += 1
   const p = spawnPointFor(lane.released, lane.field)
   c.x[i] = p.x
   c.y[i] = p.y
-  if (defender.lives <= 0) {
-    defender.lives = 0
-    endMatch(s)
+}
+
+/**
+ * Move this tick's stolen lives, losses first (ADR-0032).
+ *
+ *   1. Losses. Each defender loses a life per leak in their lane, floored at
+ *      zero. What was actually removed is what was stolen: an empty purse
+ *      has nothing to take.
+ *   2. Decide. Anyone at zero has lost; both at zero is a draw.
+ *   3. Gains. Each sender -- the lane owner's opponent -- is credited what was
+ *      stolen from that lane, only while the match is still being played. A
+ *      match decided on this tick's losses ends on them.
+ *
+ * Whole steps over summed counts, so no lane or creep order inside the tick
+ * can change the result. No cap: a stolen life moves, it is not destroyed.
+ */
+function settleLives(s: GameState): void {
+  let any = false
+  for (let p = 0; p < PLAYER_COUNT; p++) {
+    const n = leaksThisTick[p] as number
+    if (n === 0) {
+      stolen[p] = 0
+      continue
+    }
+    any = true
+    const defender = s.players[p] as Player
+    const taken = n < defender.lives ? n : defender.lives
+    defender.lives -= taken
+    stolen[p] = taken
+  }
+  if (!any) return
+  endMatch(s)
+  if (s.result !== MatchResult.Playing) return
+  for (let p = 0; p < PLAYER_COUNT; p++) {
+    const taken = stolen[p] as number
+    if (taken === 0) continue
+    const sender = s.players[opponentOf(p)] as Player
+    sender.lives += taken
   }
 }
+
+/** Lives stolen from each lane's owner this tick. Scratch; see `leaksThisTick`. */
+const stolen = new Int32Array(PLAYER_COUNT)
 
 /** Put a creep with no route back in the spawn zone. See ADR-0012. */
 function respawn(lane: Lane, i: number): void {
@@ -558,7 +605,7 @@ function moveCreeps(s: GameState, laneIndex: number): void {
       const idx = cy * GRID_W + cx
 
       if (isExitIndex(idx)) {
-        leak(s, lane, defender, i)
+        leak(lane, laneIndex, defender, i)
         leaked = true
         break
       }
@@ -597,7 +644,7 @@ function moveCreeps(s: GameState, laneIndex: number): void {
     // cell, the creep has entered the zone this tick and leaks now.
     if (!leaked) {
       const idx = Math.floor(c.y[i] as number) * GRID_W + Math.floor(c.x[i] as number)
-      if (isExitIndex(idx)) leak(s, lane, defender, i)
+      if (isExitIndex(idx)) leak(lane, laneIndex, defender, i)
     }
   }
 }

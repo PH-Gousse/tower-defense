@@ -1,0 +1,35 @@
+# Nightmare Steed (ladder tier 11, Fast). A long-legged dark-hided steed with a burning red mane and a streaming tail.
+# One design per creep (#51): its own archetype at tier 1, judged against the fast silhouette rule
+# (runner in style-sheet section 4).
+id: creep_nightmaresteed_t1
+class: creep
+archetype: nightmaresteed
+tier: 1
+body_plan: quadruped
+params:
+  height: 0.8
+  body_length: 0.42
+  leg_length: 0.42
+  body_radius: 0.12
+  head: hound
+  head_size: 0.95
+  tail: none
+  parts:
+    - { part: horns, at: head }
+    - { part: tail_long, at: tail }
+palette:
+  primary: umber
+  secondary: iron
+  accent: danger
+  glow: danger
+  team_mask: [torso_stripe, head_crest]
+rig: quadruped
+animations:
+  Idle: { gen: idle_breathe, amplitude: 0.02, duration: 1.4 }
+  Walk: { gen: walk_quadruped, stride: 0.9, cadence: 3.6, gait: trot }
+  Death: { gen: collapse_forward, duration: 0.7, impact: 0.55 }
+  Spawn: { gen: rise_from_ground, duration: 0.5, land: 0.7 }
+audio:
+  spawn: sfx_spawn_medium_1
+  death: sfx_death_medium_1
+source: { kind: generated, licence: own, author: asset-factory }

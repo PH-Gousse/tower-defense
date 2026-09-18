@@ -1,0 +1,30 @@
+# Ember Imp (ladder tier 4, Horde). A low smouldering slime of cinders with a glowing red core and ember shards on its back.
+# One design per creep (#51): its own archetype at tier 1, judged against the horde silhouette rule
+# (swarm in style-sheet section 4).
+id: creep_emberimp_t1
+class: creep
+archetype: emberimp
+tier: 1
+body_plan: blob
+params:
+  height: 0.34
+  squash: 0.55
+  lumps: 4
+  parts:
+    - { part: crystal_shards, at: back }
+palette:
+  primary: wood_dark
+  secondary: iron
+  accent: danger
+  glow: danger
+  team_mask: [torso_stripe, core]
+rig: blob
+animations:
+  Idle: { gen: idle_breathe, amplitude: 0.03, duration: 1.2 }
+  Walk: { gen: hover_bob, amplitude: 0.03, duration: 0.6, tilt: 0.05, stride: 0.5 }
+  Death: { gen: crumble, duration: 0.6 }
+  Spawn: { gen: rise_from_ground, duration: 0.5, land: 0.7 }
+audio:
+  spawn: sfx_spawn_small_1
+  death: sfx_death_small_1
+source: { kind: generated, licence: own, author: asset-factory }

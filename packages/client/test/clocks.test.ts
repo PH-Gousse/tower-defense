@@ -3,7 +3,7 @@ import {
   TICK_HZ, INCOME_EVERY_TICKS, SEND_UNLOCK_TICKS, tierUnlockTick, MAX_TIER,
 } from '@ltw/sim'
 import {
-  secondsUntil, mmss, ticksUntilIncome, unlockedTier, ticksUntilNextTier, sendWindowStart,
+  secondsUntil, mmss, ticksUntilIncome, unlockedTier, ticksUntilNextTier, hotkeyStart,
 } from '../src/clocks'
 
 /**
@@ -119,22 +119,16 @@ describe('ticksUntilIncome', () => {
   })
 })
 
-describe('sendWindowStart', () => {
-  it('starts at the bottom of the ladder while the first rungs are all that is open', () => {
-    expect(sendWindowStart(0, 14, 6)).toBe(0)
-    expect(sendWindowStart(4, 14, 6)).toBe(0)
+describe('hotkeyStart', () => {
+  it('starts the keys at the bottom of the ladder while few tiers are open', () => {
+    expect(hotkeyStart(0, 6)).toBe(0)
+    expect(hotkeyStart(5, 6)).toBe(0)
   })
 
-  it('keeps the next rung to unlock as the last card', () => {
-    for (let tier = 4; tier < 13; tier++) {
-      const start = sendWindowStart(tier, 14, 6)
-      expect(start + 5, `tier ${tier}`).toBe(tier + 1)
+  it('keeps the newest unlocked tier on the last key once six are open', () => {
+    for (let tier = 5; tier <= 13; tier++) {
+      expect(hotkeyStart(tier, 6) + 5, `tier ${tier}`).toBe(tier)
     }
-  })
-
-  it('stops at the top of the ladder instead of showing empty cards', () => {
-    expect(sendWindowStart(13, 14, 6)).toBe(8)
-    expect(sendWindowStart(99, 14, 6)).toBe(8)
   })
 })
 
@@ -175,13 +169,10 @@ describe('ticksUntilNextTier', () => {
 })
 
 describe('sudden death clock', () => {
-  it('counts down to the start tick, then shows the factor a send would carry', async () => {
+  it('reports no countdown and no factor, because the game has no sudden death (ADR-0033)', async () => {
     const { ticksUntilSuddenDeath, suddenDeathLabel } = await import('../src/clocks')
-    const { SUDDEN_DEATH_TICK, INCOME_EVERY_TICKS } = await import('@ltw/sim')
-    expect(ticksUntilSuddenDeath(0)).toBe(SUDDEN_DEATH_TICK)
-    expect(ticksUntilSuddenDeath(SUDDEN_DEATH_TICK)).toBe(0)
-    expect(suddenDeathLabel(0)).toBe('×1.00')
-    expect(suddenDeathLabel(SUDDEN_DEATH_TICK)).toBe('×1.15')
-    expect(suddenDeathLabel(SUDDEN_DEATH_TICK + INCOME_EVERY_TICKS)).toBe('×1.32')
+    expect(ticksUntilSuddenDeath(0)).toBeNull()
+    expect(ticksUntilSuddenDeath(1_000_000)).toBeNull()
+    expect(suddenDeathLabel(1_000_000)).toBe('×1.00')
   })
 })

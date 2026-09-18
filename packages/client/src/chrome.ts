@@ -1,5 +1,4 @@
 import { LANE_WIDTH, LANE_GAP, GRID_W } from '@ltw/sim'
-import { DEFAULT_ROWS_IN_VIEW } from './render/CameraRig'
 
 /**
  * Where the HUD and the palette sit, and what that reserves from the camera.
@@ -25,7 +24,7 @@ import { DEFAULT_ROWS_IN_VIEW } from './render/CameraRig'
  * directly. The camera scrolls now (ADR-0024) and frames a fixed number of
  * rows, so there is no fit to keep height-bound -- the question is what the
  * default framing must still show ACROSS. The rule: after the rails, the
- * usable view at `DEFAULT_ROWS_IN_VIEW` rows must still show your whole lane,
+ * usable view at `PLAY_ROWS_IN_VIEW` rows must still show your whole lane,
  * the gap and a strip of the opponent's, with a tile of margin. That is
  * `MIN_VIEW_ASPECT`, derived from the lane constants so a geometry change
  * moves it rather than quietly invalidating a tuned number.
@@ -52,8 +51,20 @@ export const CONTENT_W = GRID_W * 2 + OPP_GAP
  */
 export const MIN_VIEW_TILES = LANE_WIDTH + LANE_GAP + 2 + 2
 
-/** The usable viewport aspect below which rails would cost the default view. */
-export const MIN_VIEW_ASPECT = MIN_VIEW_TILES / DEFAULT_ROWS_IN_VIEW
+/**
+ * The framing the rails are sized against: the one a player spends the match
+ * at, not the one a match opens on.
+ *
+ * These were the same number until 2026-09-18, when a match began opening at
+ * the zoom cap (40 rows, the user's ask). Deriving the rails from the opening
+ * view would have widened every rail -- a view that far out leaves more free
+ * width -- and a rail's width IS the camera's reservation, so the chrome would
+ * have grown because of where the camera starts rather than where it is played.
+ */
+export const PLAY_ROWS_IN_VIEW = 30
+
+/** The usable viewport aspect below which rails would cost the playing view. */
+export const MIN_VIEW_ASPECT = MIN_VIEW_TILES / PLAY_ROWS_IN_VIEW
 
 /** Widest a rail may be. Beyond this the rail is padding, not content. */
 export const RAIL_MAX = 300

@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   createState, step, hashState, buildDump, parseDump, HashRing, MatchResult,
-  botCommand, BOT_NORMAL, Kind,
-  type Command, type GameState,
+  botCommand, BOT_NORMAL, BOT_HARD, Kind,
+  type BotConfig, type Command, type GameState,
 } from '@ltw/sim'
 import { replayDump, replayFile } from '../src/replay'
 
@@ -16,7 +16,7 @@ import { replayDump, replayFile } from '../src/replay'
  */
 
 /** Play a bot-vs-bot match the way the client does, logging as the driver logs. */
-function playAndDump(ticks: number, perturbAt = -1) {
+function playAndDump(ticks: number, perturbAt = -1, bots: readonly [BotConfig, BotConfig] = [BOT_NORMAL, BOT_NORMAL]) {
   let a: GameState = createState()
   let b: GameState = createState()
   const log: Command[] = []
@@ -24,7 +24,7 @@ function playAndDump(ticks: number, perturbAt = -1) {
   for (let t = 0; t < ticks; t++) {
     const cmds: Command[] = []
     for (const p of [0, 1] as const) {
-      for (const c of botCommand(a, p, BOT_NORMAL)) cmds.push(c)
+      for (const c of botCommand(a, p, bots[p])) cmds.push(c)
     }
     // The driver rewrites `tick` to the tick a command is applied on, because
     // `step()` ignores the field and the producers disagree about it.
@@ -128,7 +128,10 @@ describe('replaying a dump', () => {
   })
 
   it('carries enough to finish a decided match', () => {
-    const { state, dump } = playAndDump(40000)
+    // Normal against hard, not a mirror. Under "a leak steals a life"
+    // (ADR-0032) two normal bots trade every stolen life back and draw only
+    // at 38 minutes, past this window; normal vs hard is decided at 17.9.
+    const { state, dump } = playAndDump(40000, -1, [BOT_NORMAL, BOT_HARD])
     expect(state.result).not.toBe(MatchResult.Playing)
     const r = replayDump(dump)
     expect(r.result).toBe(state.result)

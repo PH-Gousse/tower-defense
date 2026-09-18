@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { MatchResult, STARTING_LIVES, towerSlotAt } from '../src/state'
+import { createState, MatchResult, STARTING_LIVES, towerSlotAt } from '../src/state'
 import { hashState } from '../src/hash'
-import { GRID_H, SPAWN_ROWS } from '../src/grid'
+import { GRID_H, SPAWN_ROWS, EXIT_ROW_MIN } from '../src/grid'
 import { TowerKind, creepSpec, tierUnlockTick } from '../src/data'
 import { build, send, runUntil, tick, withGold, R, DASHER_HOUND, BOG_BRUTE, withEveryCreepUnlocked } from './helpers'
 
@@ -42,12 +42,12 @@ describe('the loop', () => {
     expect(s.players[0]!.lives).toBe(STARTING_LIVES - s.players[0]!.leaks)
   })
 
-  it('credits the sender nothing — lives only ever go down', () => {
-    // The damping rule as shipped. ADR-0008 / issue #7 hold the confirmed rule
-    // that overrides it; unchanged by the geometry.
+  it('steals a life on every leak: the sender gains what the defender loses', () => {
+    // ADR-0032 (#7): a leak is a transfer, so the match's lives are conserved.
     const s = runUntil((x) => x.players[0]!.leaks >= 4, lapTicks(DASHER_HOUND) * 3, RELENTLESS, FUND_SENDER)
-    expect(s.players[1]!.lives).toBe(STARTING_LIVES)
-    expect(s.players[0]!.lives + s.players[0]!.leaks).toBe(STARTING_LIVES)
+    expect(s.players[0]!.lives).toBe(STARTING_LIVES - s.players[0]!.leaks)
+    expect(s.players[1]!.lives).toBe(STARTING_LIVES + s.players[0]!.leaks)
+    expect(s.players[0]!.lives + s.players[1]!.lives).toBe(2 * STARTING_LIVES)
   })
 
   it('loops the creep instead of despawning it, keeping damage and lap count', () => {
@@ -159,5 +159,93 @@ describe('the loop', () => {
     )
     expect(strong.players[0]!.kills).toBe(1)
     expect(strong.players[0]!.leaks).toBeLessThan(weak.players[0]!.leaks)
+  })
+})
+
+/**
+ * How a tick settles its leaks (ADR-0032): losses first, floored at zero,
+ * then the win check, then gains while the match is still on.
+ *
+ * Each case sends one creep per leak it wants, parks them a hair above the
+ * exit seam so they cross mid-step, sets the purses, and runs one tick.
+ */
+describe('stealing lives, settled per tick', () => {
+  function oneTick(lives: [number, number], leaksInto: [number, number]) {
+    const cmds: ReturnType<typeof send>[] = []
+    // Player 1's sends land in lane 0, player 0's in lane 1.
+    for (let i = 0; i < leaksInto[0]; i++) cmds.push(send(DASHER_HOUND, 1))
+    for (let i = 0; i < leaksInto[1]; i++) cmds.push(send(DASHER_HOUND, 0))
+    const s = tick(createState(), cmds)
+    for (const lane of s.lanes) {
+      const c = lane.creeps
+      for (let i = 0; i < c.count; i++) {
+        c.x[i] = 0.5 + i
+        c.y[i] = EXIT_ROW_MIN - 0.05
+      }
+    }
+    ;(s.players[0] as { lives: number }).lives = lives[0]
+    ;(s.players[1] as { lives: number }).lives = lives[1]
+    return tick(s)
+  }
+
+  it('lets a leader hold more lives than the match started with', () => {
+    // No cap: a stolen life moves, it is not destroyed.
+    const out = oneTick([STARTING_LIVES, STARTING_LIVES], [1, 0])
+    expect(out.players[0]!.lives).toBe(STARTING_LIVES - 1)
+    expect(out.players[1]!.lives).toBe(STARTING_LIVES + 1)
+    expect(out.result).toBe(MatchResult.Playing)
+  })
+
+  it('steals several lives on one tick, one per leak', () => {
+    const out = oneTick([10, 10], [3, 0])
+    expect(out.players[0]!.lives).toBe(7)
+    expect(out.players[1]!.lives).toBe(13)
+    expect(out.players[0]!.leaks).toBe(3)
+  })
+
+  it('takes no more than the purse holds, and counts every leak', () => {
+    const out = oneTick([1, 20], [3, 0])
+    expect(out.players[0]!.lives).toBe(0)
+    expect(out.players[0]!.leaks).toBe(3)
+    expect(out.result).toBe(MatchResult.Decided)
+    expect(out.winner).toBe(1)
+    // Decided on the losses, so no gain is credited afterwards.
+    expect(out.players[1]!.lives).toBe(20)
+  })
+
+  it('settles losses before gains: reaching zero loses even if your own creep leaks that tick', () => {
+    const out = oneTick([1, 5], [1, 1])
+    expect(out.result).toBe(MatchResult.Decided)
+    expect(out.winner).toBe(1)
+    expect(out.players[0]!.lives).toBe(0)
+    expect(out.players[1]!.lives).toBe(4)
+  })
+
+  it('does not depend on lane order: the same exchange mirrored gives the mirrored result', () => {
+    // Lane 0 resolves before lane 1. Before ADR-0032 the match ended inside
+    // the lane loop, so the seat whose lane came first could win a same-tick
+    // exchange the other seat would have lost.
+    const out = oneTick([5, 1], [1, 1])
+    expect(out.result).toBe(MatchResult.Decided)
+    expect(out.winner).toBe(0)
+    expect(out.players[1]!.lives).toBe(0)
+    expect(out.players[0]!.lives).toBe(4)
+  })
+
+  it('is a draw when both players reach zero on the same tick', () => {
+    const out = oneTick([1, 1], [1, 1])
+    expect(out.result).toBe(MatchResult.Draw)
+    expect(out.winner).toBe(-1)
+    expect(out.players[0]!.lives).toBe(0)
+    expect(out.players[1]!.lives).toBe(0)
+  })
+
+  it('trades a life each way when both leak with lives to spare', () => {
+    const out = oneTick([5, 5], [1, 1])
+    expect(out.result).toBe(MatchResult.Playing)
+    expect(out.players[0]!.lives).toBe(5)
+    expect(out.players[1]!.lives).toBe(5)
+    expect(out.players[0]!.leaks).toBe(1)
+    expect(out.players[1]!.leaks).toBe(1)
   })
 })

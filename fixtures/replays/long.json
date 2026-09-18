@@ -1,5 +1,5 @@
 {
-  "_comment": "Recorded by headless-match. seed 1 selects \"easy vs normal on \"tight half-slot serpentine\"\" — nothing in the sim consumes a seed, see ADR-0010. Re-verify with: pnpm replay-verify. Re-recorded 2026-09-15 when spawn cells were scrambled (ADR-0030): every send enters at a different cell, so the bots' match diverges from the first send. The previous recording hashed 7a84a8cd.",
+  "_comment": "Recorded by headless-match. seed 1 selects \"easy vs normal on \"tight half-slot serpentine\"\" — nothing in the sim consumes a seed, see ADR-0010. Re-verify with: pnpm replay-verify. Re-recorded 2026-09-15 when spawn cells were scrambled (ADR-0030): every send enters at a different cell, so the bots' match diverges from the first send. The previous recording hashed 7a84a8cd. Re-hashed 2026-09-17, not re-recorded, when a leak began stealing a life (ADR-0032, #7): the match ends on its 20th leak into lane 0, and player 1 now finishes on 39 lives, holding the 19 it stole before the last leak decided it. The command log and data are unchanged. The previous hash was 9f37240f.",
   "seed": 1,
   "config": "easy vs normal on \"tight half-slot serpentine\"",
   "ticks": 24366,
@@ -19802,7 +19802,7 @@
       "y": 99
     }
   ],
-  "expectedHash": "9f37240f",
+  "expectedHash": "1f07e128",
   "data": {
     "sellRefund": 0.6,
     "acquireTicks": 10,

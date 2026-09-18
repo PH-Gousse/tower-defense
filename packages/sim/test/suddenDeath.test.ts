@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, beforeAll, afterAll } from 'vitest'
 import { createState } from '../src/state'
 import { INCOME_EVERY_TICKS } from '../src/state'
 import {
@@ -17,12 +17,31 @@ import { tick, send, BOG_BRUTE, SCRAPLING, withoutBuildPhase } from './helpers'
 
 withoutBuildPhase()
 
+describe('sudden death in the shipped data', () => {
+  it('is off: a match ends only when a player reaches zero lives (user, ADR-0033)', () => {
+    expect(SUDDEN_DEATH_TICK).toBe(SUDDEN_DEATH_NEVER)
+    expect(suddenDeathScale(1_000_000, INCOME_EVERY_TICKS)).toBe(1)
+    expect(liveBalanceData().suddenDeathTick).toBeUndefined()
+  })
+})
+
 /**
  * Sudden death (ADR-0026): from SUDDEN_DEATH_TICK, the HP of every creep
  * spawned is multiplied by SUDDEN_DEATH_GROWTH once per income period,
- * compounding. The match-ender the bounded ladder lost.
+ * compounding.
+ *
+ * Removed from the game by ADR-0033, and kept in the sim so a replay recorded
+ * with it still replays the match it recorded. These pin the mechanism with it
+ * switched on at its old sizing (15:00, x1.15), installed per file below.
  */
 describe('sudden death', () => {
+  let switchedOff: ReturnType<typeof installBalanceData> | null = null
+  beforeAll(() => {
+    switchedOff = installBalanceData({ ...liveBalanceData(), suddenDeathTick: 18000, suddenDeathGrowth: 1.15 })
+  })
+  afterAll(() => {
+    if (switchedOff) installBalanceData(switchedOff)
+  })
   let restore: (() => void) | null = null
   afterEach(() => {
     restore?.()
@@ -38,7 +57,7 @@ describe('sudden death', () => {
     return out.lanes[0]!.creeps.hp[0] as number
   }
 
-  it('is on in the shipped data, one unlock interval after the last tier', () => {
+  it('runs at the sizing these cases were written for', () => {
     expect(SUDDEN_DEATH_TICK).toBe(18000)
     expect(SUDDEN_DEATH_GROWTH).toBe(1.15)
   })

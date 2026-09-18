@@ -1,0 +1,36 @@
+# Storm Drake (ladder tier 14, Fast). A wingless raptor-headed drake leaning into the run, spined back and crackling ice-blue shards.
+# One design per creep (#51): its own archetype at tier 1, judged against the fast silhouette rule
+# (runner in style-sheet section 4).
+id: creep_stormdrake_t1
+class: creep
+archetype: stormdrake
+tier: 1
+body_plan: biped_lean
+params:
+  height: 0.9
+  leg_length: 0.42
+  torso_width: 0.2
+  torso_length: 0.55
+  head: raptor
+  lean: 0.7
+  arms: true
+  parts:
+    - { part: tail_long, at: tail }
+    - { part: spike_row, at: back }
+    - { part: crystal_shards, at: shoulders }
+palette:
+  primary: stone_blue
+  secondary: iron
+  accent: ice
+  glow: ice
+  team_mask: [torso_stripe, head_crest]
+rig: biped_small
+animations:
+  Idle: { gen: idle_breathe, amplitude: 0.02, duration: 1.2 }
+  Walk: { gen: walk_biped, stride: 1.2, cadence: 3.2, bob: 0.03, swing: 0.8, lean: 0.2, arm_swing: 0.3 }
+  Death: { gen: collapse_forward, duration: 0.7, impact: 0.55 }
+  Spawn: { gen: rise_from_ground, duration: 0.5, land: 0.7 }
+audio:
+  spawn: sfx_spawn_medium_1
+  death: sfx_death_medium_1
+source: { kind: generated, licence: own, author: asset-factory }

@@ -95,3 +95,17 @@ describe('the chrome cannot resize itself', () => {
     expect(html).toMatch(/#palette \.hint\s*\{[^}]*overflow:\s*hidden/)
   })
 })
+
+describe('the opponent on the HUD', () => {
+  // Asserted on source text for the same reason as the palette above: main.ts
+  // cannot be imported without WebGL.
+  const main = readFileSync(new URL('../src/main.ts', import.meta.url), 'utf8')
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8')
+  const scene = readFileSync(new URL('../src/scene.ts', import.meta.url), 'utf8')
+
+  it("shows the opponent's income beside yours (user, 2026-09-17)", () => {
+    expect(html).toContain('id="oppIncome"')
+    expect(main).toContain('setText(oppIncome')
+    expect(scene).toMatch(/oppIncome: state\.players\[1 - me\(\)\]!\.income/)
+  })
+})
