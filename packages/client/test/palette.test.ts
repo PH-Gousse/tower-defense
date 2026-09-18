@@ -77,9 +77,16 @@ describe('the build-phase palette', () => {
  */
 describe('the chrome cannot resize itself', () => {
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8')
+  const main = readFileSync(new URL('../src/main.ts', import.meta.url), 'utf8')
 
-  it('stops the send and tower captions wrapping', () => {
-    expect(html).toMatch(/\.tool \.n,[^{]*\.creep \.c[^{]*\{[^}]*white-space:\s*nowrap/)
+  it('keeps card text out of the palette, so it cannot change its height', () => {
+    // The palette's height is measured and handed to the camera, so text that
+    // wraps re-frames the board mid-match. The cards went icon-only on
+    // 2026-09-18 and the words moved into each card's title, which is also its
+    // accessible name; main.ts sets both.
+    expect(html).toMatch(/\.tool \.n,[^{]*\.creep \.c\s*\{[^}]*display:\s*none/)
+    expect(main).toContain("b.setAttribute('aria-label', caption)")
+    expect(main).toContain("tool.setAttribute('aria-label', caption)")
   })
 
   it('pins the placement message to one line', () => {

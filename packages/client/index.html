@@ -221,10 +221,10 @@
     /* A card: a framed icon, a name, a caption, and its hotkey in the corner,
        the way a command card lays them out. */
     .tool, .creep {
-      position: relative; display: grid; grid-template-columns: 40px 1fr; gap: 0 9px; align-items: center;
+      position: relative; display: grid; grid-template-columns: 40px; justify-items: center; align-items: center;
       text-align: left; cursor: pointer; font: inherit;
       color: var(--face); background: var(--bevel); border: 1px solid var(--brass-dark);
-      border-radius: 3px; padding: 5px 8px 5px 5px; min-width: 132px;
+      border-radius: 3px; padding: 4px; min-width: 0;
       box-shadow: inset 0 1px 0 #4a3824, 0 1px 2px #000;
     }
     .tool:hover, .creep:hover { border-color: var(--brass); background: var(--bevel-hi); }
@@ -247,10 +247,12 @@
 
        Captions are numbers and short phrases; clipping one is a far smaller
        problem than the whole board jumping. */
-    .tool .n, .tool .c, .creep .n, .creep .c, #palette .hint { white-space: nowrap; }
-    .tool .n, .creep .n { display: block; font: 14px/1.2 var(--serif); align-self: end; }
-    .tool .c, .creep .c { display: block; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; align-self: start; }
-    .tool .c em, .creep .c em { font-style: normal; color: var(--gold); }
+    #palette .hint { white-space: nowrap; }
+    /* Icons only (user, 2026-09-18). The name, the price and the unlock
+       countdown live in each card's `title`, which is also its accessible
+       name, so nothing is lost -- the card is a picture of what it buys, and
+       fourteen of them fit a rail without scrolling most screens. */
+    .tool .n, .tool .c, .creep .n, .creep .c { display: none; }
     .tool[data-broke], .creep[data-broke] { opacity: .5; filter: saturate(.4); }
     .creep[data-locked] { opacity: .55; border-style: dashed; }
     .creep[data-locked] .c { color: #c48d3a; }
@@ -283,7 +285,9 @@
     /* Every tier is on the panel (user, 2026-09-17). The tier tag leads the
        name so the list reads as the ladder it is. */
     .creep .tier { font: 11px/1 var(--sans); color: var(--muted); font-variant-numeric: tabular-nums; }
-    .creep { min-width: 116px; }
+    /* Icon cards tile rather than stack: three towers across, and the creep
+       ladder two across so fourteen fit the rail. */
+    #palette .tools { display: grid; grid-template-columns: repeat(3, auto); gap: 6px; justify-content: start; }
     kbd { border: 1px solid #5a4527; border-radius: 2px; padding: 0 4px; font: inherit; font-size: 10px; background: #14100a; }
 
     /* ---- selection panel ------------------------------------------------------- */
@@ -355,7 +359,8 @@
     /* Fourteen cards do not fit a short screen, so the list scrolls inside the
        rail. The rail's width is unchanged, so the camera does not re-frame, and
        `min-height: 0` is what lets a flex child shrink below its content. */
-    body[data-layout="rails"] #sendRow { flex-direction: column; gap: 6px; flex: 0 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; }
+    body[data-layout="rails"] #sendRow { display: grid; grid-template-columns: repeat(2, auto); justify-content: center; gap: 6px; flex: 0 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; }
+    body[data-layout="rails"] #palette .tools { justify-content: center; }
     body[data-layout="rails"] #palette .sep {
       width: auto; height: 2px; align-self: stretch; margin: 4px 0;
       background: linear-gradient(90deg, transparent, var(--brass-dark) 25%, var(--brass-dark) 75%, transparent);
@@ -386,9 +391,9 @@
     <div class="primary"><b>Time</b><span id="clock">00:00</span></div>
     <div class="primary"><b>Lives</b><span id="lives">20</span></div>
     <div class="primary"><b>Opponent</b><span id="oppLives">20</span></div>
+    <div class="primary"><b>Opp. income</b><span id="oppIncome">10</span></div>
     <div class="primary"><b>Gold</b><span id="gold">9000</span></div>
     <div><b>Income</b><span id="income">10</span></div>
-    <div><b>Opp. income</b><span id="oppIncome">10</span></div>
     <div><b>Next income</b><span id="incomeLeft">00:15</span></div>
     <div><b>Next tier</b><span id="tierLeft">05:00</span></div>
     <div class="detail"><b>Towers</b><span id="towers">0</span></div>
@@ -405,6 +410,7 @@
        misclick from a 600g tower. The icons are filled in by main.ts from
        pictures the scene renders of its own models. -->
   <div id="palette">
+    <span class="tools">
     <button class="tool selected" data-tower="0">
       <span class="ico"></span><span class="n">Guard tower</span><span class="c"><em id="cost0">600</em>g &middot; anti-tank</span><kbd class="key">1</kbd>
     </button>
@@ -414,6 +420,7 @@
     <button class="tool" data-tower="2">
       <span class="ico"></span><span class="n">Frost shrine</span><span class="c"><em id="cost2">800</em>g &middot; anti-runner</span><kbd class="key">3</kbd>
     </button>
+    </span>
     <span class="sep"></span>
     <span class="label" id="sendLabel">Send &rarr;</span>
     <span id="sendRow"></span>
